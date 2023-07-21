@@ -1,0 +1,50 @@
+<isif condition="${!empty(pdict.EShopWorldModuleEnabled) && pdict.EShopWorldModuleEnabled}">
+    <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+    <span>
+        <isset name="price" value="${pdict.price}" scope="page" />
+        <isset name="finalOrigPrice" value="${price}" scope="page" />
+        <isset name="isLowPrice" value="${pdict.isLowPrice}" scope="page" />
+
+        <isif condition="${finalOrigPrice.list !== null}">
+            <del>
+                <span class="strike-through list">
+                    <span class="value" content="${price.decimalPrice}">
+                        <span class="sr-only">
+                            ${Resource.msg('label.price.reduced.from', 'pricing', null)}
+                        </span>
+                        <isif condition="${!eswHelper.isAjaxCall() && typeof price === 'object' && !('formatted' in pdict.productStrikePrice)}">
+                            ${pdict.productStrikePrice.decimalPrice}
+                        <iselse/>
+                            ${pdict.productStrikePrice.formatted}
+                        </isif>
+                        <span class="sr-only">
+                            ${Resource.msg('label.price.to', 'pricing', null)}
+                        </span>
+                    </span>
+                </span>
+            </del>
+        </isif>
+        <isif condition="${!eswHelper.isAjaxCall()}">
+            <isif condition="${!empty(pdict.productPrice)}">
+                <isset name="price" value="${pdict.productPrice}" scope="page" />
+            </isif>
+            <span class="sales">
+                <isif condition="${isLowPrice == 'range-low'}">
+                    <span class="value" content="${price.decimalPrice}">
+                </isif>
+                <isif condition="${isLowPrice == 'range-high'}">
+                    <span class="value" content="${price.decimalPrice}">
+                </isif>
+                <isif condition="${isLowPrice == null}">
+                    <span class="value" content="${price.decimalPrice}">
+                <iselse>
+                    <isif condition="${!('formatted' in price)}">
+                        ${price.decimalPrice}
+                    <iselse/>
+                        ${price.formatted}
+                    </isif>
+                </isif>
+            </span>
+        </isif>
+    </span>
+</isif>

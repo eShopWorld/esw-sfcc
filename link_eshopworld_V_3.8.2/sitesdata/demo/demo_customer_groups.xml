@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customer-groups xmlns="http://www.demandware.com/xml/impex/customergroup/2007-06-30">
+    <customer-group group-id="eswSupportsFixedPrices">
+        <description>The customer group is active if the selected country supports fixed price model. Moreover, the rules are mentioned below as well</description>
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswSupportsFixedPrices</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>true</string>
+                    </condition>
+                    <condition>
+                        <attribute-path>session.custom.eswCurrency</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>GBP</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="Everyone">
+        <description>Represents all customers of the site, both unregistered and registered.</description>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="eswOperatedCountry">
+        <description>The customer group is active if the country is ESW supported country. The rule value can be changed to make the customer group active for Non supported country</description>
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswOperatedCountry</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>true</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="esw_employees">
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>customer.profile.email</attribute-path>
+                        <operator>contains</operator>
+                        <string>@eshopworld.com</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="Big Spenders">
+        <description>Customers who have spent more then $200 in the last month</description>
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>customer.activeData.orderValueMonth</attribute-path>
+                        <operator>is-greater-than</operator>
+                        <number>200.0</number>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="Unregistered">
+        <description>Represents all unregistered customers of the site.</description>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="QA customer group">
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>customer.profile.email</attribute-path>
+                        <operator>contains</operator>
+                        <string>eshopworld.com</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="eswEnabled">
+        <description>The Customer group will be active if ESW module is enabled in custom preferences. Moreover, per the configurations, it will work for every ESW country except SE</description>
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswEnabled</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>true</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+            <excluded-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswCountry</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>SE</string>
+                    </condition>
+                </condition-group>
+            </excluded-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="eswCurrency">
+        <description>The customer group will be active for the mentioned currency in the rules below</description>
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswCurrency</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>EUR</string>
+                    </condition>
+                </condition-group>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswCurrency</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>SEK</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="Registered">
+        <description>Represents all registered customers of the site.</description>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="VIP customer group">
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>customer.profile.email</attribute-path>
+                        <operator>contains</operator>
+                        <string>@eshopworld.com</string>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+    <customer-group group-id="eswCountry">
+        <description>The customer group will be active for the mentioned countries in the rules below</description>
+        <membership-rule>
+            <included-customers>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswCountry</attribute-path>
+                        <operator>is-equal</operator>
+                        <string>IE</string>
+                    </condition>
+                </condition-group>
+                <condition-group match-mode="all">
+                    <condition>
+                        <attribute-path>session.custom.eswAuthenticated</attribute-path>
+                        <operator>is-true</operator>
+                    </condition>
+                </condition-group>
+            </included-customers>
+        </membership-rule>
+        <custom-attributes/>
+    </customer-group>
+
+</customer-groups>

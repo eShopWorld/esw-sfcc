@@ -1,0 +1,77 @@
+<!--- TEMPLATENAME: eswlandingpage.isml --->
+<iscontent type="text/html" charset="UTF-8" compact="true"/>
+<isinclude template="util/modules"/>
+<div class="eswModalWrapper">
+	<div class="eswModal" role="dialog" id="eswModal">
+		<div class="eswModal-content">
+			<div class="closeLandingPage">
+				<a href="#">&times;</a>
+			</div>
+			<isslot id="eswLandingWelcome" description="ESW Landing Page Welcome Message" context="global"/>
+			<isif condition=${pdict.EswLandingObject.enabledLandingPageBar}>
+				<div class="selectors selector-container">
+					<iscomment> ESW Country Selector </iscomment>
+					<isif condition=${pdict.EswLandingObject.enabledCountriesInLandingPage}>
+						<div class="esw-country-selector selectCountry">
+							<label>${Resource.msg('esw.shipping.country','esw',null)}</label>
+							<div class="select-field">
+								<div class="current-country">
+									<i class="fa fa-angle-right fa-fw selector-icon"></i>
+									<i class="flag-icon flag-icon-${pdict.EswLandingObject.selectedCountry.toLowerCase()}"></i>
+									<span id="selected-country" data-value="${pdict.EswLandingObject.selectedCountry}">${pdict.EswLandingObject.selectedCountryName}</span>
+								</div>
+								<div class="selector">
+									<div class="country">
+										<isloop iterator="${pdict.EswLandingObject.allCountries}" var="object" status="loopStatus">
+											<a href="javascript:void(0);" class="country landing-link" data-param="${object.value}" data-locale="${request.getLocale()}" data-currency="${pdict.EswLandingObject.selectedCurrency}"><i class="flag-icon flag-icon-${object.value.toLowerCase()}"></i>${object.displayValue}</a>
+										</isloop>
+									</div>
+								</div>
+							</div>
+						</div>
+					</isif>
+					<iscomment> ESW Language Selector </iscomment>
+					<isif condition=${pdict.EswLandingObject.enabledLanguagesInLandingPage}>				
+						<div class="esw-country-selector selectLanguage">
+							<label>${Resource.msg('esw.shipping.lang','esw',null)}</label>
+							<div class="select-field">
+							<div class="current-country">
+								<i class="fa fa-angle-right fa-fw selector-icon"></i>
+								<span id="selected-locale" data-value="${request.getLocale()}">${Resource.msg('esw.locale.'+request.getLocale(),'esw',null)}</span>
+							</div>
+							<div class="selector">
+								<div class="country">
+									<isloop items="${pdict.EswLandingObject.languages}" var="object" status="loopStatus">
+										<a href="${'#'}" class="landing-link" data-country="${pdict.EswLandingObject.selectedCountry}" data-param="${object.value}" data-currency="${pdict.EswLandingObject.selectedCurrency}">${Resource.msg('esw.locale.'+object.value,'esw',null)}</a>
+									</isloop>
+								</div>
+							</div>
+							</div>
+						</div>
+					</isif>
+					<iscomment> ESW Currency Selector </iscomment>
+					<isif condition=${pdict.EswLandingObject.enabledCurrencyInLandingPage}>
+						<div class="esw-country-selector selectCurrency">
+							<label>${Resource.msg('esw.shipping.currency','esw',null)} </label>
+							<div class="select-field">
+							<div class="current-country">
+								<i class="fa fa-angle-right fa-fw selector-icon"></i>
+								<span id="selected-currency" data-value="${pdict.EswLandingObject.selectedCurrency}">${pdict.EswLandingObject.selectedCurrency}</span>
+							</div>
+							<div class="selector">
+								<div class="country">
+								<isloop iterator="${pdict.EswLandingObject.currencies}" var="object" status="loopStatus">
+									<a href="${'#'}" class="landing-link" data-country="${pdict.EswLandingObject.selectedCountry}" data-locale="${request.getLocale()}" data-param="${object.value}">${object.value}</a>
+								</isloop>
+								</div>
+							</div>
+							</div>
+						</div>
+					</isif>
+				</div>
+				<isslot id="eswLandingContent" description="ESW Landing Page Content" context="global" />
+			</isif>
+		</div>		
+	</div>
+</div>
+<div class="modalBg"></div>

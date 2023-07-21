@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<promotions xmlns="http://www.demandware.com/xml/impex/promotion/2008-01-31">
+    <campaign campaign-id="PromotionTests">
+        <enabled-flag>true</enabled-flag>
+        <campaign-scope>
+            <applicable-online/>
+        </campaign-scope>
+        <customer-groups match-mode="any">
+            <customer-group group-id="Everyone"/>
+        </customer-groups>
+    </campaign>
+
+    <global-promotion-settings>
+        <global-excluded-products>
+            <included-products>
+                <condition-group>
+                    <category-condition catalog-id="storefront-catalog-m-en" operator="is equal">
+                        <category-id>electronic-games</category-id>
+                    </category-condition>
+                </condition-group>
+            </included-products>
+        </global-excluded-products>
+    </global-promotion-settings>
+
+    <promotion promotion-id="THRESHOLD-SHIPPING-PROMO">
+        <enabled-flag>true</enabled-flag>
+        <archived-flag>false</archived-flag>
+        <searchable-flag>false</searchable-flag>
+        <refinable-flag>false</refinable-flag>
+        <prevent-requalifying-flag>false</prevent-requalifying-flag>
+        <prorate-across-eligible-items-flag>false</prorate-across-eligible-items-flag>
+        <exclusivity>no</exclusivity>
+        <name xml:lang="x-default">Threshold demo shipping promotion</name>
+        <callout-msg xml:lang="x-default">Spend 50 and save 10 on shipping&#13;
+Spend 75 and save 15 on shipping&#13;
+Spend 100 and get free shipping</callout-msg>
+        <details xml:lang="x-default">Spend 50 and save 10 on shipping&#13;
+Spend 75 and save 15 on shipping&#13;
+Spend 100 and get free shipping</details>
+        <custom-attributes>
+            <custom-attribute attribute-id="eswLocalizedThresholdEnabled">true</custom-attribute>
+            <custom-attribute attribute-id="eswMinThresholdAmount">
+                <value>50:10,75:15,100:20</value>
+            </custom-attribute>
+            <custom-attribute attribute-id="eswPromotionDiscountType">amount_off</custom-attribute>
+        </custom-attributes>
+        <shipping-promotion-rule>
+            <shipping-methods/>
+            <discounts condition-type="shipment-total">
+                <discount>
+                    <threshold>0.01</threshold>
+                    <amount>0.01</amount>
+                </discount>
+            </discounts>
+        </shipping-promotion-rule>
+    </promotion>
+
+    <promotion-campaign-assignment promotion-id="THRESHOLD-SHIPPING-PROMO" campaign-id="PromotionTests">
+        <qualifiers match-mode="any">
+            <customer-groups/>
+            <source-codes/>
+            <coupons/>
+        </qualifiers>
+    </promotion-campaign-assignment>
+
+</promotions>

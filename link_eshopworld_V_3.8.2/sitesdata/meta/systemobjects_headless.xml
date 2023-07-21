@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <type-extension type-id="ProductLineItem">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswBasePrice">
+                <display-name xml:lang="x-default">ESW Base Price</display-name>
+                <description xml:lang="x-default">Product Line Item Shopper Currency eSW Base Price</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswPrice">
+                <display-name xml:lang="x-default">ESW Price</display-name>
+                <description xml:lang="x-default">Product Line Item Shopper Currency eSW Price</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswPriceAfterOrderDiscount">
+                <display-name xml:lang="x-default">ESW Price After Order Discount</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRegularPrice">
+                <display-name xml:lang="x-default">ESW Regular Price</display-name>
+                <description xml:lang="x-default">Product Line Item Shopper Currency eSW Regular Price</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswSalePrice">
+                <display-name xml:lang="x-default">ESW Sale Price</display-name>
+                <description xml:lang="x-default">Product Line Item Shopper Currency eSW Sale Price</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswRestrictedProduct">
+                <display-name xml:lang="x-default">ESW Restricted Product</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="eswProductLineItemHeadless">
+                <display-name xml:lang="x-default">ESW Product Line Item Headless</display-name>
+                <attribute attribute-id="eswBasePrice"/>
+                <attribute attribute-id="eswPrice"/>
+                <attribute attribute-id="eswPriceAfterOrderDiscount"/>
+				<attribute attribute-id="eswRegularPrice"/>
+                <attribute attribute-id="eswSalePrice"/>
+				<attribute attribute-id="eswRestrictedProduct"/>
+            </attribute-group>
+		</group-definitions>
+    </type-extension>
+	
+	<type-extension type-id="Basket">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswOrderTotal">
+                <display-name xml:lang="x-default">ESW Order Total</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswEstimatedCharges">
+                <display-name xml:lang="x-default">ESW Estimated Charges</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswEstimatedShippingTotal">
+                <display-name xml:lang="x-default">ESW Estimated Shipping Total</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswCartSubTotal">
+                <display-name xml:lang="x-default">ESW Cart Sub Total</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswTotalDiscount">
+                <display-name xml:lang="x-default">ESW Total Discount</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswShopperCurrency">
+                <display-name xml:lang="x-default">ESW Shopper Currency</display-name>
+                <description xml:lang="x-default">The shopper/ customer's currency selected from eSW country/ currency selector.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswSubTotal">
+                <display-name xml:lang="x-default">ESW Cart SubTotal</display-name>
+                <description xml:lang="x-default">eSW cart subtotal calculated according to eSW Plugin</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswOrderDiscount">
+                <display-name xml:lang="x-default">ESW Order Discount</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+    </type-extension>
+	
+	<type-extension type-id="Order">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswDeliveryOptions">
+                <display-name xml:lang="x-default">ESW Delivery Options</display-name>
+                <description xml:lang="x-default">ESW Override Shipping Methods detail</description>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+		</custom-attribute-definitions>
+    </type-extension>
+
+    <type-extension type-id="SitePreferences">
+        <custom-attribute-definitions>
+			<attribute-definition attribute-id="eswBasketPricingMapping">
+                <display-name xml:lang="x-default">ESW Basket Pricing Mapping</display-name>
+                <description xml:lang="x-default">ESW Basket Attributes Mapping with Custom Attributes</description>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+			<attribute-definition attribute-id="eswPriceBookKeyWords">
+                <display-name xml:lang="x-default">ESW Pricebook Keywords - Retailer Currencies/ Keywords</display-name>
+                <description xml:lang="x-default">Enter Pricebook ID keywords (separated by pipeline) which needs to be replaced while converting the pricebook prices.&#13;
+Keywords Example: Retailer Currencies, countries, etc.&#13;
+Value(s) Example: usd|cad|gbp</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+			<attribute-group group-id="ESW Headless Integration Configuration">
+                <display-name xml:lang="x-default">ESW Headless Integration Configuration</display-name>
+                <attribute attribute-id="eswBasketPricingMapping"/>
+				<attribute attribute-id="eswPriceBookKeyWords"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+
+</metadata>

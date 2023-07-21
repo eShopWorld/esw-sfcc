@@ -1,0 +1,60 @@
+<span>
+    <isset name="finalOrigPrice" value="${price}" scope="page" />
+    <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+    <isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page" />
+    
+    <isif condition="${empty(pdict.product)}"> 
+        <isset name="matchingLineItem" value="${typeof lineItem !== 'undefined' && (lineItem) ? eswHelper.getMatchingLineItem(lineItem) : ''}" scope="page" />
+    <iselse>
+        <isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(pdict.product)}" scope="page" />
+    </isif>
+    
+    <isif condition="${finalOrigPrice.list !== null}">
+        <isif condition="${!empty(matchingLineItem)}">
+            <isset name="price" value="${finalOrigPrice.list.decimalPrice}" scope="page" />
+        <iselse>
+            <isset name="price" value="${finalOrigPrice.list}" scope="page" />
+        </isif>
+        
+        <del>
+            <span class="strike-through list">
+                <span class="value" content="${price.decimalPrice}">
+                    <span class="sr-only">
+                        ${Resource.msg('label.price.reduced.from', 'pricing', null)}
+                    </span>
+                    <isif condition="${!empty(matchingLineItem)}">
+                        ${price}
+                    <iselse>
+                        ${price.decimalPrice}
+                    </isif>
+                    <span class="sr-only">
+                        ${Resource.msg('label.price.to', 'pricing', null)}
+                    </span>
+                </span>
+            </span>
+        </del>
+    </isif>
+    <isif condition="${!empty(matchingLineItem)}">
+        <isset name="price" value="${formatMoney(eswHelper.getUnitPriceCost(matchingLineItem))}" scope="page" />
+    <iselse>
+        <isset name="price" value="${finalOrigPrice.sales}" scope="page" />
+    </isif>
+    
+    <span class="sales">
+        <isif condition="${isLowPrice == 'range-low'}">
+            <span class="value" content="${price.decimalPrice}">
+        </isif>
+        <isif condition="${isLowPrice == 'range-high'}">
+            <span class="value" content="${price.decimalPrice}">
+        </isif>
+        <isif condition="${isLowPrice == null}">
+            <span class="value" content="${price.decimalPrice}">
+        </isif>
+        <isif condition="${!empty(matchingLineItem)}">
+            ${price}
+        <iselse>
+            ${price.decimalPrice}
+        </isif>
+        </span>
+    </span>
+</span>
