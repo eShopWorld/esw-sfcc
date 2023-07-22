@@ -1,2 +1,2 @@
 # esw-sfcc
-ESW cartridge for SFCC AppExchange
+ESW cartridge for SFCC AppExchange.
