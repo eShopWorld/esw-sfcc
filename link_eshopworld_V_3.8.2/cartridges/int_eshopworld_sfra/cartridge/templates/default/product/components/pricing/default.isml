@@ -1,0 +1,51 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+<isset name="isTileShow" value="${typeof pdict.tileShow === 'undefined' || pdict.tileShow === null ? false: true}" scope="page" />
+<isif condition="${(!eswHelper.isAjaxCall() && !isTileShow && typeof lineItem === 'undefined') ||
+    (typeof isEswRangePrice !== 'undefined' && isEswRangePrice && !isTileShow) ||
+    (typeof isEswTiredPrice !== 'undefined' && isEswTiredPrice && !isTileShow)}">
+    <isscript>
+        var priceObjectJson = JSON.stringify(price);
+        var isLowPrice = typeof isLowPrice !== 'undefined' ? isLowPrice : null;
+    </isscript>
+    <isinclude url="${URLUtils.url('EShopWorld-GetSelectedCountryProductPrice', 'priceObject', priceObjectJson, 'isLowPrice', isLowPrice)}"/>
+<iselse/>
+    <isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
+        <isinclude template="/product/components/pricing/defaultESW" />
+    <iselse>
+        <span>
+        <isset name="finalOrigPrice" value="${price}" scope="page" />
+
+        <isif condition="${finalOrigPrice.list !== null}">
+            <isset name="price" value="${finalOrigPrice.list}" scope="page" />
+            <del>
+                <span class="strike-through list">
+                    <span class="value" content="${price.decimalPrice}">
+                        <span class="sr-only">
+                            ${Resource.msg('label.price.reduced.from', 'pricing', null)}
+                        </span>
+                        <isinclude template="/product/components/pricing/formatted" />
+                        <span class="sr-only">
+                            ${Resource.msg('label.price.to', 'pricing', null)}
+                        </span>
+                    </span>
+                </span>
+            </del>
+        </isif>
+
+        <isset name="price" value="${finalOrigPrice.sales}" scope="page" />
+        <span class="sales">
+            <isif condition="${isLowPrice == 'range-low'}">
+                <span class="value" content="${price.decimalPrice}">
+            </isif>
+            <isif condition="${isLowPrice == 'range-high'}">
+                <span class="value" content="${price.decimalPrice}">
+            </isif>
+            <isif condition="${isLowPrice == null}">
+                <span class="value" content="${price.decimalPrice}">
+            </isif>
+            <isinclude template="/product/components/pricing/formatted" />
+            </span>
+        </span>
+        </span>
+    </isif>
+</isif>

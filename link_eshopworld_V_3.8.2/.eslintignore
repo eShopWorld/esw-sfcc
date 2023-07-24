@@ -1,0 +1,8 @@
+cartridges/int_eshopworld_sfra/cartridge/static/
+cartridges/int_eshopworld_core/cartridge/static/
+cartridges/int_eshopworld_controllers/cartridge/static/
+coverage/
+doc/
+bin/
+test/
+codecept.conf.js

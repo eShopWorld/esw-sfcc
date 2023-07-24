@@ -1,0 +1,18 @@
+<isif condition="${price.type === 'tiered'}">
+    <div class="price <isif condition="${product.isProductRestricted}">d-none</isif>">
+        <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+        <isset name="isEswTiredPrice" value="${!eswHelper.isAjaxCall() ? true: false}" scope="page" />
+        <isinclude template="/product/components/pricing/tiered" />
+    </div>
+<iselseif condition="${price.type === 'range'}">
+    <div class="price <isif condition="${product.isProductRestricted}">d-none</isif>">
+        <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+        <isset name="isEswRangePrice" value="${!eswHelper.isAjaxCall() ? true: false}" scope="page" />
+        <isinclude template="/product/components/pricing/range" />
+    </div>
+<iselse>
+    <div class="price <isif condition="${typeof product != 'undefined' && product.productType != 'set' && product.isProductRestricted}">d-none</isif>">
+        <isset name="isLowPrice" value="${}" scope="page" />
+        <isinclude template="/product/components/pricing/default" />
+    </div>
+</isif>

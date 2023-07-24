@@ -1,0 +1,68 @@
+<isdecorate template="common/layout/page">
+    <isscript>
+        var assets = require('*/cartridge/scripts/assets.js');
+        assets.addCss('/css/login.css');
+        assets.addJs('/js/login.js');
+    </isscript>
+
+    <isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled) ? dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled : false}" scope="page" />
+
+    <isif condition="${isEswEnabled}">
+        <div class="card col-md-6 col-sm-8 container my-5">
+            <div class="card-header h4">
+                ${Resource.msgf('esw.already.registered.customer','esw',null, pdict.userName)}
+            </div>
+            <div class="card-body">
+                <form action="${pdict.actionUrl}" class="login" method="POST" name="login-form">
+            <div class="form-group required">
+                <label class="form-control-label" for="login-form-email">
+                    ${Resource.msg('label.input.login.email', 'login', null)}
+                </label>
+                <input type="email" id="login-form-email" required aria-required="true" class="form-control required" aria-describedby="form-email-error" name="loginEmail" value="${pdict.userName}" readonly>
+                <div class="invalid-feedback" id="form-email-error"></div>
+            </div>
+
+            <div class="form-group required">
+                <label class="form-control-label" for="login-form-password">
+                        ${Resource.msg('label.input.login.password', 'login', null)}
+                </label>
+                <input type="password" id="login-form-password" required aria-required="true" class="form-control required" aria-describedby="form-password-error" name="loginPassword">
+                <div class="invalid-feedback" id="form-password-error"></div>
+            </div>
+
+            <div class="clearfix">
+                <div class="form-group custom-control custom-checkbox pull-left remember-me">
+                    <input type="checkbox" class="custom-control-input" id="rememberMe" name="loginRememberMe" value="true"
+                        <isif condition="${pdict.rememberMe}">checked</isif>
+                    >
+                    <label class="custom-control-label" for="rememberMe">
+                        ${Resource.msg('label.checkbox.login.rememberme', 'login', null)}
+                    </label>
+                </div>
+
+                <div class="pull-right forgot-password text-right">
+                    <a class="d-sm-none" href="${URLUtils.url('Account-PasswordReset')}" title="${Resource.msg('link.login.forgotpassword', 'login', null)}">
+                        ${Resource.msg('link.login.forgotpassword', 'login', null)}
+                    </a>
+
+                    <a
+                        id="password-reset"
+                        class="hidden-xs-down"
+                        title="${Resource.msg('link.login.forgotpassword', 'login', null)}"
+                        data-toggle="modal"
+                        href="${URLUtils.url('Account-PasswordResetDialogForm')}"
+                        data-target="#requestPasswordResetModal">
+                        ${Resource.msg('link.login.forgotpassword', 'login', null)}
+                    </a>
+                </div>
+            </div>
+
+            <input type="hidden" name="${dw.web.CSRFProtection.getTokenName()}" value="${dw.web.CSRFProtection.generateToken()}"/>
+
+            <button type="submit" class="btn btn-block btn-primary">${Resource.msg('button.text.loginform', 'login', null)}</button>
+        </form>
+        <isinclude template="account/password/requestPasswordResetModal"/>
+            </div>
+        </div>
+    </isif>
+</isdecorate>

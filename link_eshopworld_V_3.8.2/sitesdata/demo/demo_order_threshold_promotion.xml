@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<promotions xmlns="http://www.demandware.com/xml/impex/promotion/2008-01-31">
+    <campaign campaign-id="Automation">
+        <description>Automation</description>
+        <enabled-flag>true</enabled-flag>
+        <campaign-scope>
+            <applicable-online/>
+        </campaign-scope>
+        <customer-groups match-mode="any">
+            <customer-group group-id="VIP customer group"/>
+        </customer-groups>
+    </campaign>
+
+    <global-promotion-settings>
+        <global-excluded-products>
+            <included-products>
+                <condition-group>
+                    <category-condition catalog-id="storefront-catalog-m-en" operator="is equal">
+                        <category-id>electronic-games</category-id>
+                    </category-condition>
+                </condition-group>
+            </included-products>
+        </global-excluded-products>
+    </global-promotion-settings>
+
+    <promotion promotion-id="Threshold-Order-Promotion">
+        <enabled-flag>false</enabled-flag>
+        <archived-flag>false</archived-flag>
+        <searchable-flag>false</searchable-flag>
+        <refinable-flag>false</refinable-flag>
+        <prevent-requalifying-flag>false</prevent-requalifying-flag>
+        <prorate-across-eligible-items-flag>false</prorate-across-eligible-items-flag>
+        <exclusivity>no</exclusivity>
+        <name xml:lang="x-default">Threshold Order Promotion</name>
+        <callout-msg xml:lang="x-default">10 Amount off on order values greater than 50&#13;
+15 Amount off on order values greater than 70&#13;
+25 Amount off on order values greater than 100</callout-msg>
+        <custom-attributes>
+            <custom-attribute attribute-id="eswLocalizedThresholdEnabled">true</custom-attribute>
+            <custom-attribute attribute-id="eswMinThresholdAmount">
+                <value>50:10,70:15,100:25</value>
+            </custom-attribute>
+            <custom-attribute attribute-id="eswPromotionDiscountType">amount_off</custom-attribute>
+        </custom-attributes>
+        <order-promotion-rule>
+            <discount-only-qualifying-products>false</discount-only-qualifying-products>
+            <discounts condition-type="order-total">
+                <discount>
+                    <threshold>0.01</threshold>
+                    <amount>0.01</amount>
+                </discount>
+            </discounts>
+            <exclude-discounted-products>false</exclude-discounted-products>
+        </order-promotion-rule>
+    </promotion>
+
+    <promotion-campaign-assignment promotion-id="Threshold-Order-Promotion" campaign-id="Automation">
+        <qualifiers match-mode="any">
+            <customer-groups/>
+            <source-codes/>
+            <coupons/>
+        </qualifiers>
+    </promotion-campaign-assignment>
+
+</promotions>

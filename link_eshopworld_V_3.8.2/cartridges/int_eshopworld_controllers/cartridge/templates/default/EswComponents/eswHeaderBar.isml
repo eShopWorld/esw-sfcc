@@ -1,0 +1,9 @@
+<!--- TEMPLATENAME: eswHeaderBar.isml --->
+<iscontent type="text/html" charset="UTF-8" compact="true"/>
+<div class="selectors selector-container headerDropdown${(pdict.EswHeaderEnabled) ? '' : ' d-none'}" >
+   	<div class="esw-country-selector selectCountry">
+       	<i class="fa fa-fw selector-icon"></i>
+        <i class="flag-icon flag-icon-${pdict.EswHeaderObject.selectedCountry.toLowerCase()}"></i>
+        <span>${pdict.EswHeaderObject.selectedCountryName+' | '+pdict.EswHeaderObject.selectedCurrency}</span>
+	</div>
+</div>

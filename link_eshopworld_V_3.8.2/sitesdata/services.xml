@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<services xmlns="http://www.demandware.com/xml/impex/services/2014-09-26">
+    <service-credential service-credential-id="ESWSFTPCredentials">
+        <url></url>
+        <user-id></user-id>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswOAuthCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswPackageV4Credentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswPriceFeedV3Credentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswOrderAPIV2Credentials">
+        <url>https://order-transaction-api-{brandID}.sandbox.eshopworld.com/api/v2/Order/{brandOrderReference}/OrderActivity</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswCheckoutV3Credentials.SFRA">
+        <url>https://checkout-api-{brandID}.sandbox.eshopworld.com/api/v3/PreOrder</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="ESWOrderReturnServiceCredentials">
+        <url>https://logistics-returns-api.sandbox.eshopworld.com/api/v2.1/Returns</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-profile service-profile-id="ESWSFTPProfile">
+        <timeout-millis>110000</timeout-millis>
+        <rate-limit-enabled>false</rate-limit-enabled>
+        <rate-limit-calls>0</rate-limit-calls>
+        <rate-limit-millis>0</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>20</cb-calls>
+        <cb-millis>30000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswServiceProfile">
+        <timeout-millis>30000</timeout-millis>
+        <rate-limit-enabled>false</rate-limit-enabled>
+        <rate-limit-calls>0</rate-limit-calls>
+        <rate-limit-millis>0</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>20</cb-calls>
+        <cb-millis>50000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="ESWOrderReturnServiceProfile">
+        <timeout-millis>30000</timeout-millis>
+        <rate-limit-enabled>false</rate-limit-enabled>
+        <rate-limit-calls>0</rate-limit-calls>
+        <rate-limit-millis>0</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>20</cb-calls>
+        <cb-millis>50000</cb-millis>
+    </service-profile>
+
+    <service service-id="EswOAuthService">
+        <service-type>HTTPForm</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswOAuthCredentials</credential-id>
+    </service>
+
+    <service service-id="EswPriceFeedV3Service">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswPriceFeedV3Credentials</credential-id>
+    </service>
+
+    <service service-id="ESWSFTP">
+        <service-type>SFTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>ESWSFTPProfile</profile-id>
+        <credential-id>ESWSFTPCredentials</credential-id>
+    </service>
+
+    <service service-id="EswPackageV4Service">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswPackageV4Credentials</credential-id>
+    </service>
+
+    <service service-id="EswOrderAPIV2Service">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESW-OrderAPI</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswOrderAPIV2Credentials</credential-id>
+    </service>
+
+    <service service-id="EswCheckoutV3Service.SFRA">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswCheckoutV3Credentials.SFRA</credential-id>
+    </service>
+
+    <service service-id="ESWOrderReturnService">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESWOrderReturnService</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>ESWOrderReturnServiceProfile</profile-id>
+        <credential-id>ESWOrderReturnServiceCredentials</credential-id>
+    </service>
+</services>
+

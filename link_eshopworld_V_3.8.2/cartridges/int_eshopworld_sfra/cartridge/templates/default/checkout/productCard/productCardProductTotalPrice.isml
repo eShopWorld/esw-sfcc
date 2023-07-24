@@ -1,0 +1,25 @@
+<isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled) ? dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled : false}" scope="page" />
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+
+<isif condition="${isEswEnabled && eswHelper.isESWSupportedCountry()}">
+	<isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page" />
+	<isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(lineItem)}" scope="page" />
+	
+	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
+	    <isif condition=${lineItem.priceTotal.nonAdjustedPrice}>
+	    	${formatMoney(lineItem.priceTotal.nonAdjustedPrice)}
+	    </isif>
+	</div>
+	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">
+		<isif condition="${!empty(matchingLineItem)}">
+		    ${formatMoney(eswHelper.getSubtotalObject(matchingLineItem, false))}
+		<iselse>
+			${lineItem.priceTotal.price}
+		</isif>
+	</div>
+<iselse>
+	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
+	    ${lineItem.priceTotal.nonAdjustedPrice}
+	</div>
+	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">${lineItem.priceTotal.price}</div>
+</isif>

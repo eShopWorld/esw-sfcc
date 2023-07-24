@@ -1,0 +1,79 @@
+<isdecorate template="common/layout/page">
+    <isscript>
+        var assets = require('*/cartridge/scripts/assets.js');
+        assets.addCss('/css/checkout/checkout.css');
+        assets.addJs('/js/checkoutRegistration.js');
+    </isscript>
+
+    <isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled) ? dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled : false}" scope="page" />
+
+    <isif condition="${isEswEnabled}">
+        <div class="container my-5">
+            <div class="row justify-content-center">
+                <div class="col-sm-8 col-md-6">
+                <div class="card order-confirm-create-account">
+                <div class="card-header">
+                    <h3 class="card-header-custom">${Resource.msg('title.save.customer.information', 'confirmation', null)}</h3>
+                </div>
+                <div class="card-body">
+                    <form
+                        action="${URLUtils.url('Order-CreateAccount', 'ID', pdict.orderNumber, 'UUID', pdict.orderUUID)}"
+                        class="checkout-registration"
+                        method="POST"
+                        name="checkout-register-form" ${pdict.passwordForm.attributes} novalidate>
+                        <div class="form-group">
+                            <label class="form-control-label" for="email">
+                                ${Resource.msg('label.profile.email','account',null)}
+                            </label>
+                            <input
+                                type="email"
+                                class="form-control"
+                                id="email"
+                                data-missing-error="${Resource.msg('error.message.required','forms',null)}"
+                                data-range-error="${Resource.msg('error.message.8_255characters','forms',null)}"
+                                value="<isprint value="${pdict.Customeremail}" encoding="off" />"
+                                readonly>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="form-group
+                            <isif condition="${pdict.passwordForm.newpassword.mandatory === true}">required</isif>">
+                            <label class="form-control-label" for="newPassword">
+                                ${Resource.msg('field.password','confirmation',null)}
+                            </label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="newPassword"
+                                data-missing-error="${Resource.msg('error.message.required','forms',null)}"
+                                data-range-error="${Resource.msg('error.message.8_255characters','forms',null)}"
+                                <isprint value="${pdict.passwordForm.newpassword.attributes}" encoding="off" />>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="form-group
+                            <isif condition="${pdict.passwordForm.newpasswordconfirm.mandatory === true}">required</isif>">
+                            <label class="form-control-label" for="newPasswordConfirm">
+                                ${Resource.msg('field.confirm.password','confirmation',null)}
+                            </label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="newPasswordConfirm"
+                                data-missing-error="${Resource.msg('error.message.required','forms',null)}"
+                                data-range-error="${Resource.msg('error.message.8_255characters','forms',null)}"
+                                <isprint value="${pdict.passwordForm.newpasswordconfirm.attributes}" encoding="off" />>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <input type="hidden" name="${dw.web.CSRFProtection.getTokenName()}" value="${dw.web.CSRFProtection.generateToken()}"/>
+
+                        <button class="btn btn-primary btn-block">
+                            ${Resource.msg('button.create.account','confirmation',null)}
+                        </button>
+                    </form>
+                </div>
+            </div>
+                </div>
+            </div>
+        </div>
+    </isif>
+</isdecorate>
