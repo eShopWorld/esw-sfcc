@@ -1,0 +1,173 @@
+<div id="simpleSearchDiv"
+    style="${(pdict.submittedFrom === Constants.SIMPLE_FORM || pdict.currentController === 'Start') ? '' : 'display: none;'}">
+    <form action="${URLUtils.https('EShopWorldBM-Search')}" method="GET" name="simpleProductFrm"
+        enctype="application/x-www-form-urlencoded">
+        <input name="submittedFrom" value="${Constants.SIMPLE_FORM}" type="hidden" />
+        <table cellspacing="0" cellpadding="4" width="100%" class="infobox w e s">
+            <tbody>
+                <tr>
+                    <td class="infobox_title_search" colspan="3" nowrap="nowrap">Product Search</td>
+                    <td align="right" nowrap="nowrap" class="infobox_item_search">
+                        <span class="switch_link">Simple</span>&nbsp;
+                        <a href="#" onclick="switchToAdvancedSearch();" class="switch_link">Advanced</a>&nbsp;
+                        <a href="#" onclick="switchToIDListSearch();" class="switch_link">By ID</a>
+                    </td>
+                </tr>
+                <tr>
+                </tr>
+                <tr>
+                    <td colspan="4" width="100%">
+                        <table border="0" cellpadding="0" cellspacing="0">
+                            <tbody>
+                                <tr>
+                                    <td class="infobox_item" style="padding: 0 4px 0 4px;" nowrap="nowrap">
+                                        <label for="WFSimpleSearch_NameOrID">
+                                            Name or ID:
+                                        </label>
+                                    </td>
+                                    <td nowrap="nowrap">
+                                        <input id="searchProduct" type="text" name="q"
+                                            value="${!empty(pdict.query) && pdict.query != '*' ? pdict.query : ''}"
+                                            maxlength="255" size="35" class="inputfield_en perm_not_disabled">
+                                        <button name="findSimple" id="searchAction" class="button perm_not_disabled"
+                                            type="submit">
+                                            Find
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+</div>
+
+<div id="AdvancedSearchDiv" style="${pdict.submittedFrom === Constants.ADVANCE_FORM ? '' : 'display: none;'}">
+    <form action="${dw.web.URLUtils.https('EShopWorldBM-Search')}" method="GET" name="AdvProductFrm">
+        <input name="submittedFrom" value="${Constants.ADVANCE_FORM}" type="hidden" />
+        <table cellspacing="0" cellpadding="4" width="100%" class="infobox w e s">
+            <colgroup>
+                <col width="15%">
+                <col width="15%">
+                <col width="10%">
+                <col width="15%">
+                <col width="8%">
+                <col width="15%">
+                <col width="22%">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="infobox_title_search" colspan="6" nowrap="nowrap">Product Search</td>
+                    <td align="right" nowrap="nowrap" class="infobox_item_search">
+                        <a href="#" onclick="switchToSimpleSearch();" class="switch_link">Simple</a>&nbsp;
+                        <span class="switch_link">Advanced</span>&nbsp;
+                        <a href="#" onclick="switchToIDListSearch();" class="switch_link">By ID</a>
+                    </td>
+                </tr>
+                <tr>
+                </tr>
+                <tr>
+                    <td class="infobox_item_search" nowrap="nowrap">Filter By:&nbsp;</td>
+                    <td class="infobox_item_search">
+                        <select id="filterAttribute" name="filterAttribute" style="width:20em;"
+                            class="select perm_not_disabled" onfocus="addSorting('filterAttribute');">
+                            <option value="none" ${!empty(pdict.filterValue) && pdict.filterValue == 'none' ? 'selected' : ''}>All</option>
+                            <option value="unsynced" ${!empty(pdict.filterValue) && pdict.filterValue == 'unsynced' ? 'selected' : ''}>Unsynced</option>
+                            <option value="synced" ${!empty(pdict.filterValue) && pdict.filterValue == 'synced' ? 'selected' : ''}>Synced</option>
+                        </select>
+                    </td>
+                    <td class="infobox_item_search">&nbsp;</td>
+                    <td class="infobox_item_search">
+                        <select id="SortingDirection" name="SortingDirection" style="width:15em;"
+                            class="select perm_not_disabled" fdprocessedid="2halcs">
+                            <option value="eswSyncAscending" ${!empty(pdict.sortingValue) && pdict.sortingValue == 'eswSyncAscending' ? 'selected' : ''}>Ascending</option>
+                            <option value="eswSyncDescending" ${!empty(pdict.sortingValue) && pdict.sortingValue == 'eswSyncDescending' ? 'selected' : ''}>Descending</option>
+                        </select>
+                    </td>
+                    <td class="infobox_item_search">&nbsp;</td>
+                    <td class="infobox_item_search">
+                        <select id="InitialPageSize" name="InitialPageSize" style="width:18em;"
+                            class="select perm_not_disabled" fdprocessedid="sxhuxd">
+                            <option value="10" ${!empty(pdict.selectedPageResultNumber) && pdict.selectedPageResultNumber == '10' ? 'selected' : ''}>10 results per page</option>
+                            <option value="50" ${!empty(pdict.selectedPageResultNumber) && pdict.selectedPageResultNumber == '50' ? 'selected' : ''}>50 results per page</option>
+                            <option value="100" ${!empty(pdict.selectedPageResultNumber) && pdict.selectedPageResultNumber == '100' ? 'selected' : ''}>100 results per page</option>
+                            <option value="1000" ${!empty(pdict.selectedPageResultNumber) && pdict.selectedPageResultNumber == '1000' ? 'selected' : ''}>All (maximum 1000)</option>
+                        </select>
+                    </td>
+                    <td align="right" width="100%" class="infobox_item_search">&nbsp;</td>
+                </tr>
+                <tr>
+                    <td valign="bottom" colspan="7" align="right" style="padding: 0 4px 4px 0;">
+                        <button name="findSimple" id="loadAdvance" class="button perm_not_disabled"
+                            fdprocessedid="mo50gl" data-url="${dw.web.URLUtils.https('EShopWorldBM-Search')}"
+                            onclick="loadAdvanceSearch()">Find</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+</div>
+
+<div id="IDSearchListDiv" style="${pdict.submittedFrom === Constants.By_ID_FORM ? '' : 'display: none;'}">
+    <form action="${dw.web.URLUtils.https('EShopWorldBM-Search')}" method="GET" name="ByIdProductFrm">
+        <input name="submittedFrom" value="${Constants.By_ID_FORM}" type="hidden" />
+        <table cellspacing="0" cellpadding="4" width="100%" class="infobox w e s">
+            <tbody>
+                <tr>
+                    <td class="infobox_title_search" colspan="3" nowrap="nowrap">Product Search</td>
+                    <td align="right" nowrap="nowrap" class="infobox_item_search">
+                        <a href="#" onclick="switchToSimpleSearch();" class="switch_link">Simple</a>&nbsp;
+                        <a href="#" onclick="switchToAdvancedSearch();" class="switch_link">Advanced</a>&nbsp;
+                        <span class="switch_link">By ID</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" class="infobox_item_search"><img
+                            src="/on/demandware.static/Sites-Site/-/default/vaddcde23fc7e3c25383ea9247692d46eb3e8b005/images/space.gif"
+                            width="1" height="1" alt=""></td>
+                </tr>
+
+                <tr>
+                    <td colspan="4">
+                        <table cellpadding="0" cellspacing="0" style="width:100%" border="0">
+                            <tbody>
+                                <tr>
+
+                                    <td class="infobox_item_search" valign="top" nowrap="nowrap" width="5%">
+                                        <span data-dw-name="List of IDs:" data-dw-attrid="listIDs"
+                                            data-dw-tooltip="ProductSet.listIDs" class="tooltipstered">List of
+                                            IDs:</span></td>
+                                    <td class="infobox_item_search" align="left" width="23%">
+                                        <textarea rows="3" cols="80" name="WFSimpleSearch_IDList"
+                                            class="perm_not_disabled"
+                                            id="searchList">${!empty(pdict.idBasedSearch) ? pdict.idBasedSearch : ''}</textarea>
+                                    </td>
+                                    <td valign="top">
+                                        <input type="checkbox" id="searchListCheckBox" value="true"
+                                            ${!empty(pdict.nlSeparatorOnly) && pdict.nlSeparatorOnly ? "checked" : ''}
+                                            name="WFSimpleSearch_IDList_NewlineSeparatorOnly">
+                                        Use only newline as separator
+                                    </td>
+                                    <input type="hidden" name="DefaultButton" value="findIDList">
+
+                                    <td align="right" valign="bottom" style="padding-right: 4px;">&nbsp;
+                                        <button name="findSimple" id="loadListSearch" class="button perm_not_disabled"
+                                            fdprocessedid="mo50gl"
+                                            data-url="${dw.web.URLUtils.https('EShopWorldBM-Search')}"
+                                            onclick="loadListSearch()">Find</button>
+                                </tr>
+                                <tr>
+                                    <td class="infobox_item_search"><img
+                                            src="/on/demandware.static/Sites-Site/-/default/vaddcde23fc7e3c25383ea9247692d46eb3e8b005/images/space.gif"
+                                            width="1" height="1" alt=""></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+</div>

@@ -1,0 +1,63 @@
+<isif condition="${internallyValidProductRes.isError}">
+    <isloop items="${internallyValidProductRes.errorMsg}" var="productSyncErrorMsg" status="index">
+        <div class="clip-txt alert alert-warning">
+            ${Resource.msg('label.internal.error.found', 'eswbm', null)}
+            <isif condition="${index.count === 1}">
+                <isif condition="${internallyValidProductRes.errorMsg.length > 0}">
+                    <div class="btn btn-primary tooltip">
+                        <div class="left">
+                            <h3>${Resource.msg('heading.validation.error', 'eswbm', null)}</h3>
+                            <ol class="error-msg">
+                                <isloop items="${internallyValidProductRes.errorMsg}" var="productSyncErrorMsgInner">
+                                    <li>
+                                        <isprint value="${productSyncErrorMsgInner}" encoding="off" />
+                                    </li>
+                                </isloop>
+                                <i></i>
+                            </ol>
+                        </div>
+                    </div>
+                </isif>
+                <isbreak/>
+            </isif>
+        </div>
+    </isloop>
+<iselse/>
+    <isset value="${eswSyncHelper.getSyncStatusInfo(product.product)}" name="syncStatus" scope="page" />
+    <isif condition="${syncStatus === 'synced'}">
+        <div class="alert-success alert">
+            ${Resource.msg('label.status.success.message', 'eswbm', null)}
+            <isprint value="${new Date(JSON.parse(product.product.custom.eswSyncMessage).lastSynced)}"
+                style="DATE_SHORT" />
+            <isprint value="${new Date(JSON.parse(product.product.custom.eswSyncMessage).lastSynced)}"
+                style="DATE_TIME" />
+            <div class="btn btn-primary tooltip">
+                <div class="left">
+                    <h3>${Resource.msg('label.api.response', 'eswbm', null)}</h3>
+                    <p><code>${product.product.custom.eswSyncMessage}</code></p>
+                    <ul>
+                        <i></i>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    <iselseif condition="${syncStatus === 'apiError'}">
+            <div class="alert-danger alert">
+                ${Resource.msg('label.validated.external', 'eswbm', null)}
+                <div class="btn btn-primary tooltip">
+                    <div class="left">
+                        <h3>${Resource.msg('label.api.response', 'eswbm', null)}</h3>
+                        <p><code>${product.product.custom.eswSyncMessage}</code></p>
+                        <ul>
+                            <i></i>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </iselseif>
+    <iselse/>
+        <div class="alert-info alert">
+            ${Resource.msg('label.validated.prod', 'eswbm', null)}
+        </div>
+    </isif>
+</isif>

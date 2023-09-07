@@ -1,0 +1,228 @@
+{
+    "step-types": {
+        "script-module-step": [
+            {
+                "@type-id": "custom.ESW_GetPriceFeed",
+                "timeout-in-seconds": "180000",
+                "description": "This job is used to get ESW price feed from pricing advisor.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GetPriceFeed.js",
+                "transactional": "true",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_ExecuteCatalogFeed",
+                "timeout-in-seconds": "180000",
+                "description": "This job syncs Retailer catalog with ESW Catalog service.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/CatalogFeed.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_RetailerCatalogAPI",
+                "timeout-in-seconds": "180000",
+                "description": "This job synch catalog between SFCC & ESW Via Rest API",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswCatalogAPI.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_ExecutePackageFeed",
+                "timeout-in-seconds": "180000",
+                "description": "This job syncs Retailer Package Information with ESW Package service.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/sendASNtoESW.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_GenerateLocalizePricing",
+                "timeout-in-seconds": "180000",
+                "description": "This job used to calculate and generate localize price books.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizePricing.js",
+                "transactional": "true",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "impexDirPath",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define IMPEX directory path here."
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_GenerateLocalizePromotions",
+                "timeout-in-seconds": "180000",
+                "description": "This job used to generate localize promotions.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizePromotions.js",
+                "transactional": "true",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "impexDirPath",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define IMPEX directory path here."
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_EswToSfccOrderCancellation",
+                "timeout-in-seconds": "180000",
+                "description": "This job cancel orders in SFCC which are cancelled in ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/EswToSfccOrderCancellation.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_orderReturns",
+                "timeout-in-seconds": "180000",
+                "description": "This job returns orders in esw which are returned in sfcc",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/ESWOrderReturns.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_OrderStatus",
+                "timeout-in-seconds": "180000",
+                "description": "This job synch Order Status between SFCC & ESW.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/OrderStatus.js",
+                "transactional": "false",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "action",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define Order Status action here.",
+                            "default-value": "Cancel"
+                        },
+                        {
+                            "@name": "actionBy",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define action by here [Retailer, Shopper, eShopWorld].",
+                            "default-value": "Retailer"
+                        },
+                        {
+                            "@name": "actionByUserEmail",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define action by user email here."
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_Settings",
+                "timeout-in-seconds": "1800",
+                "description": "This job automates ESW configurations in SFCC BM.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/Settings.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "settingType",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define Setting Type here."
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_LocalizedProductFeed",
+                "description": "This job is used to create price feeds for different marketplaces.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeProductFeed.js",
+                "transactional": "false",
+                "function": "execute",
+                "@supports-organization-context": false,
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "impexDirPath",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define IMPEX directory path here.",
+                            "default-value": "Impex/src/product-feeds"
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_InventoryFeed",
+                "@supports-organization-context": false,
+                "description": "This job is used to create inventory feed for current site.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateInventoryFeed.js",
+                "transactional": "false",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "impexDirPath",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define IMPEX directory path here.",
+                            "default-value": "Impex/src/inventory-feeds"
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_OrderAppeasementStatus",
+                "timeout-in-seconds": "180000",
+                "description": "This job syncs appeasement from ESW to SFCC orders",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/EswOrderAppeasementStatus.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_HealthCheck",
+                "timeout-in-seconds": "180000",
+                "description": "This job go through all services and check their health with predefined payload",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/EswHealthCheck.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "impexDirPath",
+                            "@type": "string",
+                            "@required": "true",
+                            "description": "Define output IMPEX directory path here.",
+                            "default-value": "Impex/src/ESW/logs/health-check"
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.ESW_ExportMarketPlaceOrders",
+                "timeout-in-seconds": "180000",
+                "description": "This job go through all market placed orders and export them to ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswExportMarketPlaceOrders.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            }
+        ]
+    }
+}

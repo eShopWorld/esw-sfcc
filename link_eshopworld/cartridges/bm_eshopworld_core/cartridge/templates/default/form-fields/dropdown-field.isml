@@ -1,0 +1,9 @@
+<select class="esw-bm-select esw-pref-input" name="${sitePrefField.id}" id="${sitePrefField.id}">
+    <isloop items="${sitePrefField.enumValues}" var="enumValue">
+        <isif condition="${enumValue.value == sitePrefField.currentValue}">
+            <option value="${enumValue.value}" selected>${enumValue.displayValue}</option>
+        <iselse/>
+            <option value="${enumValue.value}">${enumValue.displayValue}</option>
+        </isif>
+    </isloop>
+</select>

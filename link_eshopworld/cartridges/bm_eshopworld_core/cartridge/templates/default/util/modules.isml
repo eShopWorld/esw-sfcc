@@ -1,0 +1,9 @@
+<iscontent type="text/html" charset="UTF-8" compact="true"/>
+<iscomment>
+	Creates a paging bar on the page
+</iscomment>
+<ismodule template = "components/eswpagingbar"
+	name="eswpagingbar"
+	attribute="pageurl"
+	attribute="pagingmodel"
+/>
