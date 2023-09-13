@@ -65,7 +65,7 @@
         </group-definitions>
     </custom-type>
     <custom-type type-id="ESW_COUNTRIES">
-        <display-name xml:\lang="x-default">ESW Countries</display-name>
+        <display-name xml:lang="x-default">ESW Countries</display-name>
         <description xml:lang="x-default">This custom object type to hold ESW Supported &amp; Non-Supported Countries.</description>
         <staging-mode>no-staging</staging-mode>
         <storage-scope>site</storage-scope>
