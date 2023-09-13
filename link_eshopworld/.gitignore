@@ -1,0 +1,15 @@
+node_modules/
+coverage/
+npm-debug.log
+cartridges.zip
+.idea/
+dw.json
+.DS_Store
+test/appium/webdriver/config.json
+.vscode
+.history
+*.iml
+.idea
+test/acceptance/report
+test/integration/config.json
+.nyc_output

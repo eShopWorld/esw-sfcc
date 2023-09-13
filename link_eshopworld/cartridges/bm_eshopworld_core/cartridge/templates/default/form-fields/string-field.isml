@@ -1,0 +1,1 @@
+<input id="${sitePrefField.id}" class="esw-bm-input-text esw-pref-input" type="text" name="${sitePrefField.id}" value="${sitePrefField.currentValue}" />

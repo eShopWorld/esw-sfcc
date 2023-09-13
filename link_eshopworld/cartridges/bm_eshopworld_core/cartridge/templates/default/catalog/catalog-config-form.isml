@@ -1,0 +1,6 @@
+<isdecorate template="application/ESWMenuFrame">
+    <isinclude template="util/modules" />
+    <isset value="${true}" name="isCatalogForm" scope="page" />
+    <input type="hidden" id="eswCatalogReleventFields" value="${JSON.stringify(pdict.relatedMethodFields)}" />
+    <isinclude template="/common/esw-site-pref-form" />
+</isdecorate>

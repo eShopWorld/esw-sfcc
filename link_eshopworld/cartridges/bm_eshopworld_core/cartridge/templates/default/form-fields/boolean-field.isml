@@ -1,0 +1,5 @@
+<select class="esw-bm-select esw-pref-input" name="${sitePrefField.id}" id="${sitePrefField.id}">
+    <option value="" disabled>None</option>
+    <option value="true" <isif condition="${sitePrefField.currentValue === true}">selected</isif>>Yes</option>
+    <option value="false" <isif condition="${sitePrefField.currentValue === false}">selected</isif>>No</option>
+</select>

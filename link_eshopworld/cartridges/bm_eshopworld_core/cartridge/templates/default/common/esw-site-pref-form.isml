@@ -1,0 +1,49 @@
+<form id="esw-bm-config-form" action="${URLUtils.abs('EShopWorldBM-SavePostedConfig')}" method="POST">
+    <table class="table full-width">
+        <tr>
+            <td class="top left">
+                <section>
+                    <h1><strong>${pdict.sitePrefFields.displayName}</strong></h1>
+                </section>
+            </td>
+            <td class="top right"><input type="submit" value="Save" class="esw-frm-submit-btn" /></td>
+        </tr>
+    </table>
+    <div class="esw-v-seperatpr">&nbsp;</div>
+    <table class="table esw-form-table">
+        <tr>
+            <th class="table_header w e s">Name</th>
+            <th class="table_header w e s">Value</th>
+            <th class="table_header w e s">Default Value</th>
+        </tr>
+        <isloop items="${pdict.sitePrefFields.attributes}" var="sitePrefField">
+            <tr class="esw-field-${sitePrefField.id}">
+                <td class="top">
+                    <label>${sitePrefField.displayName}</label>
+                    <hr />
+                    <p>
+                        (${sitePrefField.id})
+                        <br />
+                        (${sitePrefField.type.type})
+                    </p>
+                </td>
+                <td class="top center">
+                    <p>
+                        <isinclude template="${sitePrefField.type.template}" />
+                    </p>
+                </td>
+                <td class="top center">
+                    <isif
+                        condition=" ${!empty(sitePrefField.defaultValue) && sitePrefField.defaultValue.getValue() === true}">
+                        Yes
+                        <iselseif
+                            condition="${!empty(sitePrefField.defaultValue) && sitePrefField.defaultValue.getValue() === false}">
+                            No
+                        <iselse/>
+                            ${!empty(sitePrefField.defaultValue) ? sitePrefField.defaultValue.getValue() : ''}
+                    </isif>
+                </td>
+            </tr>
+        </isloop>
+    </table>
+</form>

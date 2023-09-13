@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <custom-type type-id="ESW_PA_DATA">
+        <display-name xml:lang="x-default">ESW Pricing Advisor Data</display-name>
+        <description xml:lang="x-default">This custom object type holds ESW pricing advisor data coming from ESW.</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>site</storage-scope>
+        <key-definition attribute-id="pricingKey">
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="countryAdjustmentJson">
+                <display-name xml:lang="x-default">ESW Country Adjustment JSON</display-name>
+                <description xml:lang="x-default">Country Adjustment JSON will be stored here for internal use</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswPriceFeedLastUpdated">
+                <display-name xml:lang="x-default">ESW Price Feed Last Updated on</display-name>
+                <description xml:lang="x-default">Last updated date of price feed. The job will always check this day with the current day to make sure we are suspending the API call till the next day.</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswPricingSynchronizationId">
+                <display-name xml:lang="x-default">ESW Pricing Synchronization Id</display-name>
+                <description xml:lang="x-default">A globally unique identifier (GUID), used to identify the generated pricing advice.</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRoundingJson">
+                <display-name xml:lang="x-default">ESW Rounding Rules</display-name>
+                <description xml:lang="x-default">Rounding Rules will be stored here for internal use</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="fxRatesJson">
+                <display-name xml:lang="x-default">ESW FX Rates JSON</display-name>
+                <description xml:lang="x-default">FX Rate JSON will be stored here for internal use</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="esw_pricing_data">
+                <display-name xml:lang="x-default">ESW Pricing Data</display-name>
+                <attribute attribute-id="fxRatesJson"/>
+                <attribute attribute-id="countryAdjustmentJson"/>
+                <attribute attribute-id="eswRoundingJson"/>
+                <attribute attribute-id="eswPricingSynchronizationId"/>
+                <attribute attribute-id="eswPriceFeedLastUpdated"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+    <custom-type type-id="ESW_COUNTRIES">
+        <display-name xml:lang="x-default">ESW Countries</display-name>
+        <description xml:lang="x-default">This custom object type to hold ESW Supported &amp; Non-Supported Countries.</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>site</storage-scope>
+        <key-definition attribute-id="countryCode">
+            <display-name xml:lang="x-default">Country Code</display-name>
+            <description xml:lang="x-default">This value will indicate the country code.</description>
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="baseCurrencyCode">
+                <display-name xml:lang="x-default">Base Currency Code</display-name>
+                <description xml:lang="x-default">ISO-3 Currency Code</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="defaultCurrencyCode">
+                <display-name xml:lang="x-default">Default Currency Code</display-name>
+                <description xml:lang="x-default">ISO-3 Currency Code</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="isFixedPriceModel">
+                <display-name xml:lang="x-default">Is Fixed Price Model</display-name>
+                <description xml:lang="x-default">This flag will indicate whether this country is using fixed price model or not.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="isSupportedByESW">
+                <display-name xml:lang="x-default">Is ESW Supported Country</display-name>
+                <description xml:lang="x-default">This flag will indicate whether this country is supported by ESW or not.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="isProductFeedSupported">
+                <display-name xml:lang="x-default">Is Product Feed Supported?</display-name>
+                <description xml:lang="x-default">If checked, then product feeds for this country will be generated.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="name">
+                <display-name xml:lang="x-default">Name</display-name>
+                <description xml:lang="x-default">Country Name</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="hubAddress">
+                <display-name xml:lang="x-default">Address</display-name>
+                <description xml:lang="x-default">ESW Hub Address</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="hubAddressState">
+                <display-name xml:lang="x-default">State</display-name>
+                <description xml:lang="x-default">ESW Hub Address State</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="hubAddressCity">
+                <display-name xml:lang="x-default">City</display-name>
+                <description xml:lang="x-default">ESW Hub Address City</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="hubAddressPostalCode">
+                <display-name xml:lang="x-default">Postal Code</display-name>
+                <description xml:lang="x-default">ESW Hub Address</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="esw_countries">
+                <display-name xml:lang="x-default">ESW Countries</display-name>
+                <attribute attribute-id="countryCode"/>
+                <attribute attribute-id="name"/>
+                <attribute attribute-id="defaultCurrencyCode"/>
+                <attribute attribute-id="baseCurrencyCode"/>
+                <attribute attribute-id="isSupportedByESW"/>
+                <attribute attribute-id="isFixedPriceModel"/>
+                <attribute attribute-id="isProductFeedSupported"/>
+            </attribute-group>
+            <attribute-group group-id="eswHubAddress">
+                <display-name xml:lang="x-default">ESW HUB Address</display-name>
+                <attribute attribute-id="hubAddress"/>
+                <attribute attribute-id="hubAddressState"/>
+                <attribute attribute-id="hubAddressCity"/>
+                <attribute attribute-id="hubAddressPostalCode"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+
+    <custom-type type-id="ESW_CURRENCIES">
+        <display-name xml:lang="x-default">ESW Currencies</display-name>
+        <description xml:lang="x-default">This custom object type to hold ESW Currencies.</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>site</storage-scope>
+        <key-definition attribute-id="currencyCode">
+            <display-name xml:lang="x-default">Currency Code</display-name>
+            <description xml:lang="x-default">This value will indicate the ISO code for the currency.</description>
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="isSupportedByESW">
+                <display-name xml:lang="x-default">Is ESW Supported Currency</display-name>
+                <description xml:lang="x-default">This flag will indicate whether this currency is supported by ESW or not.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="name">
+                <display-name xml:lang="x-default">Name</display-name>
+                <description xml:lang="x-default">Currency Name</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="esw_currencies">
+                <display-name xml:lang="x-default">ESW Currencies</display-name>
+                <attribute attribute-id="currencyCode"/>
+                <attribute attribute-id="name"/>
+                <attribute attribute-id="isSupportedByESW"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+</metadata>
