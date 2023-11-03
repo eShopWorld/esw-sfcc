@@ -51,20 +51,24 @@ function setDefaultCurrency($selectedCurrency) {
     });
 }
 
-function openEswCountrySwitcher(dataObj) {
+window.openEswCountrySwitcher = function (dataObj, selectedCountryParam) {
     $.ajax({
         type: 'get',
         url: Urls.getEswLandingPage,
         data: dataObj,
         success: function (response) {
             $('#navigation').prepend(response);
-            let $selectedCurrency = $('#selected-currency');
-            if ($selectedCurrency.length > 0) {
-                setDefaultCurrency($selectedCurrency);
+            if (selectedCountryParam && typeof selectedCountryParam !== 'undefined' && selectedCountryParam.length > 0) {
+                $('.esw-country-selector .selector .country.landing-link[data-param="' + selectedCountryParam + '"]').trigger('click');
+            } else {
+                let $selectedCurrency = $('#selected-currency');
+                if ($selectedCurrency.length > 0) {
+                    setDefaultCurrency($selectedCurrency);
+                }
             }
         }
     });
-}
+};
 
 function updateCountryList() {
     $(document).on('click', '.btnCheckout', function (e) {
@@ -83,6 +87,12 @@ function updateCountryList() {
     $(document).on('click', '.closeLandingPage', function () {
         $('.eswModal').hide();
         $('.modalBg').hide();
+        let geoCountry = $('script#eswMattAutoOpen').attr('data-current-geo-location');
+        window.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
+    });
+    $(document).on('click', '#continueButton', function () {
+        let geoCountry = $('script#eswMattAutoOpen').attr('data-current-geo-location');
+        window.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
     });
 
     // set currency first before reload
@@ -138,7 +148,7 @@ function updateCountryList() {
         let dataObj = {
             dropDownSelection: 'true'
         };
-        openEswCountrySwitcher(dataObj);
+        window.openEswCountrySwitcher(dataObj);
     });
 
     $(document).on('click', '.selected-link', function () {

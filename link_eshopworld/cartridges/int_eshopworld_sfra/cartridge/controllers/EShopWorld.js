@@ -160,10 +160,17 @@ server.get('GetDefaultCurrency', function (req, res, next) {
  * Get ESW App Resources for frontend prices conversion (content assets & callout messages)
  */
 server.get('GetEswAppResources', function (req, res, next) {
-    let Currency = require('dw/util/Currency'),
-        selectedCurrency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry()),
-        selectedCountry = eswHelper.getSelectedCountryDetail(eswHelper.getAvailableCountry());
-
+    let selectedCountryParam = null;
+    let Site = require('dw/system/Site').getCurrent();
+    let Currency = require('dw/util/Currency');
+    let locationUrlParameter = req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
+    if (empty(locationUrlParameter.value)) {
+        selectedCountryParam = !empty(request.httpCookies['esw.location']) && !empty(request.httpCookies['esw.location'].value) ? request.httpCookies['esw.location'].value : eswHelper.getAvailableCountry();
+    } else {
+        selectedCountryParam = locationUrlParameter.value;
+    }
+    let selectedCountry = eswHelper.getSelectedCountryDetail(selectedCountryParam);
+    let selectedCurrency = eswHelper.getDefaultCurrencyForCountry(selectedCountry.countryCode);
     res.render('/EswMfComponents/eswAppResources', {
         isEswRoundingsEnabled: eswHelper.isEswRoundingsEnabled(),
         isFrontendConversionEnabled: eswHelper.isFrontendConversionEnabled(),
@@ -563,6 +570,9 @@ server.get('RegisterCustomer', function (req, res, next) {
                             allAddresses.forEach(function (address) {
                                 addressHelpers.saveAddress(address, { raw: newCustomer }, addressHelpers.generateAddressName(address));
                             });
+                            // update marketing optin values on customer profile
+                            newCustomerProfile.custom.eswMarketingOptIn = order.custom.eswEmailMarketingOptIn;
+                            newCustomerProfile.custom.eswSMSMarketingOptIn = order.custom.eswSMSMarketingOptIn;
 
                             res.setViewData({ newCustomer: newCustomer });
                             res.setViewData({ order: order });

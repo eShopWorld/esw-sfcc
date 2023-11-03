@@ -186,16 +186,6 @@
                 }
             },
             {
-                "@type-id": "custom.ESW_OrderAppeasementStatus",
-                "timeout-in-seconds": "180000",
-                "description": "This job syncs appeasement from ESW to SFCC orders",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/EswOrderAppeasementStatus.js",
-                "function": "execute",
-                "parameters": {
-                    "parameters": []
-                }
-            },
-            {
                 "@type-id": "custom.ESW_HealthCheck",
                 "timeout-in-seconds": "180000",
                 "description": "This job go through all services and check their health with predefined payload",

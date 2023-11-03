@@ -3,6 +3,8 @@
 * Helper script for order confirmation back into SFCC from ESW Checkout
 **/
 const Site = require('dw/system/Site').getCurrent();
+const CustomerMgr = require('dw/customer/CustomerMgr');
+const CustomObjectMgr = require('dw/object/CustomObjectMgr');
 
 /* Script Modules */
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
@@ -163,6 +165,7 @@ const getEswOcHelper = {
         order.custom.eswRetailerCurrencyPaymentAmount = Number(obj.checkoutTotal.retailer.amount);
         order.custom.eswEmailMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
         order.custom.eswDeliveryOption = obj.deliveryOption.deliveryOption;
+        order.custom.eswSMSMarketingOptIn = !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false;
 
         let shoppercurrencyAmount = Number(obj.checkoutTotal.shopper.amount);
         let retailercurrencyAmount = Number(obj.checkoutTotal.retailer.amount);
@@ -181,7 +184,6 @@ const getEswOcHelper = {
         order.custom.eswRetailerCurrencyDeliveryDiscountsInfo = !empty(eswRetailerCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswRetailerCurrencyDeliveryDiscountsInfo) : '';
         order.custom.eswShopperCurrencyDeliveryDiscountsInfo = !empty(eswShopperCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswShopperCurrencyDeliveryDiscountsInfo) : '';
 
-        let CustomObjectMgr = require('dw/object/CustomObjectMgr');
         let CountryCO = CustomObjectMgr.getCustomObject('ESW_COUNTRIES', obj.deliveryCountryIso);
         if (!empty(CountryCO) && !empty(CountryCO.custom.hubAddress)) {
             order.custom.eswHubAddress = CountryCO.custom.hubAddress;
@@ -192,6 +194,17 @@ const getEswOcHelper = {
 
         if (!empty(order.customer) && !empty(order.customer.profile)) {
             order.customer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+            if (!empty(obj.shopperCheckoutExperience.smsMarketingOptIn)) {
+                order.customer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+            }
+        } else {
+            let existedCustomer = CustomerMgr.getCustomerByLogin(!empty(obj.contactDetails[0].email) ? obj.contactDetails[0].email : obj.contactDetails[1].email);
+            if (!empty(existedCustomer) && obj.shopperCheckoutExperience.emailMarketingOptIn === true) {
+                existedCustomer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+            }
+            if (!empty(existedCustomer) && obj.shopperCheckoutExperience.smsMarketingOptIn === true) {
+                existedCustomer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+            }
         }
     },
     /**
@@ -289,7 +302,6 @@ const getEswOcHelper = {
     */
     saveAddressinAddressBook: function (contactDetails, customerID) {
         try {
-            let CustomerMgr = require('dw/customer/CustomerMgr');
             let addressHelpers = require('*/cartridge/scripts/helpers/addressHelpers');
             let addressBook = CustomerMgr.getCustomerByCustomerNumber(customerID).getAddressBook();
             let addressList = addressBook.getAddresses();
@@ -361,6 +373,7 @@ const getEswOcHelper = {
         order.custom.eswShopperCurrencyPaymentAmount = Number(obj.shopperCurrencyPaymentAmount.substring(3));
         order.custom.eswRetailerCurrencyPaymentAmount = Number(obj.retailerCurrencyPaymentAmount.substring(3));
         order.custom.eswEmailMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+        order.custom.eswSMSMarketingOptIn = !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false;
         order.custom.eswDeliveryOption = obj.deliveryOption.deliveryOption;
 
         let shoppercurrencyAmount = Number(obj.shopperCurrencyPaymentAmount.substring(3));
@@ -384,6 +397,17 @@ const getEswOcHelper = {
 
         if (!empty(order.customer) && !empty(order.customer.profile)) {
             order.customer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+            if (!empty(obj.shopperCheckoutExperience.smsMarketingOptIn)) {
+                order.customer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+            }
+        } else {
+            let existedCustomer = CustomerMgr.getCustomerByLogin(!empty(obj.contactDetails[0].email) ? obj.contactDetails[0].email : obj.contactDetails[1].email);
+            if (!empty(existedCustomer) && obj.shopperCheckoutExperience.emailMarketingOptIn === true) {
+                existedCustomer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+            }
+            if (!empty(existedCustomer) && obj.shopperCheckoutExperience.smsMarketingOptIn === true) {
+                existedCustomer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+            }
         }
     },
     /**

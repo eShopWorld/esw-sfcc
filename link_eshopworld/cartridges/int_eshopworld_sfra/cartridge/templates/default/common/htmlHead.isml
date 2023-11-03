@@ -1,3 +1,5 @@
+<isset value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" name="eswHelper" scope="page" />
+
 <meta charset=UTF-8>
 
 <meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -35,8 +37,11 @@
 </isloop>
 
 <isif condition="${'eswEshopworldModuleEnabled' in dw.system.Site.current.preferences.custom && dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled}">
-	<script defer type="text/javascript" src="${URLUtils.staticURL('/js/EswHooks.js')}"></script>
-	<link rel="stylesheet" href="${URLUtils.staticURL('/css/EswCss.css')}" />
+    <script defer="defer" src="${URLUtils.staticURL('/js/EswHooks.js')}"></script>
+    <isif condition="${!eswHelper.isSameGeoIpCountry().isSameCountry}">
+        <script id="eswMattAutoOpen" defer="defer" src="${URLUtils.staticURL('/js/EswMattAutoOpen.js')}" data-current-geo-location="${eswHelper.isSameGeoIpCountry().geoLocation}"></script>
+    </isif>
+    <link rel="stylesheet" href="${URLUtils.staticURL('/css/EswCss.css')}" />
 </isif>
 
 <isif condition="${'GoogleVerificationTag' in dw.system.Site.current.preferences.custom && dw.system.Site.current.preferences.custom.GoogleVerificationTag!=''}">

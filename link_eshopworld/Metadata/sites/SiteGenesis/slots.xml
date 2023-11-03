@@ -66,4 +66,28 @@ text-align: center;
         </content>
     </slot-configuration>
 
+    <slot-configuration slot-id="eswGeoIpChangeWarning" context="global" configuration-id="Location change warning" assigned-to-site="true">
+        <template>slots/html/htmlSlotContainer.isml</template>
+        <enabled-flag>true</enabled-flag>
+        <content>
+            <html>
+                <body xml:lang="x-default">&lt;style&gt;
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.alert-warning {
+  background-color: #fcf8e3;
+  border-color: #faebcc;
+  color: #8a6d3b;
+}
+&lt;/style&gt;
+                &lt;div class="alert alert-warning"&gt;We noticed that you are currently accessing our website from a different country than your last visit. To view all the latest products and prices available in your area, please confirm your delivery country. If no changes are required, you can ignore this warning.&lt;/div&gt;</body>
+            </html>
+        </content>
+    </slot-configuration>
+
 </slot-configurations>

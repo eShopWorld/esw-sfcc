@@ -4,7 +4,7 @@
   "description": "New Overlay Cartridge",
   "main": "index.js",
   "engines": {
-    "node": ">=4.0 <12.0.0"
+    "node": ">=10.0 <13.0"
   },
   "scripts": {
     "test": "sgmf-scripts --test test/unit/**/*spec.js",
@@ -33,10 +33,7 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.11.0",
     "@babel/preset-env": "^7.11.0",
     "@tridnguyen/config": "^2.3.1",
-    "@wdio/sauce-service": "^5.22.5",
-    "@wdio/selenium-standalone-service": "^5.13.2",
     "allure-commandline": "^2.13.0",
-    "appium": "^1.18.1",
     "babel-core": "^6.26.3",
     "babel-eslint": "^10.0.3",
     "babel-loader": "^8.1.0",
@@ -71,9 +68,7 @@
     "stylelint": "^8.4.0",
     "stylelint-config-standard": "^17.0.0",
     "stylelint-scss": "^2.5.0",
-    "url": "^0.11.0",
-    "wdio-mocha-framework": "^0.6.4",
-    "wdio-sauce-service": "^0.4.14"
+    "url": "^0.11.0"
   },
   "dependencies": {
     "bootstrap": "4.3.1",

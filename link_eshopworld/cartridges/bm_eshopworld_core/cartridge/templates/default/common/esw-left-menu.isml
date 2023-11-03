@@ -1,4 +1,4 @@
-<isset value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" name="eswHelper" scope="page" />
+<isset value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" name="eswHelper" scope="page" />
 <div class="esw-branding">
     <img src="${dw.web.URLUtils.staticURL('/icons/esw-icon.gif')}" alt="branding picture">
     <h3>&nbsp;</h3>

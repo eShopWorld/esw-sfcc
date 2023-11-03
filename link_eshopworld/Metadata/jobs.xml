@@ -190,13 +190,6 @@
                 <parameters/>
             </step>
         </flow>
-        <flow>
-            <context site-id="RefArch"/>
-            <step step-id="eswOrderAppeasementStatus" type="custom.ESW_OrderAppeasementStatus" enforce-restart="false">
-                <description>Sets ESW Order appeasement Status</description>
-                <parameters/>
-            </step>
-        </flow>
         <rules/>
         <triggers>
             <run-once enabled="false">

@@ -2,7 +2,7 @@
 const Site = require('dw/system/Site').getCurrent();
 const StringUtils = require('dw/util/StringUtils');
 const Transaction = require('dw/system/Transaction');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Calendar = require('dw/util/Calendar');
 
 const CATALOG_HELPER = {
@@ -12,7 +12,7 @@ const CATALOG_HELPER = {
      * @return {string} - formatted time stamp
      */
     formatTimeStamp: function (timeStamp) {
-        return StringUtils.formatCalendar(new dw.util.Calendar(timeStamp), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
+        return StringUtils.formatCalendar(new Calendar(timeStamp), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
     },
     /**
      * Saves the last execution time and date as a time stamp
@@ -24,6 +24,11 @@ const CATALOG_HELPER = {
             Site.setCustomPreferenceValue('eswCatalogFeedTimeStamp', today);
         });
     },
+    /**
+     * return filtered products
+     * @param {boolean} isApiMethod - if api method or not
+     * @returns {Object} - products
+     */
     getFilteredProducts: function (isApiMethod) {
         let ProductSearchModel = require('dw/catalog/ProductSearchModel');
         let prodModel = new ProductSearchModel();
@@ -40,11 +45,13 @@ const CATALOG_HELPER = {
         let productLastModifiedTimeStamp;
         if (isApiMethod) {
             let apiProducts = [];
-            while (searchAbleProducts.hasNext()) {
-                productSearchHit = searchAbleProducts.next();
-                productLastModifiedTimeStamp = new Calendar(new Date(productSearchHit.product.lastModified));
-                if (!this.isValidProduct(productSearchHit.product).isError && productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)) {
-                    apiProducts.push(productSearchHit.product);
+            if (searchAbleProducts) {
+                while (searchAbleProducts.hasNext()) {
+                    productSearchHit = searchAbleProducts.next();
+                    productLastModifiedTimeStamp = new Calendar(new Date(productSearchHit.product.lastModified));
+                    if (!this.isValidProduct(productSearchHit.product).isError && productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)) {
+                        apiProducts.push(productSearchHit.product);
+                    }
                 }
             }
             return apiProducts;
@@ -217,6 +224,7 @@ const CATALOG_HELPER = {
                 errorMessageObj.externallyValidated = true;
             }
         } catch (e) {
+            errorMessageObj.isError = true;
             errorMessageObj.errorMsg = '<code>product.custom.eswSyncMessage</code> custom attribute not exist';
         }
         return errorMessageObj;

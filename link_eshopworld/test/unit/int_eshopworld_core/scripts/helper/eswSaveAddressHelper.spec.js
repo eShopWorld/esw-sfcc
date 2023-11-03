@@ -4,6 +4,7 @@ var expect = chai.expect;
 
 var Collection = require('../../../../mocks/dw.util.Collection');
 var CustomerMgr = require('../../../../mocks/dw/customer/CustomerMgr');
+var CustomObjectMgrMock = require('../../../../mocks/dw/object/CustomObjectMgr');
 
 
 var contactDetailType = {
@@ -49,6 +50,7 @@ var contactDetails = [
 
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', function () {
     var eswCoreHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
+        'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         '*/cartridge/scripts/helper/eswHelper': {
             getEswHelper: function () {
                 return {
