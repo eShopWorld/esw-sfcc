@@ -45,11 +45,9 @@ describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helper
                 attributes: []
             };
         },
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getCatalogUploadMethod: function () { return 'api'; }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getCatalogUploadMethod: function () { return 'api'; }
             }
         }
     });

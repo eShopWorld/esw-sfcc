@@ -277,7 +277,11 @@ function preOrderRequest() {
         }
     } catch (e) {
         logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
-        redirectURL = URLUtils.https('Cart-Show', 'eswfail', true).toString();
+        if (e.message === 'SFCC_ORDER_CREATION_FAILED') {
+            redirectURL = URLUtils.https('Cart-Show', 'eswRetailerCartIdNullException', true).toString();
+        } else {
+            redirectURL = URLUtils.https('Cart-Show', 'eswfail', true).toString();
+        }
     }
     if (isAjax) {
         Response.renderJSON({
@@ -329,6 +333,9 @@ function handlePreOrderRequestV2() {
 
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
+    if (empty(requestObj.retailerCartId)) {
+        throw new Error('SFCC_ORDER_CREATION_FAILED');
+    }
     let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
     if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
         session.privacy.confirmedOrderID = requestObj.retailerCartId;
@@ -552,6 +559,9 @@ function registerCustomer() {
                     }
                     Transaction.wrap(function () {
                         order.customer = profileValidation;
+                        // update marketing optin values on customer profile
+                        profileValidation.profile.custom.eswMarketingOptIn = order.custom.eswEmailMarketingOptIn;
+                        profileValidation.profile.custom.eswSMSMarketingOptIn = order.custom.eswSMSMarketingOptIn;
                     });
                     session.custom.TargetLocation = URLUtils.https('Account-Show', 'Registration', 'true').toString();
                     target = session.custom.TargetLocation;

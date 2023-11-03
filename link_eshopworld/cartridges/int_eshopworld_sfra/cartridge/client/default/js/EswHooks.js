@@ -43,17 +43,17 @@ function setDefaultCurrency($selectedCurrency) {
         },
         success: function (response) {
             if (response.success) {
-				// Setting the default mapped currency
+                // Setting the default mapped currency
                 $selectedCurrency.html(response.currency);
                 $selectedCurrency.attr('data-value', response.currency);
 
-				// Check if country is esw allowed country and not fixed price country
+                // Check if country is esw allowed country and not fixed price country
                 if (response.isAllowed && !response.isFixedPriceCountry) {
-					// Yes, Enable Currency Selectors
+                    // Yes, Enable Currency Selectors
                     $currencySelector.removeClass('disabled');
                     $currencySelectorDropDown.removeClass('disabled');
                 } else {
-					// No, Disable Currency Selectors
+                    // No, Disable Currency Selectors
                     $currencySelector.addClass('disabled');
                     $currencySelectorDropDown.addClass('disabled');
                 }
@@ -65,22 +65,27 @@ function setDefaultCurrency($selectedCurrency) {
 /**
  * Open country switcher
  * @param {Object} dataObj - Data object
+ * @param {string} selectedCountryParam - Selected country code e.g. IE, UK, US etc
  */
-function openEswCountrySwitcher(dataObj) {
+window.openEswCountrySwitcher = function (dataObj, selectedCountryParam) {
     $.ajax({
         type: 'get',
         url: dataObj.eswLandingPageUrl,
         data: dataObj,
         success: function (response) {
+            let $selectedCurrency = null;
             $('header').prepend(response);
-            let $selectedCurrency = $('#selected-currency');
-
-            if ($selectedCurrency.length > 0) {
-                setDefaultCurrency($selectedCurrency);
+            if (selectedCountryParam && typeof selectedCountryParam !== 'undefined' && selectedCountryParam.length > 0) {
+                $('.esw-country-selector .selector .country.landing-link[data-param="' + selectedCountryParam + '"]').trigger('click');
+            } else {
+                $selectedCurrency = $('#selected-currency');
+                if ($selectedCurrency && $selectedCurrency.length > 0) {
+                    setDefaultCurrency($selectedCurrency);
+                }
             }
         }
     });
-}
+};
 
 /**
  * Updat country list
@@ -103,9 +108,15 @@ function updateCountryList() {
     $(document).on('click', '.closeLandingPage', function () {
         $('.eswModal').hide();
         $('.modalBg').hide();
+        let geoCountry = $('script#eswMattAutoOpen').attr('data-current-geo-location');
+        window.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
+    });
+    $(document).on('click', '#continueButton', function () {
+        let geoCountry = $('script#eswMattAutoOpen').attr('data-current-geo-location');
+        window.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
     });
 
-	// set currency first before reload
+    // set currency first before reload
     $('body').on('click', '.esw-country-selector .selector a.landing-link', function (e) {
         e.preventDefault();
         let element = $(this).parents('.select-field');
@@ -116,37 +127,12 @@ function updateCountryList() {
         $(this).parents('.active').removeClass('active');
     });
 
-	// This function selects default currency based on the selected country.
+    // This function selects default currency based on the selected country.
     $('body').on('click', '.esw-country-selector .selector .country.landing-link', function () {
         let $selectedCurrency = $('#selected-currency');
 
         if ($selectedCurrency.length > 0) {
             setDefaultCurrency($selectedCurrency);
-        }
-    });
-
-	// This function selects default currency based on the selected country.
-    $('body').on('click', '.esw-country-selector .selector .country.landing-link', function () {
-        let $selectedCurrency = $('#selected-currency');
-        let $selectedCountry = $('#selected-country');
-        let selectedCountry = $selectedCountry.attr('data-value');
-
-        let dataUrl = $selectedCountry.attr('data-url');
-
-        if ($selectedCurrency.length > 0) {
-            $.ajax({
-                type: 'get',
-                url: dataUrl,
-                data: {
-                    country: selectedCountry
-                },
-                success: function (response) {
-                    if (response.success) {
-                        $selectedCurrency.html(response.currency);
-                        $selectedCurrency.attr('data-value', response.currency);
-                    }
-                }
-            });
         }
     });
 
@@ -193,7 +179,7 @@ function updateCountryList() {
             eswLandingPageUrl: eswLandingPageUrl,
             dropDownSelection: 'true'
         };
-        openEswCountrySwitcher(dataObj);
+        window.openEswCountrySwitcher(dataObj);
     });
 
     $(document).on('click', '.selected-link', function () {
@@ -287,7 +273,7 @@ function applyRoundingMethod(price, model, roundingModel, isFractionalPart) {
     let rTLength = roundingTarget.length;
 
     if (isFractionalPart) {
-		// Truncate or make roundingTarget to only two digits for fractional part.
+        // Truncate or make roundingTarget to only two digits for fractional part.
         roundingTarget = rTLength === 1 ? roundingTarget + '0' : roundingTarget.substring(0, 2);
         rTLength = roundingTarget.length;
     }
@@ -296,7 +282,7 @@ function applyRoundingMethod(price, model, roundingModel, isFractionalPart) {
         let otherPart = price % Math.pow(10, rTLength);
         let priceWithoutOtherPart = price - otherPart;
 
-		// Logic for fixed rounding method.
+        // Logic for fixed rounding method.
         if (roundingModel.direction.toLowerCase() == 'up') {
             roundedPrice = (roundingTarget < otherPart ? priceWithoutOtherPart + 1 * Math.pow(10, rTLength) : priceWithoutOtherPart) + Number(roundingTarget);
         } else if (roundingModel.direction.toLowerCase() == 'down') {
@@ -309,17 +295,17 @@ function applyRoundingMethod(price, model, roundingModel, isFractionalPart) {
             roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
         }
     } else {
-		// Logic for multiple rounding method.
-		// eslint-disable-next-line no-lonely-if
+        // Logic for multiple rounding method.
+        // eslint-disable-next-line no-lonely-if
         if (roundingModel.direction.toLowerCase() == 'up') {
             roundedPrice = Math.ceil(price / roundingTarget) * roundingTarget;
         } else if (roundingModel.direction.toLowerCase() == 'down') {
             roundedPrice = Math.floor(price / roundingTarget) * roundingTarget;
         } else if (roundingModel.direction.toLowerCase() == 'nearest') {
-			// eslint-disable-next-line no-unused-expressions, no-sequences
+            // eslint-disable-next-line no-unused-expressions, no-sequences
             roundedUp = Math.ceil(price / roundingTarget) * roundingTarget,
-			roundedDown = Math.floor(price / roundingTarget) * roundingTarget,
-			roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
+                roundedDown = Math.floor(price / roundingTarget) * roundingTarget,
+                roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
         }
     }
     if (isFractionalPart) {
@@ -342,7 +328,7 @@ function applyRoundingModel(price) {
     }
 
     if (roundingModel) {
-		// eslint-disable-next-line no-param-reassign
+        // eslint-disable-next-line no-param-reassign
         price = price.toFixed(2);
 
         let wholeNumber = parseInt(price, 10);
@@ -351,15 +337,15 @@ function applyRoundingModel(price) {
         let fractionalPart = Math.round((price % 1) * 100);
         let fractionalModel = roundingModel.model.split('.')[1];
 
-		// First, Apply rounding on the fractional part.
+        // First, Apply rounding on the fractional part.
         let roundedFractionalPart = applyRoundingMethod(fractionalPart, fractionalModel, roundingModel, true);
 
 
-		// Update the whole number based on the fractional part rounding.
+        // Update the whole number based on the fractional part rounding.
         wholeNumber = parseInt(wholeNumber + roundedFractionalPart, 10);
         roundedFractionalPart = (wholeNumber + roundedFractionalPart) % 1;
 
-		// then, Apply rounding on the whole number.
+        // then, Apply rounding on the whole number.
         roundedWholeNumber = applyRoundingMethod(wholeNumber, model, roundingModel, false);
 
         roundedPrice = roundedWholeNumber + roundedFractionalPart;
@@ -378,7 +364,7 @@ function convertPrice() {
     let priceElements = $('.esw-price:not(.esw-price-converted)');
     let selectedCurrencySymbol = window.SitePreferences.ESW_CURRENCY_SYMBOL;
 
-	// Update price elements
+    // Update price elements
     if (!window.SitePreferences.ESW_FIXED_COUNTRY) {
         let selectedCountryAdjustment = window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
         let selectedFxRate = window.SitePreferences.ESW_SELECTED_FXRATE ? JSON.parse(window.SitePreferences.ESW_SELECTED_FXRATE) : '';
@@ -393,11 +379,11 @@ function convertPrice() {
             let disableAdjustment = !!((element.attr('data-disable-adjustments') && element.attr('data-disable-adjustments') == 'true'));
             let eswPrice = Number($.trim(element.text()).replace(/[^0-9\.-]+/g, ''));
             if (selectedCountryAdjustment && !disableAdjustment) {
-				// applying adjustment
+                // applying adjustment
                 eswPrice += Number((selectedCountryAdjustment.retailerAdjustments.priceUpliftPercentage / 100 * eswPrice));
-				// applying duty
+                // applying duty
                 eswPrice += Number((selectedCountryAdjustment.estimatedRates.dutyPercentage / 100 * eswPrice));
-				// applying tax
+                // applying tax
                 eswPrice += Number((selectedCountryAdjustment.estimatedRates.taxPercentage / 100 * eswPrice));
             }
             eswPrice = Number((eswPrice * selectedFxRate.rate).toFixed(2));
@@ -426,7 +412,7 @@ function convertPrice() {
 $(document).ready(function () {
     updateCountryList();
     if ($('.eswModal').length > 0) {
-		// Logic to enable/disable welcome matt currency dropdowns
+        // Logic to enable/disable welcome matt currency dropdowns
         let $selectedCurrency = $('#selected-currency');
         setDefaultCurrency($selectedCurrency);
     }

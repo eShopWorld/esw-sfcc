@@ -3,7 +3,7 @@
  * Helper script to get all ESW services
  **/
 const LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 const eShopWorldServices = {
     /*

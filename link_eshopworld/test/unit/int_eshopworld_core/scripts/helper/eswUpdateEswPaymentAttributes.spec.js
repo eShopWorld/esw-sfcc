@@ -4,9 +4,13 @@ var chai = require('chai');
 
 var collections = require('../../../../mocks/dw.util.CollectionHelper');
 var Logger = require('../../../../mocks/dw/system/Logger');
+var CustomerMgrMock = require('../../../../mocks/dw/customer/CustomerMgr');
+var CustomObjectMgrMock = require('../../../../mocks/dw/object/CustomObjectMgr');
 
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.js', function () {
     var orderConfirmationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
+        'dw/customer/CustomerMgr': CustomerMgrMock,
+        'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         '*/cartridge/scripts/helper/eswHelper': {
             getEswHelper: function () {
                 return {

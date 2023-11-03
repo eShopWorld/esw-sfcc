@@ -136,4 +136,23 @@ describe("controllers/EShopWorld.js", function () {
         });
     });
 
+    describe('GetEswFooter', function () {
+        describe('positive test', function () {
+            it("should render template for GetEswFooter", async function () {
+                let controllerPath = '/on/demandware.store/Sites-RefArch-Site/default/EShopWorld-GetEswFooter';
+                let resp = await chai.request(config.baseUrl).get(controllerPath);
+                chai.expect(resp.text).to.include("selectors selector-container footerDropdown");
+            });
+        });
+    });
+
+    describe('GetEswAppResources', function () {
+        describe('positive test', function () {
+            it("should render template for GetEswAppResources", async function () {
+                let controllerPath = '/on/demandware.store/Sites-RefArch-Site/default/EShopWorld-GetEswAppResources';
+                let resp = await chai.request(config.baseUrl).get(controllerPath);
+                chai.expect(resp.text).to.include("window.SitePreferences");
+            });
+        });
+    });
 });

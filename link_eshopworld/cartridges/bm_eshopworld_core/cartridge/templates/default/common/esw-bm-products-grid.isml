@@ -1,7 +1,7 @@
 <isinclude template="util/modules" />
 <isset value="${require('*/cartridge/scripts/helper/eswCatalogHelper')}" name="eswCatalogHelper" scope="page" />
 <isset value="${require('*/cartridge/scripts/helpers/eswSyncHelpers')}" name="eswSyncHelper" scope="page" />
-<isset value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" name="eswHelper" scope="page" />
+<isset value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" name="eswHelper" scope="page" />
 <isset value="${require('*/cartridge/scripts/util/Constants')}" name="Constants" scope="page" />
 
 <div class="productsList"

@@ -367,5 +367,10 @@ function handleOrderRequest(orderJson, req) {
 
 module.exports = {
     handleOrderRequest: handleOrderRequest,
-    getMatchingLineItem: getMatchingLineItem
+    getMatchingLineItem: getMatchingLineItem,
+    removeShippingAndProductPriceAdjustments: removeShippingAndProductPriceAdjustments,
+    removeAllCreatedBaskets: removeAllCreatedBaskets,
+    updateLineItemMarketPlaceAttributes: updateLineItemMarketPlaceAttributes,
+    validateShipmentsRecalculateBasketTotals: validateShipmentsRecalculateBasketTotals,
+    updateEswOrderAttributes: updateEswOrderAttributes
 };

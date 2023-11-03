@@ -159,7 +159,7 @@ function loadGroups(preferences, groupURL, appendedParameter, groupId) {
  * @returns {Array} sitePrefs - New Array with fields specific to API/SFTP
  */
 function removeElements(sitePrefFieldsAttributes, relatedMethodFields) {
-    const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let uploadMethod = eswHelper.getCatalogUploadMethod(),
         sitePrefs = [];
     for (let i = 0; i < sitePrefFieldsAttributes.length; i++) {

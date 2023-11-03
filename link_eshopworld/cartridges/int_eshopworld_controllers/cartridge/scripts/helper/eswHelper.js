@@ -1,7 +1,7 @@
 /**
  * Helper script to get all ESW site preferences
  **/
-
+const Transaction = require('dw/system/Transaction');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 /*
@@ -82,6 +82,37 @@ eswHelper.isEswOrderHistory = function (lineItemContainer) {
         }
     }
     return false;
+};
+
+/**
+     * Function to rebuild basket from back to ESW checkout
+     * @return {boolean} - boolean
+     */
+eswHelper.rebuildCartUponBackFromESW = function () {
+    let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
+    let BasketMgr = require('dw/order/BasketMgr');
+    try {
+        let currentBasket = BasketMgr.getCurrentBasket();
+        if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
+            if (!currentBasket) {
+                eswHelper.rebuildCart();
+                currentBasket = BasketMgr.getCurrentBasket();
+            }
+            if (currentBasket) {
+                Transaction.wrap(function () {
+                    if (eswHelper.getShippingServiceType(currentBasket) === 'POST') {
+                        eswServiceHelper.applyShippingMethod(currentBasket, 'POST', eswHelper.getAvailableCountry(), true);
+                    } else {
+                        eswServiceHelper.applyShippingMethod(currentBasket, 'EXP2', eswHelper.getAvailableCountry(), true);
+                    }
+                    eswHelper.adjustThresholdDiscounts(currentBasket);
+                });
+            }
+        }
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 module.exports = {

@@ -14,8 +14,9 @@ const Resource = require('dw/web/Resource');
 
 const Constants = require('*/cartridge/scripts/util/Constants');
 const bmHelper = require('*/cartridge/scripts/helpers/eswBmGeneralHelper');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-const eswCatalogHelper = require('*/cartridge/scripts/helper/eswCatalogHelper');
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const eswSyncHelpers = require('*/cartridge/scripts/helpers/eswSyncHelpers');
+
 /**
  * Function to return to cart page after rebuilding cart
  */
@@ -84,16 +85,12 @@ server.get('Search', function (req, res, next) {
             if (req.querystring.submittedFrom === Constants.ADVANCE_FORM) {
                 filterValue = req.querystring.filterAttribute;
                 if (filterValue === 'synced') {
-                    let productHasInternalError = false;
-                    if (eswHelper.isEswCatalogInternalValidationEnabled()) {
-                        productHasInternalError = eswCatalogHelper.isValidProduct(currentProductInSearchHit.product).isError;
-                    }
-                    if (currentProductInSearchHit.product.custom.eswSync === true && !productHasInternalError) {
+                    if (eswSyncHelpers.getSyncStatusInfo(currentProductInSearchHit.getProduct()) === 'synced') {
                         productsInSearch.add(currentProductInSearchHit);
                     }
                 }
                 if (filterValue === 'unsynced') {
-                    if (currentProductInSearchHit.product.custom.eswSync !== true) {
+                    if (currentProductInSearchHit.product.custom.eswSync !== true || eswSyncHelpers.getSyncStatusInfo(currentProductInSearchHit.getProduct()) === 'apiError') {
                         productsInSearch.add(currentProductInSearchHit);
                     }
                 }
@@ -161,7 +158,6 @@ server.post('SyncProduct', function (req, res, next) {
     let status;
     let ProductMgr = require('dw/catalog/ProductMgr');
     let catalogFeed = require('*/cartridge/scripts/jobs/CatalogFeed');
-    let eswSyncHelpers = require('*/cartridge/scripts/helpers/eswSyncHelpers');
     if (('SyncAll' in requestObj && !empty(requestObj.SyncAll.value))) {
         // running job to sync all site catalog products
         status = catalogFeed.execute();

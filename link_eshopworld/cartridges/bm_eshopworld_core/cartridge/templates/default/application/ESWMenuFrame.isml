@@ -2,7 +2,7 @@
 <isinclude url="${URLUtils.url('SiteNavigationBar-IncludeFrameTop', 'SelectedMenuItem', pdict.SelectedMenuItem, 'CurrentMenuItemId', pdict
               .CurrentMenuItemId)}" sf-toolkit="on" />
 <link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/fa/all.min.css')}" />
-<link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/style.css?v=1.0.0')}">
+<link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/bm-style.css?v=1.0.0')}">
 <div id="esw-snackbar"></div>
 <div id="esw-overlay">
   <div class="cv-spinner">

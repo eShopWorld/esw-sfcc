@@ -369,6 +369,13 @@
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
             </attribute-definition>
+            <attribute-definition attribute-id="eswSMSMarketingOptIn">
+                <display-name xml:lang="x-default">ESW SMS Marketing Opt In</display-name>
+                <description xml:lang="x-default">Does shopper opted in for this order?</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="eswV2">
@@ -379,6 +386,7 @@
                 <attribute attribute-id="eswPaymentMethod"/>
                 <attribute attribute-id="eswFraudHold"/>
                 <attribute attribute-id="eswEmailMarketingOptIn"/>
+                <attribute attribute-id="eswSMSMarketingOptIn"/>
                 <attribute attribute-id="eswDeliveryOption"/>
             </attribute-group>
             <attribute-group group-id="eswV2RetailerCurrency">
@@ -902,7 +910,13 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
     <type-extension type-id="Profile">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="eswMarketingOptIn">
-                <display-name xml:lang="x-default">ESW Marketing Optin</display-name>
+                <display-name xml:lang="x-default">ESW Email Marketing Optin</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswSMSMarketingOptIn">
+                <display-name xml:lang="x-default">ESW SMS Marketing Optin</display-name>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -910,8 +924,9 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="eswProfileAttributes">
-                <display-name xml:lang="x-default">ESW Profile Attributes</display-name>
+                <display-name xml:lang="x-default">ESW Marketing Optin</display-name>
                 <attribute attribute-id="eswMarketingOptIn"/>
+                <attribute attribute-id="eswSMSMarketingOptIn"/>
             </attribute-group>
         </group-definitions>
     </type-extension>
@@ -920,6 +935,13 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
         <custom-attribute-definitions>
             <attribute-definition attribute-id="enableGeoLookup">
                 <display-name xml:lang="x-default">Enable Geo Lookup</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>true</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswEnableGeoIpAlert">
+                <display-name xml:lang="x-default">Enable Geo IP Alert</display-name>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -1516,6 +1538,7 @@ Order Package Reference/Tracking Number is appended in URL from code base.</desc
                 <attribute attribute-id="eswAllowedLanguages"/>
                 <attribute attribute-id="eswBaseCurrency"/>
                 <attribute attribute-id="enableGeoLookup"/>
+                <attribute attribute-id="eswEnableGeoIpAlert"/>
                 <attribute attribute-id="eswRetailerBrandCode"/>
                 <attribute attribute-id="eswClientID"/>
                 <attribute attribute-id="eswClientSecret"/>

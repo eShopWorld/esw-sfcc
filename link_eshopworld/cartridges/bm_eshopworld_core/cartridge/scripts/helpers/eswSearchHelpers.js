@@ -1,86 +1,7 @@
 /* eslint-disable require-jsdoc */
 'use strict';
 
-var collections = require('*/cartridge/scripts/util/collections');
-
-/**
- * Sets the relevant product search model properties, depending on the parameters provided
- *
- * @param {dw.catalog.ProductSearchModel} productSearch - Product search object
- * @param {Object} httpParams - Query params
- * @param {dw.catalog.Category} selectedCategory - Selected category
- * @param {dw.catalog.SortingRule} sortingRule - Product grid sort rule
- * @param {Object} httpParameterMap - Query params
- * @property {Double} [httpParameterMap.pmin] - Minimum Price
- * @property {Double} [httpParameterMap.pmax] - Maximum Price
- */
-function setProductProperties(productSearch, httpParams, selectedCategory, sortingRule, httpParameterMap) {
-    let searchPhrase;
-
-    if (httpParams.q) {
-        searchPhrase = httpParams.q;
-        productSearch.setSearchPhrase(searchPhrase + '*');
-    }
-    if (selectedCategory) {
-        productSearch.setCategoryID(selectedCategory.ID);
-    }
-    if (httpParams.pid) {
-        productSearch.setProductIDs([httpParams.pid]);
-    }
-    if (httpParameterMap) {
-        if (httpParameterMap.pmin) {
-            productSearch.setPriceMin(httpParameterMap.pmin.doubleValue);
-        }
-        if (httpParameterMap.pmax) {
-            productSearch.setPriceMax(httpParameterMap.pmax.doubleValue);
-        }
-    }
-    if (httpParams.pmid) {
-        productSearch.setPromotionID(httpParams.pmid);
-    }
-
-    if (sortingRule) {
-        productSearch.setSortingRule(sortingRule);
-    }
-
-    productSearch.setRecursiveCategorySearch(true);
-}
-
-/**
- * Updates the search model with the preference refinement values
- *
- * @param {dw.catalog.SearchModel} search - SearchModel instance
- * @param {Object} preferences - Query params map
- */
-function addRefinementValues(search, preferences) {
-    Object.keys(preferences).forEach(function (key) {
-        search.addRefinementValues(key, preferences[key]);
-    });
-}
-
-/**
- * Set search configuration values
- *
- * @param {dw.catalog.ProductSearchModel} apiProductSearch - API search instance
- * @param {Object} params - Provided HTTP query parameters
- * @return {dw.catalog.ProductSearchModel} - API search instance
- * @param {Object} httpParameterMap - Query params
- */
-function setupSearch(apiProductSearch, params, httpParameterMap) {
-    let CatalogMgr = require('dw/catalog/CatalogMgr');
-
-    let sortingRule = params.srule ? CatalogMgr.getSortingRule(params.srule) : null;
-    let selectedCategory = CatalogMgr.getCategory(params.cgid);
-    selectedCategory = selectedCategory && selectedCategory.online ? selectedCategory : null;
-
-    setProductProperties(apiProductSearch, params, selectedCategory, sortingRule, httpParameterMap);
-
-    if (params.preferences) {
-        addRefinementValues(apiProductSearch, params.preferences);
-    }
-
-    return apiProductSearch;
-}
+const collections = require('*/cartridge/scripts/util/collections');
 
 /**
  * Set the cache values
@@ -125,7 +46,7 @@ function filterProductHits(hitsIter, paramsObj) {
     return collections.filter(hitsIter, function (productHit) {
         return productHit.product &&
             ((empty(params.pid) || (productHit.productID.toLowerCase().indexOf(params.pid.toLowerCase()) > -1 || productHit.firstRepresentedProductID.toLowerCase().indexOf(params.pid.toLowerCase()) > -1 || productHit.lastRepresentedProductID.toLowerCase().indexOf(params.pid.toLowerCase()) > -1))
-            || (empty(params.name) || productHit.product.name.toLowerCase().indexOf(params.name.toLowerCase()) > -1));
+                || (empty(params.name) || productHit.product.name.toLowerCase().indexOf(params.name.toLowerCase()) > -1));
     });
 }
 
@@ -136,7 +57,6 @@ function filterSearchProductHits(hitsIter) {
     });
 }
 
-exports.setupSearch = setupSearch;
 exports.applyCache = applyCache;
 exports.getFilterObject = getFilterObject;
 exports.filterProductHits = filterProductHits;

@@ -214,6 +214,9 @@ const getEswHelper = {
     getGeoLookup: function () {
         return Site.getCustomPreferenceValue('enableGeoLookup');
     },
+    getGeoIpAlert: function () {
+        return Site.getCustomPreferenceValue('eswEnableGeoIpAlert');
+    },
     getUrlExpansionPairs: function () {
         return Site.getCustomPreferenceValue('eswUrlExpansionPairs');
     },
@@ -525,6 +528,27 @@ const getEswHelper = {
             return !empty(allowedCountries) ? allowedCountries[0] : this.getAllCountries()[0];
         }
     },
+    /**
+     * Check if current geo location is equals to the location cookie
+     * @returns {boolean}  - true or false
+     */
+    isSameGeoIpCountry: function () {
+        if (!this.getGeoIpAlert()) {
+            // When feature not in use then we do not need to show alert
+            return { isSameCountry: true, geoLocation: null };
+        }
+        let geoLocation = request.geolocation.countryCode;
+        let countryCookie = !empty(request.httpCookies['esw.location']) ? request.httpCookies['esw.location'].value : null;
+        let isAllowedCountry = this.checkIsEswAllowedCountry(geoLocation);
+
+        if (empty(countryCookie) || !isAllowedCountry || empty(geoLocation)) {
+            return { isSameCountry: true, geoLocation: isAllowedCountry ? geoLocation : null };
+        }
+        if (!empty(geoLocation) && !empty(countryCookie)) {
+            return { isSameCountry: geoLocation === countryCookie, geoLocation: geoLocation };
+        }
+        return { isSameCountry: false, geoLocation: geoLocation };
+    },
     /*
      * Function to perform fxrate calculations, apply adjustments, duty and tax and returns money object
      */
@@ -580,14 +604,24 @@ const getEswHelper = {
             } else if (roundingModel.direction.equalsIgnoreCase('nearest')) {
                 // eslint-disable-next-line no-unused-expressions, no-sequences
                 roundedUp = Math.ceil(price / roundingTarget) * roundingTarget,
-                    roundedDown = Math.floor(price / roundingTarget) * roundingTarget,
-                    roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
+                roundedDown = Math.floor(price / roundingTarget) * roundingTarget,
+                roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
             }
         }
         if (isFractionalPart) {
             return roundedPrice / Math.pow(10, rTLength);
         }
         return roundedPrice;
+    },
+    /*
+     * return rounding price from modal
+     */
+    getRoundPrice: function (roundingModel) {
+        try {
+            return roundingModel && roundingModel.split(/(\d+)/)[0].equalsIgnoreCase('multiple') ? roundingModel.split(/(\d+)/)[1] : null;
+        } catch (error) {
+            return null;
+        }
     },
     /*
      * applies rounding model received from V3 price feed.
@@ -606,7 +640,8 @@ const getEswHelper = {
                 let roundedWholeNumber = 0,
                     // eslint-disable-next-line no-unused-vars
                     roundedfractionalPart = 0,
-                    roundedPrice = 0;
+                    roundedPrice = 0,
+                    roundingTarget;
                 // eslint-disable-next-line no-param-reassign
                 price = price.toFixed(2);
 
@@ -616,15 +651,31 @@ const getEswHelper = {
                 let fractionalPart = Math.round((price % 1) * 100);
                 let fractionalModel = roundingModel.model.split('.')[1];
 
-                // First, Apply rounding on the fractional part.
-                roundedFractionalPart = this.applyRoundingMethod(fractionalPart, fractionalModel, roundingModel, true);
+                roundingTarget = this.getRoundPrice(fractionalModel);
+                // Check if the roundingTarget is 0
+                if (!empty(roundingTarget) && Number(roundingTarget) === 0) {
+                     // If it is, the result is already 0, no rounding needed just setting the fractional part to 0.
+                    roundedFractionalPart = 0;
+                } else {
+                    // For non-zero roundingTarget, use the original expression
+                    // First, Apply rounding on the fractional part.
+                    roundedFractionalPart = this.applyRoundingMethod(fractionalPart, fractionalModel, roundingModel, true);
+                }
 
                 // Update the whole number based on the fractional part rounding.
                 wholeNumber = parseInt(wholeNumber + roundedFractionalPart, 10);
                 roundedFractionalPart = (wholeNumber + roundedFractionalPart) % 1;
+                roundingTarget = this.getRoundPrice(model);
 
-                // then, Apply rounding on the whole number.
-                roundedWholeNumber = this.applyRoundingMethod(wholeNumber, model, roundingModel, false);
+                // Check if the roundingTarget is 0
+                if (!empty(roundingTarget) && Number(roundingTarget) === 0) {
+                    // If it is, the result is already 0, no rounding needed.
+                    roundedWholeNumber = wholeNumber;
+                } else {
+                    // For non-zero roundingTarget, use the original expression
+                    // then, Apply rounding on the whole number.
+                    roundedWholeNumber = this.applyRoundingMethod(wholeNumber, model, roundingModel, false);
+                }
 
                 roundedPrice = roundedWholeNumber + roundedFractionalPart;
 

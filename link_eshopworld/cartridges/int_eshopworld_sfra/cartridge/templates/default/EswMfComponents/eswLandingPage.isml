@@ -1,3 +1,4 @@
+<isset value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" name="eswHelper" scope="page" />
 <!--- TEMPLATENAME: eswlandingpage.isml --->
 <iscontent type="text/html" charset="UTF-8" compact="true"/>
 <div class="eswModalWrapper">
@@ -7,6 +8,9 @@
 				<a href="#">&times;</a>
 			</div>
 			<isslot id="eswLandingWelcome" description="ESW Landing Page Welcome Message" context="global"/>
+			<isif condition="${!eswHelper.isSameGeoIpCountry().isSameCountry}">
+				<isslot id="eswGeoIpChangeWarning" description="ESW warning on change of GeoIP" context="global"/>
+			</isif>
 			<isif condition=${pdict.EswLandingObject.enabledLandingPageBar}>
 				<div class="selectors selector-container">
 					<iscomment> ESW Country Selector </iscomment>

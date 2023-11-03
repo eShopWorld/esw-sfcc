@@ -20,16 +20,13 @@ describe('int_eshopworld_core/cartridge/scripts/services/EswCoreService.js', fun
                 };
             }
         },
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getClientID: function () { return 'fake clientID'; },
-                    eswInfoLogger: function () { return 'a logger function'; },
-                    getSelectedPriceFeedInstance: function () { return 'EswPriceFeedV4Service.PROD'; },
-                    getCheckoutServiceName: function () { return 'EswCheckoutv3'; }
-                };
-            }
-        }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getClientID: function () { return 'fake clientID'; },
+                eswInfoLogger: function () { return 'a logger function'; },
+                getSelectedPriceFeedInstance: function () { return 'EswPriceFeedV4Service.PROD'; },
+                getCheckoutServiceName: function () { return 'EswCheckoutv3'; }
+            } }
     }).getEswServices();
     describe('Happy path', function () {
         it('Should test esw order V2 api', function () {
@@ -70,6 +67,14 @@ describe('int_eshopworld_core/cartridge/scripts/services/EswCoreService.js', fun
         });
         it('Should  not return false for getOrderSubmitAPIServiceV2', function () {
             let serviceRes = EswCoreService.getOrderSubmitAPIServiceV2();
+            expect(serviceRes).not.to.be.false;
+        });
+        it('Should  not return false for getPricingAdvisorService', function () {
+            let serviceRes = EswCoreService.getPricingAdvisorService();
+            expect(serviceRes).not.to.be.false;
+        });
+        it('Should  not return false for getCatalogService', function () {
+            let serviceRes = EswCoreService.getCatalogService();
             expect(serviceRes).not.to.be.false;
         });
     });
