@@ -16,10 +16,8 @@ defaultShipment.getShippingAddress = function () {
 // eslint-disable-next-line no-useless-escape
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {}
-            }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {}
         },
         'dw/order/BasketMgr': '',
         'dw/system/Transaction': Transaction,
@@ -36,9 +34,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                     getCustomPreferenceValue: function (value) {
                         if (value === 'eswBaseCurrency') {
                             return 'some value';
-                        } else {
-                            return 'true';
                         }
+                        return 'true';
                     }
                 };
             }

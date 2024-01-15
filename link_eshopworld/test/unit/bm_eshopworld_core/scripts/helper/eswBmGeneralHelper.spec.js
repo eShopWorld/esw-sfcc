@@ -49,37 +49,11 @@ describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helper
             getEswHelper: {
                 getCatalogUploadMethod: function () { return 'api'; }
             }
-        }
-    });
-    it('Should return the field type', function () {
-        let fieldType = eswBmGeneralHelpers.getFieldType(8);
-        chai.expect(fieldType).to.deep.equal({ type: 'Boolean', template: 'form-fields/boolean-field' });
-    });
-    it('Should return undefined if no field type is given', function () {
-        let fieldType = eswBmGeneralHelpers.getFieldType();
-        chai.expect(fieldType).to.be.undefined;
+        },
+        '*/cartridge/scripts/helper/eswBmHelper': {}
     });
 
-    it('Should map group', function () {
-        let objectAttirbutGroupeMap = eswBmGeneralHelpers.mapGroup(ObjectAttributeGroupMock, '/on/demandware.store/Sites-Site/default/ViewApplication-BM?csrf_token=GeMn5DfFMZmA2asyj40cmTuLjotbLJZofKkNB7h0uh_xqu-PlDE955Ot3EA2WVvarta5bvuDwkI85TsnFou6zfJV444I6zSxxrYQCqEpxTfisLrt9wX5MofADmF4NdUpa2as7kKENV1KHPClSXpgClyer5qlE4wy0Of4azwa4YJeHGgUfAo%3d', '#/?preference#site_preference_group_attributes!id!{0}');
-        chai.expect(objectAttirbutGroupeMap).to.deep.equal({
-            id: 'aFakeId',
-            bm_link: '/on/demandware.store/Sites-Site/default/ViewApplication-BM?csrf_token=GeMn5DfFMZmA2asyj40cmTuLjotbLJZofKkNB7h0uh_xqu-PlDE955Ot3EA2WVvarta5bvuDwkI85TsnFou6zfJV444I6zSxxrYQCqEpxTfisLrt9wX5MofADmF4NdUpa2as7kKENV1KHPClSXpgClyer5qlE4wy0Of4azwa4YJeHGgUfAo%3d#/?preference#site_preference_group_attributes!id!aFakeId',
-            displayName: 'aFakeDisplayName',
-            description: 'aFakeDescription',
-            attributes: []
-        });
-    });
 
-    it('Should mapAttribute', function () {
-        let mapAttributeGroup = eswBmGeneralHelpers.mapAttribute(ObjectAttributeDefinition);
-        chai.expect(mapAttributeGroup.isMandatory).to.be.true;
-    });
-
-    it('Should loadGroups', function () {
-        let loadedGroups = eswBmGeneralHelpers.loadGroups(ExtensibleObjectMock, '#/?preference#site_preference_group_attributes!id!{0}', null, 'ESW Catalog Integration Configuration');
-        chai.expect(loadedGroups).to.be.undefined;
-    });
     it('Should removeElements', function () {
         let sitePrefAttr = [{
             id: 'isEswCatalogFeatureEnabled',

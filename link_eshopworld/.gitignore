@@ -13,3 +13,5 @@ test/appium/webdriver/config.json
 test/acceptance/report
 test/integration/config.json
 .nyc_output
+.scannerwork
+.sonar_lock

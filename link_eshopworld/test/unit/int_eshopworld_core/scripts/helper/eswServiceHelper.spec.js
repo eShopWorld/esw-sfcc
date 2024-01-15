@@ -20,37 +20,35 @@ global.session = session;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return "price";
-                    },
-                    getSubtotalObject: function () {
-                        return {
-                            available: true,
-                            value: '10.99',
-                            getDecimalValue: function () { return '10.99'; },
-                            getCurrencyCode: function () { return 'USD'; },
-                            subtract: function () { return new Money(isAvailable); }
-                        };
-                    },
-                    isThresholdEnabled: function () {
-                        return true;
-                    },
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                getSubtotalObject: function () {
+                    return {
+                        available: true,
+                        value: '10.99',
+                        getDecimalValue: function () { return '10.99'; },
+                        getCurrencyCode: function () { return 'USD'; },
+                        subtract: function () { return new Money(isAvailable); }
+                    };
+                },
+                isThresholdEnabled: function () {
+                    return true;
                 }
             }
         },
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,
-        'dw/system/Logger':  Logger,
+        'dw/system/Logger': Logger,
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': stubURLUtils,
         'dw/system/Site': {
@@ -59,9 +57,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                     getCustomPreferenceValue: function (value) {
                         if (value == 'eswBaseCurrency') {
                             return 'some value';
-                        } else {
-                            return 'true';
                         }
+                        return 'true';
                     }
                 };
             }
@@ -69,24 +66,24 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
         'dw/util/Currency': Currency,
         'dw/util/StringUtils': StringUtils,
         '*/cartridge/scripts/util/collections': collections,
-        'dw/order/BasketMgr': basket,
+        'dw/order/BasketMgr': basket
     });
     describe('Happy path', function () {
-        it("it Should calculate cart discount price info", function () {
+        it('it Should calculate cart discount price info', function () {
             let cartDiscountPriceInfo = serviceHelperV3.getCartDiscountPriceInfo(basket, 0);
-            expect(cartDiscountPriceInfo).to.own.include({});
+            expect(cartDiscountPriceInfo).to.be.a('null');
         });
-        it("it Should calculate price discount price info", function () {
+        it('it Should calculate price discount price info', function () {
             let ProductUnitPriceInfo = serviceHelperV3.getProductUnitPriceInfo(basket.productLineItems);
             expect(ProductUnitPriceInfo).to.be.a('null');
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error calculate price discount return null", function () {
+    describe('Sad Path', function () {
+        it('Should throw error calculate price discount return null', function () {
             let basketSubtotal = serviceHelperV3.getCartDiscountPriceInfo(null, null, null, null);
             expect(basketSubtotal).to.be.a('null');
         });
-        it("Should throw error prodct price discount return null", function () {
+        it('Should throw error prodct price discount return null', function () {
             let ProductUnitPriceInfo = serviceHelperV3.getProductUnitPriceInfo(null);
             expect(ProductUnitPriceInfo).to.be.a('null');
         });

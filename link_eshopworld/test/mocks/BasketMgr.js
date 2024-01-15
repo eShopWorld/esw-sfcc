@@ -39,6 +39,7 @@ function getCurrentBasket() {
         totalGrossPrice: {
             value: 250.00
         },
+        custom: {},
         productLineItems: new ArrayList([{
             product: {
                 online: true,

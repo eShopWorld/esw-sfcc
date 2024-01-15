@@ -95,6 +95,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': stubURLUtils,
         'dw/value/Money': Money,
+        'dw/content/ContentMgr': {},
         'dw/system/Site': {
             getCurrent: function () {
                 return {

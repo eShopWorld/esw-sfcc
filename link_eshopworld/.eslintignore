@@ -6,3 +6,4 @@ doc/
 bin/
 test/
 codecept.conf.js
+esw-pwa

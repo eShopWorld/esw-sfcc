@@ -61,10 +61,11 @@ const CATALOG_HELPER = {
     generateProductBatchPayload: function (productBatch) {
         let URLUtils = require('dw/web/URLUtils');
         let apiPayload = [];
+        let productMapping = eswHelper.strToJson(eswHelper.getEswCatalogFeedProductCustomAttrFieldMapping());
         for (let i = 0; i < productBatch.length; i++) {
             let product = productBatch[i];
             if (!empty(product) && typeof product === 'object') {
-                apiPayload.push({
+                let reqPayload = {
                     productCode: product.ID,
                     name: product.name,
                     description: !empty(product.shortDescription) ? product.shortDescription.getMarkup() : null,
@@ -87,7 +88,20 @@ const CATALOG_HELPER = {
                     dangerousGoods: ('dangerousGoods' in product.custom) ? product.custom.dangerousGoods : null,
                     additionalProductCode: null,
                     variantProductCode: null
-                });
+                };
+                if (!empty(productMapping) && eswHelper.isValidJson(productMapping)) {
+                    // eslint-disable-next-line no-restricted-syntax
+                    for (let key in productMapping) {
+                        // eslint-disable-next-line no-prototype-builtins
+                        if (productMapping.hasOwnProperty(key)) {
+                            let productCustomAttrVal = productMapping[key] in product.custom ? product.custom[productMapping[key]] : null;
+                            if (!empty(productCustomAttrVal)) {
+                                reqPayload[key] = productCustomAttrVal;
+                            }
+                        }
+                    }
+                }
+                apiPayload.push(reqPayload);
             }
         }
         return apiPayload;
@@ -131,7 +145,7 @@ const CATALOG_HELPER = {
     /**
      * Check if given hsCode is valid
      * @param {string} hsCode - hsCode string
-     * @returns {boolean} - true ot false
+     * @returns {boolean} - true or false
      */
     isValidHsCodeRegion: function (hsCode) {
         let allowedHsCodes = 'AD,AE,AF,AG,AI,AL,AM,AN,AO,AQ,AR,AS,AT,AU,AW,AX,AZ,BA,BB,BD,BE,BF,BG,BH,BI,BJ,BL,BM,BN,BO,BQ,BR,BS,BT,BV,BW,BY,BZ,CA,CC,CD,CF,CG,CH,CI,CK,CL,CM,CN,CO,CR,CS,CU,CV,CW,CX,CY,CZ,DE,DJ,DK,DM,DO,DZ,EC,EE,EG,EH,ER,ES,ET,FI,FJ,FK,FM,FO,FR,GA,GB,GD,GE,GF,GG,GH,GI,GL,GM,GN,GP,GQ,GR,GS,GT,GU,GW,GY,HK,HM,HN,HR,HT,HU,ID,IE,IL,IM,IN,IO,IQ,IR,IS,IT,JE,JM,JO,JP,KE,KG,KH,KI,KM,KN,KP,KR,KW,KY,KZ,LA,LB,LC,LI,LK,LR,LS,LT,LU,LV,LY,MA,MC,MD,ME,MF,MG,MH,MK,ML,MM,MN,MO,MP,MQ,MR,MS,MT,MU,MV,MW,MX,MY,MZ,NA,NC,NE,NF,NG,NI,NL,NO,NP,NR,NU,NZ,OM,PA,PE,PF,PG,PH,PK,PL,PM,PN,PR,PS,PT,PW,PY,QA,RE,RO,RS,RU,RW,SA,SB,SC,SD,SE,SG,SH,SI,SJ,SK,SL,SM,SN,SO,SR,SS,ST,SV,SX,SY,SZ,TC,TD,TF,TG,TH,TJ,TK,TL,TM,TN,TO,TR,TT,TV,TW,TZ,UA,UG,UM,US,UY,UZ,VA,VC,VE,VG,VI,VN,VU,WF,WS,XK,YE,YT,ZA,ZM,ZW,TP';
@@ -141,7 +155,7 @@ const CATALOG_HELPER = {
      * Validate product internally
      * @param {dw.catalog.Product} dwProduct - SFCC Product Object
      * @param {boolean} errorDetail - Should return error detail or not
-     * @returns {boolean} - true or false
+     * @returns {Object} - isError and errorMsg
      */
     isValidProduct: function (dwProduct) {
         let errorMsg = [];

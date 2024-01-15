@@ -27,7 +27,7 @@ const Response = require('*/cartridge/scripts/util/Response');
 function setInitialCookies() {
     let country = eswHelper.getAvailableCountry();
     let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
-    let locale = eswHelper.getAllowedLanguages()[0].value;
+    let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
 
     if (request.httpCookies['esw.location'] == null) {
         eswHelper.createCookie('esw.location', country, '/');
@@ -279,6 +279,8 @@ function preOrderRequest() {
         logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
         if (e.message === 'SFCC_ORDER_CREATION_FAILED') {
             redirectURL = URLUtils.https('Cart-Show', 'eswRetailerCartIdNullException', true).toString();
+        } else if (e.message === 'ATTRIBUTES_MISSING_IN_PRE_ORDER') {
+            redirectURL = URLUtils.https('Cart-Show', 'eswPreOrderException', true).toString();
         } else {
             redirectURL = URLUtils.https('Cart-Show', 'eswfail', true).toString();
         }
@@ -333,9 +335,7 @@ function handlePreOrderRequestV2() {
 
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
-    if (empty(requestObj.retailerCartId)) {
-        throw new Error('SFCC_ORDER_CREATION_FAILED');
-    }
+    eswHelper.validatePreOrder(requestObj);
     let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
     if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
         session.privacy.confirmedOrderID = requestObj.retailerCartId;
@@ -403,13 +403,15 @@ function notify() {
 
             Transaction.wrap(function () {
                 let order = OrderMgr.getOrder(obj.retailerCartId);
-                // If order not found or Failed in SFCC
-                if (empty(order) || order.status.value === Order.ORDER_STATUS_FAILED) {
+                // If order not found in SFCC
+                if (empty(order)) {
                     response.setStatus(400);
                     responseJSON.ResponseCode = '400';
                     responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
                     Response.renderJSON(responseJSON);
                     return;
+                } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
+                    OrderMgr.undoFailOrder(order);
                 }
                 // If order already confirmed & processed
                 if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
@@ -589,7 +591,8 @@ function registerCustomer() {
  */
 function processWebHooks() {
     let obj = JSON.parse(request.httpParameterMap.requestBodyAsString),
-        responseJSON = {};
+        responseJSON = {},
+        requestType = request.httpHeaders.get('esw-event-type');
     let eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper'),
         logger = require('dw/system/Logger');
 
@@ -599,11 +602,11 @@ function processWebHooks() {
         response.setStatus(401);
         logger.error('ESW Process Webhooks Error: Basic Authentication Token did not match');
     } else { // eslint-disable-next-line no-lonely-if
-        if (obj && 'Request' in obj && !empty(obj.Request) && 'AppeasementType' in obj.Request) {
+        if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
             responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-        } else if (obj && !empty(obj) && 'ReturnOrder' in obj) {
+        } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
             responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
-        } else {
+        } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
             responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
         }
     }

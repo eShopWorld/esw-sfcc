@@ -7,7 +7,7 @@ const CustomerMgr = require('dw/customer/CustomerMgr');
 const CustomObjectMgr = require('dw/object/CustomObjectMgr');
 
 /* Script Modules */
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
 
 const getEswOcHelper = {
@@ -18,10 +18,10 @@ const getEswOcHelper = {
     * @param {Object} req - Request object
     */
     setOverridePriceBooks: function (deliveryCountry, shopperCurrency, req) {
-        if (req && !eswHelper.overridePrice(req, deliveryCountry, shopperCurrency)) {
+        if (req && !eswHelper.overridePriceCore(req, deliveryCountry, shopperCurrency)) {
             eswHelper.setAllAvailablePriceBooks();
             eswHelper.setBaseCurrencyPriceBook(req, shopperCurrency);
-        } else if (!req && !eswHelper.overridePrice(deliveryCountry)) {
+        } else if (!req && !eswHelper.overridePriceCore(deliveryCountry)) {
             eswHelper.setAllAvailablePriceBooks();
             eswHelper.setBaseCurrencyPriceBook(shopperCurrency);
         }

@@ -8,7 +8,7 @@
  **/
 const Site = require('dw/system/Site').getCurrent();
 
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
 const BasketMgr = require('dw/order/BasketMgr');
 const eswServiceHelperV3 = require('*/cartridge/scripts/helper/serviceHelperV3');
@@ -846,18 +846,21 @@ function createOrder() {
 
 /**
  * Function to change order state to Failed
+ * @param {string} orderId - order id
  * @returns {boolean} - order failed or not.
  */
-function failOrder() {
+function failOrder(orderId) {
     let Transaction = require('dw/system/Transaction');
     let OrderMgr = require('dw/order/OrderMgr');
-    let order = OrderMgr.getOrder(session.privacy.orderNo);
-
+    let orderNum = !empty(orderId) ? orderId : session.privacy.orderNo;
+    let order = OrderMgr.getOrder(orderNum);
     if (empty(order)) return true;
 
     Transaction.wrap(function () {
         OrderMgr.failOrder(order, true);
-        delete session.privacy.orderNo;
+        if (!empty(session.privacy.orderNo)) {
+            delete session.privacy.orderNo;
+        }
         let cart = BasketMgr.getCurrentOrNewBasket();
         if (cart.productQuantityTotal > 0) {
             let shipment = cart.getShipment(cart.getDefaultShipment().getID());

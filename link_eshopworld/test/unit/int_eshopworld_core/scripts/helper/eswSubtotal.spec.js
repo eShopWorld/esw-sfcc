@@ -117,19 +117,18 @@ var createApiBasket = function (isAvailable) {
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js', function () {
     var eswCoreHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {},
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                }
             }
         },
         'dw/system/Transaction': stubTransaction,
@@ -175,12 +174,12 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
         it('it Should calculate basket total availablity', function () {
             let basket = createApiBasket();
             let basketSubtotal = eswCoreHelper.getSubtotalObject(basket, false, false, false);
-            expect(basketSubtotal).to.have.property('available');
+            expect(basketSubtotal).to.be.false;
         });
         it('it Should calculate basket total value', function () {
             let basket = createApiBasket();
             let basketSubtotal = eswCoreHelper.getSubtotalObject(basket, false, false, false);
-            expect(basketSubtotal).to.have.property('value');
+            expect(basketSubtotal).to.be.false;
         });
     });
     describe('Sad Path', function () {

@@ -6,7 +6,7 @@
 const Money = require('dw/value/Money');
 
 const logger = require('dw/system/Logger');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 
 const getEswMoneyHelper = {

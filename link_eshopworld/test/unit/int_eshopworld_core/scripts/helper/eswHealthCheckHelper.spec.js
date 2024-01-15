@@ -12,19 +12,17 @@ var LocalServiceRegMock = require('../../../../mocks/dw/svc/LocalServiceRegistry
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswHealthCheckHelper', function () {
     var eswHealthCheckHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswHealthCheckHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return new Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return new Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                }
             }
         },
         'dw/system/Logger': Logger,

@@ -90,10 +90,10 @@ var productLineItems1 = new ArrayList([{
 
 var session = {
     getCurrency: function () {
-        return "USD"
+        return 'USD';
     },
-    "privacy": {
-        fxRate: ""
+    privacy: {
+        fxRate: ''
     }
 };
 
@@ -134,22 +134,22 @@ var productMock = {
 
 let OverrideShipping = JSON.stringify([
     {
-     "countryCode": "GB",
-     "shippingMethod": {
-      "ID": ["POST_GB", "EXP2_GB"]
-     }
+        countryCode: 'GB',
+        shippingMethod: {
+            ID: ['POST_GB', 'EXP2_GB']
+        }
     },
     {
-     "countryCode": "CA",
-     "shippingMethod": {
-      "ID": ["POST_CA", "EXP2_CA"]
-     }
+        countryCode: 'CA',
+        shippingMethod: {
+            ID: ['POST_CA', 'EXP2_CA']
+        }
     },
     {
-     "countryCode": "SE",
-     "shippingMethod": {
-      "ID": ["POST_CA", "EXP2_CA"]
-     }
+        countryCode: 'SE',
+        shippingMethod: {
+            ID: ['POST_CA', 'EXP2_CA']
+        }
     }
 ]);
 
@@ -206,71 +206,68 @@ var createApiBasket = function (options) {
 
     return basket;
 };
-var rememberMeCookie = {'dwloginId': 'rahul.naik@ralphlauren.com'};
+var rememberMeCookie = { dwloginId: 'rahul.naik@ralphlauren.com' };
 
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', function () {
-
     global.request = {
         getHttpCookies: function () {
             return rememberMeCookie;
         }
     };
     var preparePreOrder = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return "price";
-                    },
-                    getCheckoutServiceName: function () {
-                        return "some service";
-                    },
-                    getOrderDiscount: function () {
-                        return "$10"
-                    },
-                    getSubtotalObject: function () {
-                        return Money();
-                    },
-                    getMappedCustomerMetadata: function () {
-                        return "eswMarketingOptIn|eswMarketingOptIn"
-                    },
-                    getUrlExpansionPairs: function () {
-                        return "EXPENSAIN PAIRS"
-                    },
-                    getMetadataItems: function () {
-                        return "some  items meta"
-                    },
-                    getSelectedInstance: function () {
-                        return "some  selected instance"
-                    },
-                    getMappedBasketMetadata: function () {
-                        return "some  site meta"
-                    },
-                    isUseDeliveryContactDetailsForPaymentContactDetailsPrefEnabled: function () {
-                        return "false"
-                    },
-                    getOverrideShipping: function () {
-                        return "";
-                    },
-                    getAvailableCountry: function () {
-                        return "some country"
-                    }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                getCheckoutServiceName: function () {
+                    return 'some service';
+                },
+                getOrderDiscount: function () {
+                    return '$10';
+                },
+                getSubtotalObject: function () {
+                    return Money();
+                },
+                getMappedCustomerMetadata: function () {
+                    return 'eswMarketingOptIn|eswMarketingOptIn';
+                },
+                getUrlExpansionPairs: function () {
+                    return 'EXPENSAIN PAIRS';
+                },
+                getMetadataItems: function () {
+                    return 'some  items meta';
+                },
+                getSelectedInstance: function () {
+                    return 'some  selected instance';
+                },
+                getMappedBasketMetadata: function () {
+                    return 'some  site meta';
+                },
+                isUseDeliveryContactDetailsForPaymentContactDetailsPrefEnabled: function () {
+                    return 'false';
+                },
+                getOverrideShipping: function () {
+                    return '';
+                },
+                getAvailableCountry: function () {
+                    return 'some country';
                 }
             }
         },
-        getCartItemsV2 : function () {
+        getCartItemsV2: function () {
             return null;
         },
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,
-        'dw/system/Logger':  {
+        'dw/system/Logger': {
             debug: function (text) {
                 return text;
             },
@@ -279,14 +276,14 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
             }
         },
         'dw/web/URLAction': function () {
-            return "some url"
+            return 'some url';
         },
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': {
-			https: function() {
+            https: function () {
                 return {};
             }
-		},
+        },
         'dw/order/ShippingMgr': {
             getDefaultShippingMethod: function () {
                 return defaultShippingMethod;
@@ -300,10 +297,9 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
                 return {
                     getCustomPreferenceValue: function (value) {
                         if (value == 'eswBaseCurrency') {
-                            return {}
-                        } else {
-                            return 'true';
+                            return {};
                         }
+                        return 'true';
                     }
                 };
             }
@@ -324,23 +320,23 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
             }
         },
         'dw/order/BasketMgr': basketMgr,
-        '*/cartridge/scripts/helper/serviceHelperV3' : '',
+        '*/cartridge/scripts/helper/serviceHelperV3': ''
     });
     describe('Happy path', function () {
-        it("Should prepare pre order payload", function () {
+        it('Should prepare pre order payload', function () {
             let basket = createApiBasket();
             let prderPayload = preparePreOrder.preparePreOrder(basket);
             expect(prderPayload).to.have.property('contactDetails');
         });
-        it("it Should have checkout experience", function () {
+        it('it Should have checkout experience', function () {
             let basket = createApiBasket();
             let prderPayload = preparePreOrder.preparePreOrder(basket);
             expect(prderPayload).to.have.property('shopperCheckoutExperience');
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error", function () {
-            let basket = undefined;
+    describe('Sad Path', function () {
+        it('Should throw error', function () {
+            let basket;
             let prderPayload = preparePreOrder.preparePreOrder(basket);
             expect(prderPayload).to.throw;
         });

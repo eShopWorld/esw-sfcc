@@ -204,7 +204,7 @@ const OCAPIHelper = {
     handleEswPreOrderCall: function (order, orderResponse) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code']) && eswHelper.checkIsEswAllowedCountry(param['country-code'][0])) {
@@ -236,7 +236,7 @@ const OCAPIHelper = {
     handleEswBasketAttributes: function (basket) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code']) && eswHelper.checkIsEswAllowedCountry(param['country-code'][0])) {
@@ -263,7 +263,7 @@ const OCAPIHelper = {
     handleEswOrderAttributes: function (order) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code']) && eswHelper.checkIsEswAllowedCountry(param['country-code'][0])) {
@@ -289,7 +289,7 @@ const OCAPIHelper = {
      * @param {Object} basket - Basket object SFCC API
      */
     setDefaultOverrideShippingMethod: function (basket) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
             customizationHelper = require('*/cartridge/scripts/helper/customizationHelper'),
             Transaction = require('dw/system/Transaction'),

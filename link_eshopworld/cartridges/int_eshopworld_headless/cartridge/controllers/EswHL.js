@@ -106,13 +106,15 @@ function notify() {
 
             Transaction.wrap(function () {
                 let order = OrderMgr.getOrder(obj.retailerCartId);
-                // If order not found or Failed in SFCC
-                if (empty(order) || order.status.value === Order.ORDER_STATUS_FAILED) {
+                // If order not found in SFCC
+                if (empty(order)) {
                     response.setStatus(400);
                     responseJSON.ResponseCode = '400';
                     responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
                     Response.renderJSON(responseJSON);
                     return;
+                } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
+                    OrderMgr.undoFailOrder(order);
                 }
                 // If order already confirmed & processed
                 if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {

@@ -169,7 +169,7 @@ function orderTotals(lineItemContainer) {
             orderTotalsObject.grandTotal = '-';
         } else if (orderTotalsObject.totalShippingCost !== '-') {
             orderTotalsObject.grandTotal = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyPaymentAmount, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalGrossPrice.decimalValue, lineItemContainer.getCurrencyCode());
-            orderTotalsObject.totalTax = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.totalTax.decimalValue, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalTax.decimalValue, lineItemContainer.getCurrencyCode());
+            orderTotalsObject.totalTax = (eswShopperCurrencyCode != null && !empty(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes)) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalTax.decimalValue, lineItemContainer.getCurrencyCode());
         }
         /* This Block handles order/ shipping discount for Account Order History (AOH) page
     	   For now, not showing any order/ shipping discount on AOH when order is placed with ESW checkout.

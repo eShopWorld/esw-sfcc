@@ -9,6 +9,13 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswTrackingURL">
+                <display-name xml:lang="x-default">ESW Tracking URL</display-name>
+                <description xml:lang="x-default">ESW Tracking URL</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
             <attribute-definition attribute-id="eswRetailerCurrencyAdministration">
                 <display-name xml:lang="x-default">ESW Retailer Currency Administration</display-name>
                 <type>double</type>
@@ -429,6 +436,7 @@
                 <display-name xml:lang="x-default">ESW Package Information</display-name>
                 <attribute attribute-id="eswReceivedASN"/>
                 <attribute attribute-id="eswPackageReference"/>
+                <attribute attribute-id="eswTrackingURL"/>
             </attribute-group>
             <attribute-group group-id="eswV2OrderAPI">
                 <display-name xml:lang="x-default">ESW Order Cancellation</display-name>
@@ -1349,15 +1357,6 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
             </attribute-definition>
-            <attribute-definition attribute-id="eswTrackingUrl">
-                <display-name xml:lang="x-default">ESW Tracking URL</display-name>
-                <description xml:lang="x-default">ESW Order/package tracking URL - General URL.&#13;
-Order Package Reference/Tracking Number is appended in URL from code base.</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <min-length>0</min-length>
-            </attribute-definition>
             <attribute-definition attribute-id="eswUrlExpansionPairs">
                 <display-name xml:lang="x-default">ESW URL Expansion Pairs</display-name>
                 <type>set-of-string</type>
@@ -1400,46 +1399,6 @@ Order Package Reference/Tracking Number is appended in URL from code base.</desc
                 <type>text</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
-            </attribute-definition>
-            <attribute-definition attribute-id="eswMamentaFeedDelimiter">
-                <display-name xml:lang="x-default">ESW Mamenta Feed Delimiter</display-name>
-                <type>enum-of-string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <value-definitions>
-                    <value-definition default="true">
-                        <display xml:lang="x-default">|</display>
-                        <value>|</value>
-                    </value-definition>
-                    <value-definition>
-                        <display xml:lang="x-default">,</display>
-                        <value>,</value>
-                    </value-definition>
-                </value-definitions>
-            </attribute-definition>
-            <attribute-definition attribute-id="eswMamentaCatalogRemotePath">
-                <display-name xml:lang="x-default">ESW Mamenta Catalog Feed Remote Path</display-name>
-                <description xml:lang="x-default">Remote Path for ESW Mamenta catalog feed CSV files on Mamenta SFTP.</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <min-length>0</min-length>
-            </attribute-definition>
-            <attribute-definition attribute-id="eswMamentaInventoryRemotePath">
-                <display-name xml:lang="x-default">ESW Mamenta Inventory Feed Remote Path</display-name>
-                <description xml:lang="x-default">Remote Path for ESW Mamenta inventory feed CSV files on Mamenta SFTP.</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <min-length>0</min-length>
-            </attribute-definition>
-            <attribute-definition attribute-id="eswMamentaFeedSFTPService">
-                <display-name xml:lang="x-default">ESW Mamenta Feed SFTP Service Name</display-name>
-                <description xml:lang="x-default">The service with mentioned service name will be called while making the connection with Mamenta SFTP.</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <min-length>0</min-length>
             </attribute-definition>
             <attribute-definition attribute-id="eswCatalogFeedInstanceID">
                 <display-name xml:lang="x-default">ESW Catalog Feed Instance ID</display-name>
@@ -1522,6 +1481,14 @@ Order Package Reference/Tracking Number is appended in URL from code base.</desc
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswEnableOrderDetail">
+                <display-name xml:lang="x-default">ESW Enable Order Detail</display-name>
+                <description xml:lang="x-default">If true order details will be shown on Order Histor Detail Page</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>true</default-value>
+            </attribute-definition>
             <attribute-definition attribute-id="eswEnableTaxInformation">
                 <display-name xml:lang="x-default">ESW Enable Tax Information</display-name>
                 <type>boolean</type>
@@ -1561,6 +1528,7 @@ Order Package Reference/Tracking Number is appended in URL from code base.</desc
                 <attribute attribute-id="eswEnableHeaderPagebar"/>
                 <attribute attribute-id="eswEnableFooterBar"/>
                 <attribute attribute-id="eswEnableLandingPageRedirect"/>
+                <attribute attribute-id="eswEnableOrderDetail"/>
             </attribute-group>
             <attribute-group group-id="ESW Pricing Configuration">
                 <display-name xml:lang="x-default">ESW Pricing Configuration</display-name>
@@ -1604,17 +1572,6 @@ Order Package Reference/Tracking Number is appended in URL from code base.</desc
                 <attribute attribute-id="eswCatalogFeedTimeStamp"/>
                 <attribute attribute-id="eswCatalogFeedDelimiter"/>
                 <attribute attribute-id="isEswCatalogInternalValidationEnabled"/>
-            </attribute-group>
-            <attribute-group group-id="ESW Package Integration Configuration">
-                <display-name xml:lang="x-default">ESW Package Integration Configuration</display-name>
-                <attribute attribute-id="eswTrackingUrl"/>
-            </attribute-group>
-            <attribute-group group-id="ESW Mamenta Integration Configuration">
-                <display-name xml:lang="x-default">ESW Mamenta Integration Configuration</display-name>
-                <attribute attribute-id="eswMamentaFeedSFTPService"/>
-                <attribute attribute-id="eswMamentaCatalogRemotePath"/>
-                <attribute attribute-id="eswMamentaInventoryRemotePath"/>
-                <attribute attribute-id="eswMamentaFeedDelimiter"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

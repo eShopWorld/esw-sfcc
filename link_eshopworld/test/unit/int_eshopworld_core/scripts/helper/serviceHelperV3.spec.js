@@ -29,61 +29,59 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                 return 23;
             }
         },
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    strToJson: function () {
-                        return {
-                            fromRetailerCurrencyIso: 'USD',
-                            rate: '1',
-                            toShopperCurrencyIso: 'Eur'
-                        };
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return true;
-                    },
-                    getEShopWorldModuleEnabled: function () {
-                        return true;
-                    },
-                    getBaseCurrencyPreference: function () {
-                        return 'USD';
-                    },
-                    getSelectedCountryDetail: function () {
-                        var selectedCountry = {
-                            countryCode: 'USD',
-                            name: '',
-                            defaultCurrencyCode: 'USD',
-                            baseCurrencyCode: 'USD',
-                            isSupportedByESW: 'false',
-                            isFixedPriceModel: 'false'
-                        };
-                        selectedCountry.name = 'Canada';
-                        selectedCountry.defaultCurrencyCode = 'CAD';
-                        selectedCountry.baseCurrencyCode = '';
-                        selectedCountry.isSupportedByESW = 'true';
-                        selectedCountry.isFixedPriceModel = 'true';
-                        return selectedCountry;
-                    },
-                    applyOverridePrice: function (billingAmount) {
-                        var selectedFxRate = {
-                            fromRetailerCurrencyIso: 'USD',
-                            rate: '0.045215122125',
-                            toShopperCurrencyIso: 'EUR'
-                        };
-                        // eslint-disable-next-line no-param-reassign
-                        billingAmount /= selectedFxRate.rate;
-                        return Number(billingAmount);
-                    },
-                    getAvailableCountry: function () {
-                        return 'IE';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    },
-                    isESWSupportedCountry: function () {
-                        return 'true';
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                strToJson: function () {
+                    return {
+                        fromRetailerCurrencyIso: 'USD',
+                        rate: '1',
+                        toShopperCurrencyIso: 'Eur'
+                    };
+                },
+                isEswRoundingsEnabled: function () {
+                    return true;
+                },
+                getEShopWorldModuleEnabled: function () {
+                    return true;
+                },
+                getBaseCurrencyPreference: function () {
+                    return 'USD';
+                },
+                getSelectedCountryDetail: function () {
+                    var selectedCountry = {
+                        countryCode: 'USD',
+                        name: '',
+                        defaultCurrencyCode: 'USD',
+                        baseCurrencyCode: 'USD',
+                        isSupportedByESW: 'false',
+                        isFixedPriceModel: 'false'
+                    };
+                    selectedCountry.name = 'Canada';
+                    selectedCountry.defaultCurrencyCode = 'CAD';
+                    selectedCountry.baseCurrencyCode = '';
+                    selectedCountry.isSupportedByESW = 'true';
+                    selectedCountry.isFixedPriceModel = 'true';
+                    return selectedCountry;
+                },
+                applyOverridePrice: function (billingAmount) {
+                    var selectedFxRate = {
+                        fromRetailerCurrencyIso: 'USD',
+                        rate: '0.045215122125',
+                        toShopperCurrencyIso: 'EUR'
+                    };
+                    // eslint-disable-next-line no-param-reassign
+                    billingAmount /= selectedFxRate.rate;
+                    return Number(billingAmount);
+                },
+                getAvailableCountry: function () {
+                    return 'IE';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                isESWSupportedCountry: function () {
+                    return 'true';
+                }
             }
         }
     });

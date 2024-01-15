@@ -224,6 +224,97 @@ function getLineItemsV3(order, countryCode, currencyCode) {
 }
 
 /**
+ * function to get line items for version 2
+ * @param {Object} order - Order API object
+ * @param {string} countryCode - shopper's countryCode
+ * @param {string} currencyCode - shopper's currencyCode
+ * @returns {Object} - the cart items
+ */
+function getLineItemsV2(order, countryCode, currencyCode) {
+    let lineItems = [],
+        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
+        totalQuantity = 0; // eslint-disable-line no-unused-vars
+
+    let localizeObj = {
+        localizeCountryObj: {
+            countryCode: countryCode,
+            currencyCode: currencyCode
+        },
+        applyCountryAdjustments: 'true',
+        applyRoundingModel: 'true'
+    };
+
+    let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
+    let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper');
+
+    let totalDiscount = eswHelperHL.getOrderDiscount(order, localizeObj, conversionPrefs).value,
+        remainingDiscount = totalDiscount; // eslint-disable-line no-unused-vars
+
+    collections.forEach(order.productLineItems, function (item) {
+        if (!item.bonusProductLineItem) {
+            totalQuantity += item.quantity.value;
+        }
+    });
+
+    for (let lineItemNumber in order.productLineItems) {
+        let item = order.productLineItems[lineItemNumber];
+        let beforeDiscount = eswHelper.getMoneyObject(item.basePrice.value, false, false).value * item.quantity.value,
+            price = beforeDiscount,
+            discountAmount;
+        let productVariationModel = item.product.variationModel;
+        let color = productVariationModel.getProductVariationAttribute('color') ? productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('color')).displayValue : null;
+        let size = productVariationModel.getProductVariationAttribute('size') ? productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('size')).displayValue : null;
+
+        // Apply product level promotions
+        // eslint-disable-next-line no-loop-func
+        collections.forEach(item.priceAdjustments, function (priceAdjustment) {
+            if (priceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
+                price = eswHelper.getMoneyObject(priceAdjustment.appliedDiscount.fixedPrice, false, false).value * priceAdjustment.quantity;
+                if (priceAdjustment.quantity < item.quantity.value) {
+                    price += (item.quantity.value - priceAdjustment.quantity) * eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
+                }
+            } else {
+                let adjustedUnitPrice = eswHelper.getMoneyObject(priceAdjustment.price, false, false, false).value;
+                price -= (adjustedUnitPrice) * -1;
+            }
+        });
+        price = (price / item.quantity.value).toFixed(3);
+        discountAmount = (beforeDiscount - price).toFixed(3);
+        if (item.bonusProductLineItem) {
+            price = 0;
+        }
+        let cartItem = {
+            quantity: item.quantity.value,
+            estimatedDeliveryDate: null,
+            lineItemId: item.custom.eswLineItemId,
+            product: {
+                productCode: item.productID,
+                upc: null,
+                title: item.productName,
+                description: item.productName,
+                shopperCurrencyProductPriceInfo: {
+                    'price': currencyCode + price,
+                    'discountAmount': currencyCode + discountAmount,
+                    'beforeDiscount': currencyCode + beforeDiscount,
+                    'discountPercentage': null
+                },
+                imageUrl: customizationHelper.getProductImage(item.product),
+                color: color,
+                size: size,
+                isNonStandardCatalogItem: false,
+                metadataItems: eswHelperHL.getProductLineMetadataItems(item),
+                isReturnProhibited: eswHelperHL.isReturnProhibited(item.productID, countryCode)
+            },
+            cartGrouping: 'Group 1',
+            metadataItems: null
+        };
+        lineItems.push(cartItem);
+    }
+    return lineItems;
+}
+
+/**
  * function to get product unit price info
  * @param {Object} cart - productLineItem
  * @returns {Object} - cart discount price info
@@ -293,5 +384,6 @@ function getShopperCheckoutExperience(shopperLocale) {
 module.exports = {
     getLineItemsV3: getLineItemsV3,
     getShopperCheckoutExperience: getShopperCheckoutExperience,
-    getDeliveryDiscounts: getDeliveryDiscounts
+    getDeliveryDiscounts: getDeliveryDiscounts,
+    getLineItemsV2: getLineItemsV2
 };

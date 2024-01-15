@@ -38,12 +38,22 @@ function syncSelectedProducts(saleableProducts) {
 function getSyncStatusInfo(product) {
     let statusInfoMsg = 'unknown';
     let isInternallyValidProduct = !eswCatalogHelper.isValidProduct(product).isError;
+    let isModifiedAfterSync = false;
+    let productModifiedDate = product.lastModified;
     if (isInternallyValidProduct) {
         if (!empty(product.custom.eswSyncMessage) && !empty(JSON.parse(product.custom.eswSyncMessage).code)) {
-            if (JSON.parse(product.custom.eswSyncMessage).code === 202) {
-                statusInfoMsg = 'synced';
+            let eswSyncedAttrVal = JSON.parse(product.custom.eswSyncMessage);
+            let syncedDateTime = eswSyncedAttrVal.lastSynced || null;
+            if (!empty(syncedDateTime)) {
+                syncedDateTime = new Date(syncedDateTime);
+                isModifiedAfterSync = productModifiedDate.getTime() > syncedDateTime.getTime();
             }
-            if (JSON.parse(product.custom.eswSyncMessage).code !== 202) {
+            if (isModifiedAfterSync) {
+                return statusInfoMsg;
+            }
+            if (eswSyncedAttrVal.code === 202) {
+                statusInfoMsg = 'synced';
+            } else {
                 statusInfoMsg = 'apiError';
             }
         }

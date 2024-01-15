@@ -154,7 +154,7 @@ const asnUtils = {
     sendASNForPackage: function (order) {
         try {
             let eswServices = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-                eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+                eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
                 oAuthObj = eswServices.getOAuthService(),
                 asnService = eswServices.getPackageServiceV4();
 
@@ -207,6 +207,7 @@ function execute() {
                     if (responseObj.outcome.equalsIgnoreCase('PackageCreated')) {
                         Transaction.begin();
                         order.custom.eswPackageReference = responseObj.package.eShopPackageReference.toString();
+                        order.custom.eswTrackingURL = responseObj.package.trackingUrl;
                         order.custom.eswReceivedASN = true;
                         Transaction.commit();
                         Logger.info('ASN successfully transmitted for order: {0}', order.orderNo);

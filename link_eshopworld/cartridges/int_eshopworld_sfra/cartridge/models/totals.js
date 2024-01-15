@@ -240,6 +240,9 @@ function totals(lineItemContainer) {
             let orderHistoryFlag = false,
                 eswShopperCurrencyCode = null,
                 eswTrackingNumber = null,
+                eswTrackingURL = null,
+                eswPaymentMethod,
+                transaction,
                 isESWSupportedCountry = eswHelper.isESWSupportedCountry(),
                 cartPageShippingCost = 0;
             if (Object.hasOwnProperty.call(lineItemContainer, 'orderNo')) {
@@ -247,14 +250,24 @@ function totals(lineItemContainer) {
                     orderHistoryFlag = true;
                     eswShopperCurrencyCode = lineItemContainer.originalOrder.custom.eswShopperCurrencyCode;
                     eswTrackingNumber = ('eswPackageReference' in lineItemContainer.originalOrder.custom) ? lineItemContainer.originalOrder.custom.eswPackageReference : null;
+                    eswTrackingURL = ('eswTrackingURL' in lineItemContainer.originalOrder.custom) ? lineItemContainer.originalOrder.custom.eswTrackingURL : null;
+                    transaction = lineItemContainer.originalOrder.getPaymentTransaction();
+                    if (!empty(transaction.custom.eswPaymentMethodCardBrand)) {
+                        eswPaymentMethod = transaction.custom.eswPaymentMethodCardBrand;
+                    } else if (!empty(lineItemContainer.originalOrder.custom.eswPaymentMethod)) {
+                        eswPaymentMethod = lineItemContainer.originalOrder.custom.eswPaymentMethod;
+                    }
                 }
             }
             this.eswTrackingNumber = eswTrackingNumber;
+            this.eswTrackingURL = eswTrackingURL;
+            this.eswPaymentMethod = eswHelper.isOrderDetailEnabled() ? eswPaymentMethod : null;
+
             if (!orderHistoryFlag) {
                 this.subTotal = (isESWSupportedCountry) ? formatMoney(eswHelper.getFinalOrderTotalsObject()) : getTotals(lineItemContainer.getAdjustedMerchandizeTotalPrice(false));
                 cartPageShippingCost = getEswCartShippingCost(lineItemContainer.shippingTotalPrice);
                 this.totalShippingCost = (isESWSupportedCountry) ? formatMoney(cartPageShippingCost) : getTotals(lineItemContainer.shippingTotalPrice);
-            } else {
+            } else if (eswHelper.isOrderDetailEnabled()) {
                 this.subTotal = (eswShopperCurrencyCode != null) ? getCalculatedSubTotal(lineItemContainer, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.getAdjustedMerchandizeTotalPrice(false).decimalValue, lineItemContainer.getCurrencyCode());
                 let shippingCost = getDiscountedAmount(lineItemContainer, 'beforeDiscount');
                 this.totalShippingCost = (eswShopperCurrencyCode != null) ? getOrderTotals(!empty(shippingCost) ? shippingCost : lineItemContainer.originalOrder.custom.eswShopperCurrencyDeliveryPriceInfo, eswShopperCurrencyCode) : getShippingLevelDiscountTotal(lineItemContainer, false);
@@ -266,7 +279,7 @@ function totals(lineItemContainer) {
                 if (!orderHistoryFlag) {
                     this.grandTotal = (isESWSupportedCountry) ? eswHelper.getOrderTotalWithShippingCost(cartPageShippingCost) : getTotals(lineItemContainer.totalGrossPrice);
                     this.totalTax = (isESWSupportedCountry && lineItemContainer.totalTax.available) ? formatMoney(new dw.value.Money(lineItemContainer.totalTax.decimalValue, request.getHttpCookies()['esw.currency'].value)) : getTotals(lineItemContainer.totalTax);
-                } else {
+                } else if (eswHelper.isOrderDetailEnabled()) {
                     this.grandTotal = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyPaymentAmount, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalGrossPrice.decimalValue, lineItemContainer.getCurrencyCode());
                     let eswTotalTax = 0;
                     if (!empty(lineItemContainer.totalTax.decimalValue) || !empty(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes)) {
@@ -278,7 +291,7 @@ function totals(lineItemContainer) {
             if (!orderHistoryFlag) {
                 this.orderLevelDiscountTotal = getOrderLevelDiscountTotal(lineItemContainer, isESWSupportedCountry);
                 this.shippingLevelDiscountTotal = getShippingLevelDiscountTotal(lineItemContainer, isESWSupportedCountry);
-            } else {
+            } else if (eswHelper.isOrderDetailEnabled()) {
                 /* This Block handles order/ shipping discount for Account Order History (AOH) page
                    For now, not showing any order/ shipping discount on AOH when order is placed with ESW checkout.
                    Once order discount is distinct from product prices, (In Checkout v3)

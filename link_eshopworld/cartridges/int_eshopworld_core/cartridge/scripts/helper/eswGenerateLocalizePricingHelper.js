@@ -7,7 +7,7 @@ let localizePriceHelpers = {
      * @returns {array} returns selected country adjustment
      */
     getESWCountryAdjustments: function (deliveryCountryIso) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let countryAdjustment = eswHelper.getPricingAdvisorData().countryAdjustment,
             selectedCountryAdjustment = [];
         if (!empty(countryAdjustment)) {
@@ -24,7 +24,7 @@ let localizePriceHelpers = {
      * @returns {array} returns selected fx rate
      */
     getESWCurrencyFXRate: function (shopperCurrencyIso, localizeCountry) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let fxRates = eswHelper.getPricingAdvisorData().fxRates,
             baseCurrency = eswHelper.getBaseCurrencyPreference(localizeCountry),
             selectedFxRate = [];
@@ -41,7 +41,7 @@ let localizePriceHelpers = {
      * @returns {array} returns selected rounding rule
      */
     getESWRoundingModel: function (localizeObj) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let roundingModels = eswHelper.getPricingAdvisorData().roundingModels,
             selectedRoundingModel,
             selectedRoundingRule = [];

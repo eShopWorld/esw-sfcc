@@ -1,0 +1,103 @@
+{
+	"hooks": [
+		{
+			"name": "dw.ocapi.shop.product.beforeGET",
+			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.product.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/pdpPriceHook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.product.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/plpPriceHook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.product_search.beforeGET",
+			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.product_search.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/plpPriceHook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.item.modifyPATCHResponse",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.items.modifyPOSTResponse",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.coupon.modifyPOSTResponse",
+			"script": "./ocapi/shop/hooks/promotionModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.coupon.afterPOST",
+			"script": "./ocapi/shop/hooks/promotionModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.modifyPATCHResponse",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.beforePATCH",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.customer.baskets.modifyGETResponse_v2",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.item.modifyDELETEResponse",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.coupon.modifyDELETEResponse",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.afterPATCH",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.items.beforePOST",
+			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.promotion.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/promotionModifyResponse.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.shipment.shipping_method.modifyPUTResponse",
+			"script": "./ocapi/shop/hooks/shippingHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.beforePOST",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.afterPOST",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.modifyPOSTResponse",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.customer.orders.modifyGETResponse_v2",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.customer.afterPOST",
+			"script": "./ocapi/shop/hooks/customerHooks.js"
+		},
+		{    "name":"dw.ocapi.shop.basket.item.afterPATCH",
+			  "script": "./ocapi/shop/hooks/cartUpdateHook.js"
+		}
+	]
+}

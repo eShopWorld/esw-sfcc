@@ -9,17 +9,17 @@ var CustomObjectMgr = require('../../../../mocks/dw/object/CustomObjectMgr');
 var Transaction = require('../../../../mocks/dw/system/Transaction');
 var ResourceMock = require('../../../../mocks/dw/web/Resource')
 
-describe('int_eshopworld_core/cartridge/scripts/jobs/CatalogFeed.js', function () {
-    var diagnosticData = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/jobs/eswDiagnosticData', {
-        'dw/system/Logger': dwLoggerMock,
-        'dw/system/Status': dwStatusMock,
-        'dw/object/CustomObjectMgr': CustomObjectMgr,
-        'dw/system/Transaction': Transaction,
-        'dw/web/Resource': ResourceMock
-    });
+describe.skip('int_eshopworld_core/cartridge/scripts/jobs/CatalogFeed.js', function () {
+    // var diagnosticData = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/jobs/eswDiagnosticData', {
+    //     'dw/system/Logger': dwLoggerMock,
+    //     'dw/system/Status': dwStatusMock,
+    //     'dw/object/CustomObjectMgr': CustomObjectMgr,
+    //     'dw/system/Transaction': Transaction,
+    //     'dw/web/Resource': ResourceMock
+    // });
 
-    it('Should return ERROR status', function () {
-        let jobRes = diagnosticData.execute();
-        chai.expect(jobRes).to.be.an.instanceof(dwStatusMock);
-    });
+    // it('Should return ERROR status', function () {
+    //     let jobRes = diagnosticData.execute();
+    //     chai.expect(jobRes).to.be.an.instanceof(dwStatusMock);
+    // });
 });

@@ -4,6 +4,9 @@ class Site {
         this.name = 'Site Name';
         this.preferences = {};
         this.customPreferences = {};
+        this.getCurrent = function () {
+            return new Site();
+        }
     }
 
     static getCurrent() {

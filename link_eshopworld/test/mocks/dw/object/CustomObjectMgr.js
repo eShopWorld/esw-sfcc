@@ -35,7 +35,20 @@ CustomObjectMgr.getCustomObject = function(type, id){
 
 };
 CustomObjectMgr.getAllCustomObjects = function(){};
-CustomObjectMgr.queryCustomObjects = function(){};
+CustomObjectMgr.queryCustomObjects = function(type){
+	if (type == "ESW_COUNTRIES" || type == "ESW_CURRENCIES") {
+		var CoClass = require('./CustomObject'); 
+		var customObject = new CoClass();
+		customObject.custom = new Object();
+		customObject.custom.targetEnvironment = "Test-Test";
+		customObject.custom.timeout = 1000;
+		customObject.custom.serviceEnableLocking = false;
+		customObject.custom.logSoap = true;
+		customObject.custom.logStatus = true;
+		customObject.count = 0;
+		return customObject;
+	}
+};
 CustomObjectMgr.prototype.customObject=null;
 CustomObjectMgr.prototype.allCustomObjects=null;
 

@@ -18,7 +18,7 @@ const eswHealthCheckHelper = {
  */
     isServiceInUse: function (serviceName) {
         let LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         try {
             /* eslint no-param-reassign: off */
             let serviceNameRegex = serviceName.match(/EswCheckout(.*?)/gi);

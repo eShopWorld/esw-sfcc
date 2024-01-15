@@ -41,8 +41,8 @@ server.append(
                         eswHelper.setAllAvailablePriceBooks();
                         eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());
                     }
-                    eswHelper.selectCountry(selectedCountry, currencyCode, language);
                 }
+                eswHelper.selectCountry(selectedCountry, currencyCode, language);
             } else {
                 delete session.privacy.fxRate;
                 let selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry);

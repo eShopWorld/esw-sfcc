@@ -33,28 +33,27 @@ basketMgr.productLineItems = productLineItems1;
 // eslint-disable-next-line no-useless-escape
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var eswCoreHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    },
-                    isThresholdEnabled: function () {
-                        return true;
-                    },
-                    getProductLineMetadataItemsPreference: function () {
-                        return 'someattribute|someattribute';
-                    },
-                    getOrderDiscount: function () {
-                        return money();
-                    }
-                };
+        'dw/content/ContentMgr': {},
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                isThresholdEnabled: function () {
+                    return true;
+                },
+                getProductLineMetadataItemsPreference: function () {
+                    return 'someattribute|someattribute';
+                },
+                getOrderDiscount: function () {
+                    return money();
+                }
             }
         },
         'dw/system/Transaction': Transaction,

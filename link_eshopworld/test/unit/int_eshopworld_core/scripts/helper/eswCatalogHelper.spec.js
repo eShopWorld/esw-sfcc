@@ -41,7 +41,9 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCatalogHelper.js', fun
             getEswHelper: {
                 isEswCatalogFeatureEnabled: function () { return true; },
                 getCatalogUploadMethod: function () { return Constants.API; },
-                isEswCatalogInternalValidationEnabled: function () { return true; }
+                isEswCatalogInternalValidationEnabled: function () { return true; },
+                getEswCatalogFeedProductCustomAttrFieldMapping: function () { return { material: 'material', hsCode: 'hsCode', hsCodeRegion: 'hsCodeRegion', countryOfOrigin: 'countryOfOrigin' }; },
+                strToJson: function () { return {}; }
             }
         }
     });
@@ -173,9 +175,9 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCatalogHelper.js', fun
         it('should return an array of products when there are products', function () {
             let isApiMethod = false;
             let searchAbleProducts = [
-              { product: { lastModified: new Date('2023-09-20T17:05:01Z') } },
-              { product: { lastModified: new Date('2023-09-20T17:05:02Z') } },
-              { product: { lastModified: new Date('2023-09-20T17:05:03Z') } }
+                { product: { lastModified: new Date('2023-09-20T17:05:01Z') } },
+                { product: { lastModified: new Date('2023-09-20T17:05:02Z') } },
+                { product: { lastModified: new Date('2023-09-20T17:05:03Z') } }
             ];
             let result = eswCatalogHelper.getFilteredProducts(isApiMethod, searchAbleProducts);
             expect(result).to.be.null;

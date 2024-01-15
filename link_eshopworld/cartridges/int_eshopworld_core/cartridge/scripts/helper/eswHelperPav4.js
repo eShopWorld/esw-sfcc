@@ -1,6 +1,6 @@
 'use strict';
 
-var eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+var eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 var Constants = require('*/cartridge/scripts/util/Constants');
 
 var eswPav4Helper = {

@@ -11,19 +11,17 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
     var orderConfirmationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/customer/CustomerMgr': CustomerMgrMock,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                }
             }
         },
         'dw/system/Logger': Logger,
@@ -56,12 +54,12 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                         }
                     }]
                 }
-            }
+            };
             let deliveryDiscount = orderConfirmationHelper.getDeliveryDiscountsInfo(deliveryOptions, 'shopper');
             chai.expect(JSON.stringify(deliveryDiscount)).to.equal('[{"deliveryOptionsPriceInfo":{"discounts":[[{"title":"","description":"","discount":{"shopper":""},"beforeDiscount":{"shopper":""}}]]}}]');
         });
     });
-    describe("Sad Path", function () {
+    describe('Sad Path', function () {
         it('should getDeliveryDiscountsInfo from provided undefined', function () {
             let deliveryOptions = null;
             let deliveryDiscount = orderConfirmationHelper.getDeliveryDiscountsInfo(deliveryOptions);

@@ -13,7 +13,7 @@ const Status = require('dw/system/Status');
  */
 function execute(args) {
     let eswGenerateLocalizePricingHelper = require('*/cartridge/scripts/helper/eswGenerateLocalizePricingHelper');
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     try {
         let localizedPricingCountries = JSON.parse(eswHelper.getLocalizedPricingCountries());
         let writeDirPath = args.impexDirPath;

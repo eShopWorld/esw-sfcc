@@ -36,25 +36,22 @@ describe('int_eshopworld_core/cartridge/scripts/helper/marketPlaceOrderHelper.js
         'dw/order/OrderMgr': OrderMgr,
         'dw/util/StringUtils': StringUtils,
         'dw/system/Status': status,
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    geteswImageType: function () { return 'fake Image'; },
-                    eswInfoLogger: function () { return 'a logger function' }
-                }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                geteswImageType: function () { return 'fake Image'; },
+                eswInfoLogger: function () { return 'a logger function'; }
             }
         }
     });
     describe('Happy path', function () {
-        it("Should build export json payload from order", function () {
+        it('Should build export json payload from order', function () {
             let returnResult = marketPlaceOrderHelper.prepareMarketPlaceOrderOrder(reqObj);
-            expect(returnResult).to.include({parentBrandOrderReference: "fake-refrence"});
-            
+            expect(returnResult).to.include({ parentBrandOrderReference: 'fake-refrence' });
         });
     });
 
-    describe("Sad Path", function () {
-        it("Should respond null object from empty order", function () {
+    describe('Sad Path', function () {
+        it('Should respond null object from empty order', function () {
             reqObj = undefined;
             let returnResult = marketPlaceOrderHelper.prepareMarketPlaceOrderOrder();
             expect(returnResult).to.include({});

@@ -55,7 +55,7 @@
             </attribute-group>
 		</group-definitions>
     </type-extension>
-	
+
 	<type-extension type-id="Basket">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="eswOrderTotal">
@@ -111,7 +111,7 @@
             </attribute-definition>
         </custom-attribute-definitions>
     </type-extension>
-	
+
 	<type-extension type-id="Order">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="eswDeliveryOptions">

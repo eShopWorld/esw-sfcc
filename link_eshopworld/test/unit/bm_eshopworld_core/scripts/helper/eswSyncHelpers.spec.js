@@ -2,7 +2,7 @@
 
 var chai = require('chai');
 var proxyquire = require('proxyquire').noCallThru();
-var calendarMock = require("../../../../mocks/dw/util/Calendar");
+var calendarMock = require('../../../../mocks/dw/util/Calendar');
 var ArrayList = require('../../../../mocks/dw.util.Collection');
 var Logger = require('../../../../mocks/dw/system/Logger');
 var Status = require('../../../../mocks/dw/system/Status');
@@ -65,11 +65,8 @@ describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', functi
         },
         'dw/util/Calendar': calendarMock,
         'dw/web/Resource': {},
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                };
-            }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {}
         },
         'dw/system/Logger': Logger,
         'dw/system/Status': Status,

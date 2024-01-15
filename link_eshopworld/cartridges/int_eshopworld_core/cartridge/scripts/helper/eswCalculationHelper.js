@@ -7,7 +7,7 @@ const formatMoney = require('dw/util/StringUtils').formatMoney;
 const Money = require('dw/value/Money');
 
 const logger = require('dw/system/Logger');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Constants = require('*/cartridge/scripts/util/Constants');
 
 const getEswCalculationHelper = {
@@ -18,12 +18,13 @@ const getEswCalculationHelper = {
      * @param {*} formatted - Return formatted price if formatted is null
      * @param {*} noRounding - Apply no rounding if `no rounding` is false
      * @param {*} selectedCountryInfoObjParam
+     * @param {*} promotionPriceObj apply rounding on promotion if set to true
      * @returns {Object | number} Formatted currency or object
      */
     // eslint-disable-next-line consistent-return
-    getMoneyObject: function (price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam) {
+    getMoneyObject: function (price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam, promotionPriceObj) {
         let paVersion = eswHelper.getPaVersion();
-        let billingPrice = (typeof price === 'object' && price.value !== 'undefined') ? Number(price.value) : Number(price);
+        let billingPrice = (typeof price === 'object' && price.value && price.value !== 'undefined') ? Number(price.value) : Number(price);
         let selectedCountryInfo = !empty(selectedCountryInfoObjParam) ? selectedCountryInfoObjParam : null;
         if (!eswHelper.getEShopWorldModuleEnabled()) {
             return price;
@@ -32,12 +33,15 @@ const getEswCalculationHelper = {
             let baseCurrency = eswHelper.getBaseCurrencyPreference(),
                 selectedCountry = !empty(selectedCountryInfo) ? selectedCountryInfo.selectedCountry : eswHelper.getAvailableCountry(),
                 selectedFxRate = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate) : false,
-                selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry),
                 selectedCountryAdjustment = !empty(session.privacy.countryAdjustment) ? JSON.parse(session.privacy.countryAdjustment) : '';
+            let selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry);
+            let selectedCurrencyCode = session.getCurrency().currencyCode;
 
             if (!empty(selectedCountryInfo)) {
+                selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry.countryCode);
                 selectedFxRate = selectedCountryInfo.selectedFxRate;
                 selectedCountryAdjustment = selectedCountryInfo.selectedCountryAdjustments;
+                selectedCurrencyCode = selectedCountryInfo.currencyCode;
             }
 
             // Checking if selected country is set as a fixed price country
@@ -45,11 +49,15 @@ const getEswCalculationHelper = {
 
             // if fxRate is empty, return the price without applying any calculations
             if (!selectedFxRate || empty(selectedFxRate.toShopperCurrencyIso) || !selectedCountryDetail.isSupportedByESW) {
-                return (formatted == null) ? formatMoney(new Money(billingPrice, session.getCurrency().currencyCode)) : new Money(billingPrice, session.getCurrency().currencyCode);
+                return (formatted == null) ? formatMoney(new Money(billingPrice, selectedCurrencyCode)) : new Money(billingPrice, selectedCurrencyCode);
             }
 
             // applying override price if override pricebook is set
-            billingPrice = Number(eswHelper.applyOverridePrice(billingPrice, selectedCountry));
+            if (empty(promotionPriceObj) || !promotionPriceObj || isFixedPriceCountry) {
+                // applying override price if override pricebook is set
+                billingPrice = Number(eswHelper.applyOverridePrice(billingPrice, selectedCountry));
+            }
+
             // fixed price countries will not have adjustment, duty and taxes applied
             if (!noAdjustment) {
                 if (!isFixedPriceCountry && selectedCountryAdjustment && !empty(selectedCountryAdjustment)) {
@@ -72,8 +80,13 @@ const getEswCalculationHelper = {
                 }
             }
             // applying the rounding model
-            if (eswHelper.isEswRoundingsEnabled() && billingPrice > 0 && !noRounding && !isFixedPriceCountry) {
-                billingPrice = eswHelper.applyRoundingModel(billingPrice, false);
+            if (eswHelper.isEswRoundingsEnabled() && (billingPrice > 0 || (!empty(promotionPriceObj) && promotionPriceObj)) && !noRounding && !isFixedPriceCountry) {
+                if ((!empty(promotionPriceObj) && promotionPriceObj)) {
+                    billingPrice = eswHelper.applyRoundingModel(billingPrice * -1, false);
+                    billingPrice *= -1;
+                } else {
+                    billingPrice = eswHelper.applyRoundingModel(billingPrice, false);
+                }
             }
             billingPrice = new Money(billingPrice, selectedFxRate.toShopperCurrencyIso);
             return (formatted == null) ? formatMoney(billingPrice) : billingPrice;
@@ -128,7 +141,7 @@ const getEswCalculationHelper = {
                                 }
                             }
                         } else {
-                            let adjustedUnitPrice = eswHelper.getMoneyObject(adjustment.price, false, false, false).value;
+                            let adjustedUnitPrice = eswHelper.getMoneyObject(adjustment.price, false, false, false, null, true).value;
                             total -= (adjustedUnitPrice) * -1;
                         }
                     });
@@ -139,7 +152,16 @@ const getEswCalculationHelper = {
             if (unitPrice) {
                 total /= cart.quantity.value;
             }
-            return new Money(total, request.httpCookies['esw.currency'].value);
+            let shopperCurrency = null;
+            if (!empty(request.httpParameters.get('country-code'))) {
+                // Fix for headless
+                countryCode = request.httpParameters.get('country-code');
+                let cDetail = eswHelper.getSelectedCountryDetail(countryCode[0]);
+                shopperCurrency = cDetail.defaultCurrencyCode;
+            } else {
+                shopperCurrency = request.httpCookies['esw.currency'].value;
+            }
+            return new Money(total, shopperCurrency);
         } catch (error) {
             logger.error('Error in getting subtotal price {0} {1}', error.message, error.stack);
             return false;

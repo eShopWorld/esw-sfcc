@@ -36,7 +36,7 @@ global.request = Request;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderImportHelper.js', function () {
     var eswOrderImportHelper = proxyquire('../../../../../cartridges/int_eshopworld_sfra/cartridge/scripts/helper/eswOrderImportHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
+        '*/cartridge/scripts/helper/eswCoreHelper': {
         },
         '*/cartridge/scripts/helper/serviceHelper': '',
         '*/cartridge/scripts/helpers/basketCalculationHelpers': '',

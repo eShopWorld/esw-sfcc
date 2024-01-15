@@ -94,6 +94,15 @@
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
             </attribute-definition>
+            <attribute-definition attribute-id="eswCountrylocale">
+                <display-name xml:lang="x-default">Locale</display-name>
+                <description xml:lang="x-default">Country locale e.g en_US</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
             <attribute-definition attribute-id="isFixedPriceModel">
                 <display-name xml:lang="x-default">Is Fixed Price Model</display-name>
                 <description xml:lang="x-default">This flag will indicate whether this country is using fixed price model or not.</description>
@@ -167,6 +176,7 @@
                 <attribute attribute-id="countryCode"/>
                 <attribute attribute-id="name"/>
                 <attribute attribute-id="defaultCurrencyCode"/>
+                <attribute attribute-id="eswCountrylocale"/>
                 <attribute attribute-id="baseCurrencyCode"/>
                 <attribute attribute-id="isSupportedByESW"/>
                 <attribute attribute-id="isFixedPriceModel"/>
