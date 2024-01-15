@@ -17,381 +17,381 @@ var Transaction = require('../../../../mocks/dw/system/Transaction');
 var cart = basketMgr.getCurrentBasket();
 cart.custom = {
     eswShopperCurrencyDeliveryTaxes: ''
-}
+};
 var fakeOrderObject = {
-    "retailerCartId": "fake",
-    "eShopWorldOrderNumber": "e26db11f",
-    "checkoutTotal": {
-        "retailer": {
-            "currency": "USD",
-            "amount": "105.50"
+    retailerCartId: 'fake',
+    eShopWorldOrderNumber: 'e26db11f',
+    checkoutTotal: {
+        retailer: {
+            currency: 'USD',
+            amount: '105.50'
         },
-        "shopper": {
-            "currency": "EUR",
-            "amount": "101.11"
+        shopper: {
+            currency: 'EUR',
+            amount: '101.11'
         }
     },
-    "paymentDetails": {
-        "time": "2023-09-11T11:29:43.1766625Z",
-        "method": "PaymentCard",
-        "methodCardBrand": "Visa"
+    paymentDetails: {
+        time: '2023-09-11T11:29:43.1766625Z',
+        method: 'PaymentCard',
+        methodCardBrand: 'Visa'
     },
-    "retailerPromoCodes": [],
-    "lineItems": [
+    retailerPromoCodes: [],
+    lineItems: [
         {
-            "quantity": 1,
-            "product": {
-                "productCode": "701642984986M",
-                "hsCode": "62114900",
-                "title": "Classic Narrow Leg Pant",
-                "description": "Classic Narrow Leg Pant",
-                "productUnitPriceInfo": {
-                    "price": {
-                        "retailer": {
-                            "currency": "USD",
-                            "amount": "70.66"
+            quantity: 1,
+            product: {
+                productCode: '701642984986M',
+                hsCode: '62114900',
+                title: 'Classic Narrow Leg Pant',
+                description: 'Classic Narrow Leg Pant',
+                productUnitPriceInfo: {
+                    price: {
+                        retailer: {
+                            currency: 'USD',
+                            amount: '70.66'
                         },
-                        "shopper": {
-                            "currency": "EUR",
-                            "amount": "67.72"
+                        shopper: {
+                            currency: 'EUR',
+                            amount: '67.72'
                         }
                     },
-                    "discounts": []
+                    discounts: []
                 },
-                "imageUrl": "fdfs",
-                "color": "Black Multi",
-                "size": "8",
-                "isReturnProhibited": false,
-                "metadataItems": []
+                imageUrl: 'fdfs',
+                color: 'Black Multi',
+                size: '8',
+                isReturnProhibited: false,
+                metadataItems: []
             },
-            "estimatedDeliveryDate": {
-                "fromEShopWorld": "2023-09-26T00:00:00Z"
+            estimatedDeliveryDate: {
+                fromEShopWorld: '2023-09-26T00:00:00Z'
             },
-            "lineItemId": 1,
-            "charges": {
-                "subTotalBeforeTaxesAndCartDiscountsApplied": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "70.66"
+            lineItemId: 1,
+            charges: {
+                subTotalBeforeTaxesAndCartDiscountsApplied: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '70.66'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "67.72"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '67.72'
                     }
                 },
-                "subTotalAfterCartDiscount": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "70.66"
+                subTotalAfterCartDiscount: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '70.66'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "67.72"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '67.72'
                     }
                 },
-                "cartDiscountAttribution": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "0.00"
+                cartDiscountAttribution: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '0.00'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "0.00"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '0.00'
                     }
                 },
-                "subTotal": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "57.45"
+                subTotal: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '57.45'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "55.06"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '55.06'
                     }
                 },
-                "uplift": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "0.00"
+                uplift: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '0.00'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "0.00"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '0.00'
                     }
                 },
-                "delivery": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "28.33"
+                delivery: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '28.33'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "27.15"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '27.15'
                     }
                 },
-                "deliveryDuty": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "0.00"
+                deliveryDuty: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '0.00'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "0.00"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '0.00'
                     }
                 },
-                "deliveryTaxes": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "6.51"
+                deliveryTaxes: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '6.51'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "6.24"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '6.24'
                     }
                 },
-                "taxes": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "13.21"
+                taxes: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '13.21'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "12.66"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '12.66'
                     }
                 },
-                "otherTaxes": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "0.00"
+                otherTaxes: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '0.00'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "0.00"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '0.00'
                     }
                 },
-                "administration": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "0.00"
+                administration: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '0.00'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "0.00"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '0.00'
                     }
                 },
-                "duty": {
-                    "retailer": {
-                        "currency": "USD",
-                        "amount": "0.00"
+                duty: {
+                    retailer: {
+                        currency: 'USD',
+                        amount: '0.00'
                     },
-                    "shopper": {
-                        "currency": "EUR",
-                        "amount": "0.00"
+                    shopper: {
+                        currency: 'EUR',
+                        amount: '0.00'
                     }
                 }
             },
-            "metadataItems": []
+            metadataItems: []
         }
     ],
-    "deliveryCountryIso": "IE",
-    "shopperCheckoutExperience": {
-        "shopperCultureLanguageIso": "en-IE",
-        "emailMarketingOptIn": true,
-        "smsMarketingOptIn": true,
-        "metadataItems": []
+    deliveryCountryIso: 'IE',
+    shopperCheckoutExperience: {
+        shopperCultureLanguageIso: 'en-IE',
+        emailMarketingOptIn: true,
+        smsMarketingOptIn: true,
+        metadataItems: []
     },
-    "retailerCheckoutExperience": {
-        "metadataItems": [
+    retailerCheckoutExperience: {
+        metadataItems: [
             {
-                "name": "OrderConfirmationUri_TestOnly",
-                "value": "fdsf"
+                name: 'OrderConfirmationUri_TestOnly',
+                value: 'fdsf'
             },
             {
-                "name": "OrderConfirmationBase64EncodedAuth_TestOnly",
-                "value": "1 parameters"
+                name: 'OrderConfirmationBase64EncodedAuth_TestOnly',
+                value: '1 parameters'
             },
             {
-                "name": "InventoryCheckUri_TestOnly",
-                "value": "fdsd"
+                name: 'InventoryCheckUri_TestOnly',
+                value: 'fdsd'
             },
             {
-                "name": "InventoryCheckBase64EncodedAuth_TestOnly",
-                "value": "1 parameters"
+                name: 'InventoryCheckBase64EncodedAuth_TestOnly',
+                value: '1 parameters'
             }
         ]
     },
-    "deliveryOption": {
-        "deliveryOption": "POST",
-        "isPriceOverrideFromRetailer": true,
-        "deliveryOptionPriceInfo": {
-            "price": {
-                "retailer": {
-                    "currency": "USD",
-                    "amount": "34.84"
+    deliveryOption: {
+        deliveryOption: 'POST',
+        isPriceOverrideFromRetailer: true,
+        deliveryOptionPriceInfo: {
+            price: {
+                retailer: {
+                    currency: 'USD',
+                    amount: '34.84'
                 },
-                "shopper": {
-                    "currency": "EUR",
-                    "amount": "33.39"
+                shopper: {
+                    currency: 'EUR',
+                    amount: '33.39'
                 }
             },
-            "discounts": []
+            discounts: []
         },
-        "metadataItems": []
+        metadataItems: []
     },
-    "charges": {
-        "totalBeforeTaxesAndCartDiscountsApplied": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "70.66"
+    charges: {
+        totalBeforeTaxesAndCartDiscountsApplied: {
+            retailer: {
+                currency: 'USD',
+                amount: '70.66'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "67.72"
+            shopper: {
+                currency: 'EUR',
+                amount: '67.72'
             }
         },
-        "totalAfterCartDiscount": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "70.66"
+        totalAfterCartDiscount: {
+            retailer: {
+                currency: 'USD',
+                amount: '70.66'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "67.72"
+            shopper: {
+                currency: 'EUR',
+                amount: '67.72'
             }
         },
-        "totalCartDiscount": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "0.00"
+        totalCartDiscount: {
+            retailer: {
+                currency: 'USD',
+                amount: '0.00'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "0.00"
+            shopper: {
+                currency: 'EUR',
+                amount: '0.00'
             }
         },
-        "total": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "57.45"
+        total: {
+            retailer: {
+                currency: 'USD',
+                amount: '57.45'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "55.06"
+            shopper: {
+                currency: 'EUR',
+                amount: '55.06'
             }
         },
-        "delivery": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "28.33"
+        delivery: {
+            retailer: {
+                currency: 'USD',
+                amount: '28.33'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "27.15"
+            shopper: {
+                currency: 'EUR',
+                amount: '27.15'
             }
         },
-        "deliveryDuty": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "0.00"
+        deliveryDuty: {
+            retailer: {
+                currency: 'USD',
+                amount: '0.00'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "0.00"
+            shopper: {
+                currency: 'EUR',
+                amount: '0.00'
             }
         },
-        "deliveryTaxes": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "6.51"
+        deliveryTaxes: {
+            retailer: {
+                currency: 'USD',
+                amount: '6.51'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "6.24"
+            shopper: {
+                currency: 'EUR',
+                amount: '6.24'
             }
         },
-        "taxes": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "13.21"
+        taxes: {
+            retailer: {
+                currency: 'USD',
+                amount: '13.21'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "12.66"
+            shopper: {
+                currency: 'EUR',
+                amount: '12.66'
             }
         },
-        "otherTaxes": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "0.00"
+        otherTaxes: {
+            retailer: {
+                currency: 'USD',
+                amount: '0.00'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "0.00"
+            shopper: {
+                currency: 'EUR',
+                amount: '0.00'
             }
         },
-        "administration": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "0.00"
+        administration: {
+            retailer: {
+                currency: 'USD',
+                amount: '0.00'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "0.00"
+            shopper: {
+                currency: 'EUR',
+                amount: '0.00'
             }
         },
-        "duty": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "0.00"
+        duty: {
+            retailer: {
+                currency: 'USD',
+                amount: '0.00'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "0.00"
+            shopper: {
+                currency: 'EUR',
+                amount: '0.00'
             }
         },
-        "uplift": {
-            "retailer": {
-                "currency": "USD",
-                "amount": "0.00"
+        uplift: {
+            retailer: {
+                currency: 'USD',
+                amount: '0.00'
             },
-            "shopper": {
-                "currency": "EUR",
-                "amount": "0.00"
+            shopper: {
+                currency: 'EUR',
+                amount: '0.00'
             }
         }
     },
-    "contactDetails": [
+    contactDetails: [
         {
-            "contactDetailType": "IsDelivery",
-            "contactDetailsNickName": "",
-            "firstName": "sd",
-            "lastName": "test",
-            "gender": "None",
-            "address1": "436M M block Model",
-            "address2": "",
-            "city": "Lahore",
-            "postalCode": "A65 F4E2",
-            "region": "Dublin",
-            "country": "IE",
-            "email": "test@gmail.com",
-            "telephone": "+3538576437634",
-            "metadataItems": []
+            contactDetailType: 'IsDelivery',
+            contactDetailsNickName: '',
+            firstName: 'sd',
+            lastName: 'test',
+            gender: 'None',
+            address1: '436M M block Model',
+            address2: '',
+            city: 'Lahore',
+            postalCode: 'A65 F4E2',
+            region: 'Dublin',
+            country: 'IE',
+            email: 'test@gmail.com',
+            telephone: '+3538576437634',
+            metadataItems: []
         },
         {
-            "contactDetailType": "IsPayment",
-            "contactDetailsNickName": "",
-            "firstName": "sd",
-            "lastName": "test",
-            "gender": "None",
-            "address1": "436M M block Model",
-            "address2": "",
-            "city": "Lahore",
-            "postalCode": "A65 F4E2",
-            "region": "Dublin",
-            "country": "IE",
-            "email": "test@gmail.com",
-            "telephone": "+3538576437634",
-            "metadataItems": []
+            contactDetailType: 'IsPayment',
+            contactDetailsNickName: '',
+            firstName: 'sd',
+            lastName: 'test',
+            gender: 'None',
+            address1: '436M M block Model',
+            address2: '',
+            city: 'Lahore',
+            postalCode: 'A65 F4E2',
+            region: 'Dublin',
+            country: 'IE',
+            email: 'test@gmail.com',
+            telephone: '+3538576437634',
+            metadataItems: []
         }
     ]
 };
@@ -451,26 +451,139 @@ cart.getAllProductLineItems = function () {
     }]);
 };
 
+let cartItem = [{
+    product: {
+        productUnitPriceInfo: {
+            discounts: [{
+                beforeDiscount: {
+                    shopper: {
+                        amount: 100
+                    },
+                    retailer: {
+                        amount: 100
+                    }
+                },
+                title: '',
+                description: '',
+                discount: {
+                    shopper: {
+                        amount: 100
+                    },
+                    retailer: {
+                        amount: 100
+                    }
+                }
+            }],
+            price: {
+                retailer: {
+                    amount: 100
+                },
+                shopper: {
+                    amount: 100
+                }
+            }
+        }
+    },
+    charges: {
+        administration: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        duty: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        otherTaxes: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        subTotal: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        delivery: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        deliveryDuty: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        deliveryTaxes: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        uplift: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        },
+        taxes: {
+            retailer: {
+                amount: 100
+            },
+            shopper: {
+                amount: 100
+            }
+        }
+    }
+}];
+
 var stubArrayList = sinon.stub();
 var stubURLUtils = sinon.stub();
 
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.js', function () {
     var getEswOcHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
-        'dw/system/Logger':  Logger,
+        'dw/system/Logger': Logger,
         'dw/web/Cookie': Cookie,
         'dw/system/Transaction': Transaction,
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': stubURLUtils,
         'dw/value/Money': Money,
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    overridePrice: function () {
-                        return false;
-                    },
-                    setAllAvailablePriceBooks: function () {},
-                    setBaseCurrencyPriceBook: function () {}
-                }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            overridePriceCore: function () {
+                return false;
+            },
+            getEswHelper: {
+                overridePrice: function () {
+                    return false;
+                },
+                overridePriceCore: function () {
+                    return false;
+                },
+                setAllAvailablePriceBooks: function () {},
+                setBaseCurrencyPriceBook: function () {}
             }
         },
         'dw/system/Site': {
@@ -479,9 +592,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                     getCustomPreferenceValue: function (value) {
                         if (value == 'eswBaseCurrency') {
                             return 'some value';
-                        } else {
-                            return 'true';
                         }
+                            return 'true';
                     }
                 };
             }
@@ -507,7 +619,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                     return Money(true, request.httpCookies['esw.currency'].value);
                 },
                 getMoneyObject: function () {
-                    return Money
+                    return Money;
                 }
             }
         },
@@ -518,21 +630,52 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
         }
     }).getEswOcHelper();
     describe('Happy path', function () {
-        it("it Should set override pricebook", function () {
+        it('it Should set override pricebook', function () {
             let getFinalOrderTotalsObject = getEswOcHelper.setOverridePriceBooks('CAD', 'USD', {});
             expect(getFinalOrderTotalsObject).to.equal(undefined);
         });
     });
     describe('Happy path', function () {
-        it("it Should set applicable shipping method", function () {
+        it('it Should set applicable shipping method', function () {
             let getFinalOrderTotalsObject = getEswOcHelper.setApplicableShippingMethods(cart, 'POST', 'CAD', global.request);
             expect(getFinalOrderTotalsObject).to.equal(undefined);
         });
     });
     describe('Happy path', function () {
-        it("it Should update order attributes", function () {
+        it('it Should update order attributes', function () {
             let getUpdatedEswOrderAttributesV3 = getEswOcHelper.updateEswOrderAttributesV3(fakeOrderObject, cart);
             expect(getUpdatedEswOrderAttributesV3).to.equal(undefined);
+        });
+    });
+    describe('getDeliveryDiscountsInfo', function () {
+        it('it Should return discounts info', function () {
+            let deliveryOptions = {
+                deliveryOptionPriceInfo: {
+                    discounts: [1, 2, 3]
+                }
+            };
+            let getUpdatedEswOrderAttributesV3 = getEswOcHelper.getDeliveryDiscountsInfo(deliveryOptions, 'USD');
+            expect(getUpdatedEswOrderAttributesV3).to.be.an('array');
+        });
+    });
+    describe('getDeliveryDiscountsInfo', function () {
+        it('it Should return updated VE items', function () {
+            let updateEswOrderItemAttributesV3 = getEswOcHelper.updateEswOrderItemAttributesV3(fakeOrderObject, { custom: {} }, cartItem);
+            expect(updateEswOrderItemAttributesV3).to.have.property('ShopperDiscount');
+        });
+    });
+    describe('updateEswPaymentAttributes', function () {
+        let order = {
+            paymentInstruments: [
+                { paymentTransaction: { custom: {
+                    eswPaymentAmount: 0,
+                    eswPaymentMethodCardBrand: ''
+                } } }
+            ]
+        };
+        it('it Should update order payment', function () {
+            let updateEswPaymentAttributes = getEswOcHelper.updateEswPaymentAttributes(order, 150, 'testcardBrand');
+            expect(updateEswPaymentAttributes).to.equal(undefined);
         });
     });
 });

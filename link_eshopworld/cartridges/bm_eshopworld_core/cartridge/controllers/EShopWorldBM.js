@@ -196,7 +196,8 @@ server.get('CatalogConfig', function (req, res, next) {
         apiFields: [
             'isEswCatalogInternalValidationEnabled',
             'eswCatalogFeedPriceBookID',
-            'eswCatalogFeedTimeStamp'
+            'eswCatalogFeedTimeStamp',
+            'eswCatalogFeedProductCustomAttrFieldMapping'
         ],
         sftpFields: [
             'eswCatalogFeedLocalPath',

@@ -22,7 +22,14 @@
 <!--- Shipping Cost --->
 <div class="row leading-lines shipping-item">
     <div class="col-6 start-lines">
-        <p class="order-receipt-label"><span>${Resource.msg('label.order.shipping.cost','confirmation', null)}</span></p>
+        <p class="order-receipt-label">
+        <span>
+        <isif condition="${pdict.order.isEswOrder}">
+            ${Resource.msg('label.order.gross.shipping.cost','esw', null)}
+        <iselse/>
+            ${Resource.msg('label.order.shipping.cost','confirmation', null)}
+        </isif>
+        </span></p>
     </div>
     <div class="col-6 end-lines">
         <p class="text-right"><span class="shipping-total-cost">${pdict.order.totals.totalShippingCost}</span></p>

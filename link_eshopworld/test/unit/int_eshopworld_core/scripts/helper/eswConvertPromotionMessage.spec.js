@@ -19,25 +19,23 @@ let getEswCalculationHelper = {
 // eslint-disable-next-line no-useless-escape
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     let serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    },
-                    isThresholdEnabled: function () {
-                        return true;
-                    },
-                    strToJson: function () {
-                        return '';
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                isThresholdEnabled: function () {
+                    return true;
+                },
+                strToJson: function () {
+                    return '';
+                }
             }
         },
         '*/cartridge/scripts/helper/eswCalculationHelper': function () {
@@ -72,7 +70,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
     describe('Sad Path', function () {
         it('Should return null', function () {
             let convertPromotionMessage = serviceHelperV3.convertPromotionMessage();
-            expect(convertPromotionMessage).to.be.a('null');
+            expect(convertPromotionMessage).to.be.equals('');
         });
     });
 });

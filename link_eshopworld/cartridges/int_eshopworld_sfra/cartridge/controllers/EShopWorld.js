@@ -19,7 +19,8 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
 function setInitialCookies(req) {
     let country = eswHelper.getAvailableCountry();
     let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
-    let locale = eswHelper.getAllowedLanguages()[0].value;
+    let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
+
     let Site = require('dw/system/Site').getCurrent();
     let locationParameter = req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
     eswHelper.setCustomSessionVariables(country, currencyCode);
@@ -343,13 +344,15 @@ server.post('Notify', function (req, res, next) {
 
             Transaction.wrap(function () {
                 let order = OrderMgr.getOrder(obj.retailerCartId);
-                // If order not found or Failed in SFCC
-                if (empty(order) || order.status.value === Order.ORDER_STATUS_FAILED) {
+                // If order not found in SFCC
+                if (empty(order)) {
                     response.setStatus(400);
                     responseJSON.ResponseCode = '400';
                     responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
                     res.json(responseJSON);
                     return;
+                } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
+                    OrderMgr.undoFailOrder(order);
                 }
                 // If order already confirmed & processed
                 if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
@@ -607,12 +610,13 @@ server.post('ProcessWebHooks', function (req, res, next) {
     } else {
         let eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
         let obj = JSON.parse(req.body);
+        let requestType = request.httpHeaders.get('esw-event-type');
         eswHelper.eswInfoLogger('ProcessWebhook Log', JSON.stringify(obj));
-        if (obj && 'Request' in obj && !empty(obj.Request) && 'AppeasementType' in obj.Request) {
+        if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
             responseJSON = eswOrderProcessHelper.markOrderAppeasement(JSON.parse(req.body));
-        } else if (obj && !empty(obj) && 'ReturnOrder' in obj) {
+        } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
             responseJSON = eswOrderProcessHelper.markOrderAsReturn(JSON.parse(req.body));
-        } else {
+        } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
             responseJSON = eswOrderProcessHelper.cancelAnOrder(JSON.parse(req.body));
         }
     }

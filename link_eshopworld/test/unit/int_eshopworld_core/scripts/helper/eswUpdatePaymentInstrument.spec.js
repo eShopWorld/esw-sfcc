@@ -44,10 +44,8 @@ basket.createPaymentInstrument = function () {
 // eslint-disable-next-line no-useless-escape
 describe('int_eshopworld_core\cartridge\scripts\helper\serviceHelper.js', function () {
     var serviceHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {}
-            }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {}
         },
         'dw/order/PaymentMgr': PaymentMgr,
         'dw/order/BasketMgr': '',
@@ -65,9 +63,8 @@ describe('int_eshopworld_core\cartridge\scripts\helper\serviceHelper.js', functi
                     getCustomPreferenceValue: function (value) {
                         if (value === 'eswBaseCurrency') {
                             return 'some value';
-                        } else {
-                            return 'true';
                         }
+                        return 'true';
                     }
                 };
             }

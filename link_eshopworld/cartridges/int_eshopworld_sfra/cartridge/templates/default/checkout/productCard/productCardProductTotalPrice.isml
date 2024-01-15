@@ -1,7 +1,6 @@
-<isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled) ? dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled : false}" scope="page" />
 <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
 
-<isif condition="${isEswEnabled && eswHelper.isESWSupportedCountry()}">
+<isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
 	<isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page" />
 	<isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(lineItem)}" scope="page" />
 	

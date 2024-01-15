@@ -224,18 +224,9 @@ const CatalogUtils = {
  * @returns {array} returns selected fx rate
  */
 function getESWCurrencyFXRate(shopperCurrencyIso, localizeCountry) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-    let fxRates = eswHelper.getPricingAdvisorData().fxRates,
-        baseCurrency = eswHelper.getBaseCurrencyPreference(localizeCountry),
-        selectedFxRate = [];
-    if (!empty(fxRates)) {
-        selectedFxRate = fxRates.filter(function (rates) {
-            return rates.toShopperCurrencyIso === shopperCurrencyIso && rates.fromRetailerCurrencyIso === baseCurrency;
-        });
-    }
-    return selectedFxRate;
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    return eswHelper.getESWCurrencyFXRate(shopperCurrencyIso, localizeCountry);
 }
-
 
 /**
  * Get ESW Country Adjustments for localize country
@@ -243,15 +234,8 @@ function getESWCurrencyFXRate(shopperCurrencyIso, localizeCountry) {
  * @returns {array} returns selected country adjustment
  */
 function getESWCountryAdjustments(deliveryCountryIso) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-    let countryAdjustment = eswHelper.getPricingAdvisorData().countryAdjustment,
-        selectedCountryAdjustment = [];
-    if (!empty(countryAdjustment)) {
-        selectedCountryAdjustment = countryAdjustment.filter(function (adjustment) {
-            return adjustment.deliveryCountryIso === deliveryCountryIso;
-        });
-    }
-    return selectedCountryAdjustment;
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    return eswHelper.getESWCountryAdjustments(deliveryCountryIso);
 }
 
 /**
@@ -262,7 +246,7 @@ function getESWCountryAdjustments(deliveryCountryIso) {
  * @returns {boolean} - returns execute result
  */
 function execute(args) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     try {
         let fileHasRecords = false;

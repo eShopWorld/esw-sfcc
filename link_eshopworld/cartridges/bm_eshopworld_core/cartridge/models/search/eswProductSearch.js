@@ -1,11 +1,11 @@
 'use strict';
 
-var collections = require('*/cartridge/scripts/util/collections');
-var URLUtils = require('dw/web/URLUtils');
+const collections = require('*/cartridge/scripts/util/collections');
+const URLUtils = require('dw/web/URLUtils');
 
-var ACTION_ENDPOINT = 'Search-Show';
-var ACTION_ENDPOINT_AJAX = 'Search-ShowAjax';
-var DEFAULT_PAGE_SIZE = 12;
+const ACTION_ENDPOINT = 'Search-Show';
+const ACTION_ENDPOINT_AJAX = 'Search-ShowAjax';
+const DEFAULT_PAGE_SIZE = 12;
 
 
 /**
@@ -52,8 +52,8 @@ function getRefinements(productSearch, refinements, refinementDefinitions) {
  * @return {Object[]} - List of selected filters
  */
 function getSelectedFilters(refinements) {
-    var selectedFilters = [];
-    var selectedValues = [];
+    let selectedFilters = [];
+    let selectedValues = [];
 
     refinements.forEach(function (refinement) {
         selectedValues = refinement.values.filter(function (value) { return value.selected; });
@@ -75,8 +75,8 @@ function getSelectedFilters(refinements) {
  * @return {dw.web.PagingModel} - PagingModel instance
  */
 function getPagingModel(productHits, count, pageSize, startIndex) {
-    var PagingModel = require('dw/web/PagingModel');
-    var paging = new PagingModel(productHits, count);
+    let PagingModel = require('dw/web/PagingModel');
+    let paging = new PagingModel(productHits, count);
 
     paging.setStart(startIndex || 0);
     paging.setPageSize(pageSize || DEFAULT_PAGE_SIZE);
@@ -92,13 +92,13 @@ function getPagingModel(productHits, count, pageSize, startIndex) {
  * @return {string} - More button URL
  */
 function getShowMoreUrl(productSearch, httpParams) {
-    var showMoreEndpoint = 'Search-UpdateGrid';
-    var currentStart = httpParams.start || 0;
-    var pageSize = httpParams.sz || DEFAULT_PAGE_SIZE;
-    var hitsCount = productSearch.count;
-    var nextStart;
+    let showMoreEndpoint = 'Search-UpdateGrid';
+    let currentStart = httpParams.start || 0;
+    let pageSize = httpParams.sz || DEFAULT_PAGE_SIZE;
+    let hitsCount = productSearch.count;
+    let nextStart;
 
-    var paging = getPagingModel(
+    let paging = getPagingModel(
         productSearch.productSearchHits,
         hitsCount,
         DEFAULT_PAGE_SIZE,
@@ -110,7 +110,7 @@ function getShowMoreUrl(productSearch, httpParams) {
     } else if (pageSize > DEFAULT_PAGE_SIZE) {
         nextStart = pageSize;
     } else {
-        var endIdx = paging.getEnd();
+        let endIdx = paging.getEnd();
         nextStart = endIdx + 1 < hitsCount ? endIdx + 1 : null;
 
         if (!nextStart) {
@@ -120,8 +120,8 @@ function getShowMoreUrl(productSearch, httpParams) {
 
     paging.setStart(nextStart);
 
-    var baseUrl = productSearch.url(showMoreEndpoint);
-    var finalUrl = paging.appendPaging(baseUrl);
+    let baseUrl = productSearch.url(showMoreEndpoint);
+    let finalUrl = paging.appendPaging(baseUrl);
     return finalUrl;
 }
 
@@ -132,8 +132,8 @@ function getShowMoreUrl(productSearch, httpParams) {
  * @return {SuggestedPhrase[]} - Array of suggested phrases
  */
 function getPhrases(suggestedPhrases) {
-    var phrase = null;
-    var phrases = [];
+    let phrase = null;
+    let phrases = [];
 
     while (suggestedPhrases.hasNext()) {
         phrase = suggestedPhrases.next();
@@ -157,19 +157,19 @@ function getPhrases(suggestedPhrases) {
  *     results
  */
 function ProductSearch(productSearch, httpParams) {
-    var searchHelper = require('*/cartridge/scripts/helpers/eswSearchHelpers');
+    let searchHelper = require('*/cartridge/scripts/helpers/eswSearchHelpers');
 
     this.pageSize = parseInt(httpParams.sz, 10) || DEFAULT_PAGE_SIZE;
     this.productSearch = productSearch;
-    var startIdx = httpParams.start || 0;
-    var paging = getPagingModel(
+    let startIdx = httpParams.start || 0;
+    let paging = getPagingModel(
         productSearch.productSearchHits,
         productSearch.count,
         this.pageSize,
         startIdx
     );
 
-    var searchSuggestions = productSearch.searchPhraseSuggestions;
+    let searchSuggestions = productSearch.searchPhraseSuggestions;
     this.isSearchSuggestionsAvailable = searchSuggestions ? searchSuggestions.hasSuggestedPhrases() : false;
 
     if (this.isSearchSuggestionsAvailable) {

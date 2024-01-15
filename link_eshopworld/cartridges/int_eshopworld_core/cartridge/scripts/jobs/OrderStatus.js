@@ -37,7 +37,7 @@ const ocUtils = {
     cancelESWOrder: function (order, args) {
         try {
             let eswServices = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-                eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+                eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
                 oAuthObj = eswServices.getOAuthService(),
                 ocService = eswServices.getOrderAPIServiceV2();
 

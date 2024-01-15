@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+<type-extension type-id="SitePreferences">
+        <custom-attribute-definitions>
+			<attribute-definition attribute-id="eswPwaUrl">
+                <display-name xml:lang="x-default">PWA Storefront URL</display-name>
+                <description xml:lang="x-default">The storefront base URL for the PWA Kit</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswPwaUrlExpansionPairs">
+                <display-name xml:lang="x-default">ESW PWA URL Expansion Pairs</display-name>
+                <type>set-of-string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+			<attribute-group group-id="ESW PWA Integration Configuration">
+                <display-name xml:lang="x-default">ESW PWA Integration Configuration</display-name>
+                <attribute attribute-id="eswPwaUrl"/>
+                <attribute attribute-id="eswPwaUrlExpansionPairs"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+</metadata>

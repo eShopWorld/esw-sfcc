@@ -14,24 +14,22 @@ ProductLineItem.custom = {};
 // eslint-disable-next-line no-useless-escape
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', function () {
     var serviceHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    },
-                    isThresholdEnabled: function () {
-                        return true;
-                    },
-                    getProductLineMetadataItemsPreference: function () {
-                        return 'someattribute|someattribute';
-                    }
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                isThresholdEnabled: function () {
+                    return true;
+                },
+                getProductLineMetadataItemsPreference: function () {
+                    return 'someattribute|someattribute';
                 }
             }
         },

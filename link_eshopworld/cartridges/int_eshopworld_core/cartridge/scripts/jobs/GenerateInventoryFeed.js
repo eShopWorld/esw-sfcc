@@ -131,7 +131,7 @@ const InventoryUtils = {
  * @returns {boolean} - returns execute result
  */
 function execute(args) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     try {
         let fileHasRecords = false;
         let localizedPricingCountries = [];

@@ -82,7 +82,7 @@ const eswHelperHL = {
         let allPriceAdjustmentIter = order.priceAdjustments.iterator();
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
-            if (eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) {
+            if (!empty(eachPriceAdjustment.promotion) && (eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER || eachPriceAdjustment.custom.thresholdDiscountType === 'order')) {
                 orderLevelProratedDiscount += eachPriceAdjustment.priceValue;
             }
         }
@@ -129,7 +129,7 @@ const eswHelperHL = {
      */
     applyShippingMethod: function (order, shippingMethodID, shopperCountry, isNotifyReq) {
         let ShippingMgr = require('dw/order/ShippingMgr'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
             cart = order,
             isOverrideShippingCountry,
@@ -174,7 +174,7 @@ const eswHelperHL = {
     */
     getLineItemConvertedProrated: function (cart, item, localizeObj, conversionPrefs) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let orderLevelProratedDiscount = eswHelper.getOrderProratedDiscount(cart);
         let price = this.getSubtotalObject(item, false, false, false, localizeObj, conversionPrefs).value;
         if (orderLevelProratedDiscount > 0 && item.proratedPrice.value < item.adjustedPrice.value) {
@@ -202,7 +202,7 @@ const eswHelperHL = {
      * @return {Array} arr - metadata Array
      */
     getProductLineMetadataItems: function (pli) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             metadataItems = eswHelper.getProductLineMetadataItemsPreference(),
             obj,
             arr = [],
@@ -397,12 +397,12 @@ const eswHelperHL = {
     * @param {Object} conversionPrefs - conversion preferences
     */
     adjustThresholdDiscounts: function (currentBasket, localizeObj, conversionPrefs) {
-        if (empty(currentBasket.priceAdjustments) && empty(currentBasket.getShippingPriceAdjustments())) {
+        if (empty(currentBasket.priceAdjustments) && empty(currentBasket.getAllShippingPriceAdjustments())) {
             return;
         }
         let cartTotals = this.getSubtotalObject(currentBasket, true, false, false, localizeObj, conversionPrefs),
             collections = require('*/cartridge/scripts/util/collections'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let shippingLineItemIter;
         if (!empty(currentBasket.defaultShipment)) {
             shippingLineItemIter = currentBasket.defaultShipment.getShippingLineItems().iterator();

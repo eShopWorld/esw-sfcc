@@ -10,7 +10,7 @@ const logger = require('dw/system/Logger');
  * @returns {array} returns selected fx rate
  */
 function getESWCurrencyFXRate(shopperCurrencyIso, shopperCountry) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         fxRates = eswHelper.getPricingAdvisorData().fxRates,
         baseCurrency = eswHelper.getBaseCurrencyPreference(shopperCountry),
         selectedFxRate = [];
@@ -58,7 +58,7 @@ function applyESWCountryAdjustments(localizePrice, selectedCountryAdjustment) {
  * @returns {array} returns selected country adjustment
  */
 function getESWCountryAdjustments(deliveryCountryIso) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         countryAdjustment = eswHelper.getPricingAdvisorData().countryAdjustment,
         selectedCountryAdjustment = [];
     if (!empty(countryAdjustment)) {
@@ -78,7 +78,7 @@ function getESWCountryAdjustments(deliveryCountryIso) {
  */
 function applyESWRoundingRule(localizePrice, selectedRoundingRule, baseProductPrice) {
     let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper'),
-        eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         roundedPrice = customizationHelper.applyCustomizedRounding(localizePrice, baseProductPrice);
 
     if (!empty(selectedRoundingRule) && empty(roundedPrice)) {
@@ -93,7 +93,7 @@ function applyESWRoundingRule(localizePrice, selectedRoundingRule, baseProductPr
  * @returns {array} returns selected rounding rule
  */
 function getESWRoundingModel(localizeObj) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         roundingModels = eswHelper.getPricingAdvisorData().roundingModels,
         selectedRoundingModel,
         selectedRoundingRule = [];
@@ -129,7 +129,7 @@ function getConversionPreference(localizeObj) {
  * @returns {boolean} returns boolean value
  */
 function isFixedPriceCountry(shopperCountry) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         fixedPriceCountry = eswHelper.getSelectedCountryDetail(shopperCountry).isFixedPriceModel;
     return fixedPriceCountry;
 }
@@ -164,7 +164,7 @@ function getConvertedPrice(localizePrice, localizeObj, conversionPrefs) {
 function setOverridePriceBooks(shopperCountry, overrideCurrency, basket, isOCRequest) {
     let PriceBookMgr = require('dw/catalog/PriceBookMgr'),
         eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
-        eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         arrPricebooks = [],
         overridePricebooks = eswHelper.getOverridePriceBooks(shopperCountry);
 
@@ -193,7 +193,7 @@ function setOverridePriceBooks(shopperCountry, overrideCurrency, basket, isOCReq
  * @returns {string} returns localize currency or null
  */
 function getShopperCurrency(shopperCountry) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let selectedCountryDetail = eswHelper.getSelectedCountryDetail(shopperCountry);
     if (!empty(selectedCountryDetail.name)) {
         return selectedCountryDetail.defaultCurrencyCode;
@@ -206,7 +206,7 @@ function getShopperCurrency(shopperCountry) {
  * @return {boolean} - true/ false
  */
 function isShippingCostConversionEnabled(shopperCountry) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let shippingOverrides = eswHelper.getOverrideShipping(),
         countryCode = shopperCountry,
         isOverrideCountry;

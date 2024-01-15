@@ -38,11 +38,12 @@ function validateBasket(basket, validateTax) {
         } else if (!totalTax) {
             result.error = true;
             result.message = Resource.msg('error.invalid.tax', 'cart', null);
-        } else if (!empty(session.privacy.eswRetailerCartIdNullException) && session.privacy.eswRetailerCartIdNullException) {
+        } else if ((!empty(session.privacy.eswRetailerCartIdNullException) && session.privacy.eswRetailerCartIdNullException) || (!empty(session.privacy.eswPreOrderException) && session.privacy.preOrderException)) {
             result.error = true;
             result.message = Resource.msg('esw.error.general', 'esw', null);
             delete session.privacy.eswfail;
             delete session.privacy.eswRetailerCartIdNullException;
+            delete session.privacy.eswPreOrderException;
         } else if (!empty(session.privacy.eswfail) && session.privacy.eswfail) {
             result.error = true;
             result.message = Resource.msg('cart.eswerror', 'esw', null);

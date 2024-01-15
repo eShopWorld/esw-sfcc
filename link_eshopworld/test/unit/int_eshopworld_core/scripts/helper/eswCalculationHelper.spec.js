@@ -26,56 +26,56 @@ global.session = session;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js', function () {
     var eswCoreHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getPaVersion: function (paVersion) {
-                        return (!global.empty(paVersion)) ? 'PAv4' : paVersion;
-                    },
-                    getEShopWorldModuleEnabled: function () {
-                        return true;
-                    },
-                    getBaseCurrencyPreference: function () {
-                        return 'EUR';
-                    },
-                    getSelectedCountryDetail: function () {
-                        var selectedCountry = {
-                            countryCode: 'USD',
-                            name: '',
-                            defaultCurrencyCode: 'USD',
-                            baseCurrencyCode: 'USD',
-                            isSupportedByESW: 'false',
-                            isFixedPriceModel: 'false'
-                        };
-                        selectedCountry.name = 'Canada';
-                        selectedCountry.defaultCurrencyCode = 'CAD';
-                        selectedCountry.baseCurrencyCode = '';
-                        selectedCountry.isSupportedByESW = 'true';
-                        selectedCountry.isFixedPriceModel = 'true';
-                        return selectedCountry;
-                    },
-                    applyOverridePrice: function (billingAmount) {
-                        var selectedFxRate = {
-                            fromRetailerCurrencyIso: 'EUR',
-                            rate: '1',
-                            toShopperCurrencyIso: session.getCurrency().currencyCode
-                        };
-                        // eslint-disable-next-line no-param-reassign
-                        billingAmount /= selectedFxRate.rate;
-                        return Number(billingAmount);
-                    },
-                    getAvailableCountry: function () {
-                        return 'USD';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    },
-                    isESWSupportedCountry: function () {
-                        return 'true';
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getPaVersion: function (paVersion) {
+                    return (!global.empty(paVersion)) ? 'PAv4' : paVersion;
+                },
+                getEShopWorldModuleEnabled: function () {
+                    return true;
+                },
+                getBaseCurrencyPreference: function () {
+                    return 'EUR';
+                },
+                getSelectedCountryDetail: function () {
+                    var selectedCountry = {
+                        countryCode: 'USD',
+                        name: '',
+                        defaultCurrencyCode: 'USD',
+                        baseCurrencyCode: 'USD',
+                        isSupportedByESW: 'false',
+                        isFixedPriceModel: 'false'
+                    };
+                    selectedCountry.name = 'Canada';
+                    selectedCountry.defaultCurrencyCode = 'CAD';
+                    selectedCountry.baseCurrencyCode = '';
+                    selectedCountry.isSupportedByESW = 'true';
+                    selectedCountry.isFixedPriceModel = 'true';
+                    return selectedCountry;
+                },
+                applyOverridePrice: function (billingAmount) {
+                    var selectedFxRate = {
+                        fromRetailerCurrencyIso: 'EUR',
+                        rate: '1',
+                        toShopperCurrencyIso: session.getCurrency().currencyCode
+                    };
+                    // eslint-disable-next-line no-param-reassign
+                    billingAmount /= selectedFxRate.rate;
+                    return Number(billingAmount);
+                },
+                getAvailableCountry: function () {
+                    return 'USD';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                isESWSupportedCountry: function () {
+                    return 'true';
+                }
             }
         },
+        getPaVersion: function () { return 'PAv3'; },
+        getMoneyObject: function () { return 25; },
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,

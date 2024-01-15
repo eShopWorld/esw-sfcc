@@ -17,3 +17,4 @@ exports.UNKNOWN = 'Unknown';
 exports.SIMPLE_FORM = 'simpleForm';
 exports.ADVANCE_FORM = 'advanceForm';
 exports.By_ID_FORM = 'searchByIdForm';
+exports.REGISTERATION_PWA_URL_VALUE = 'EShopWorld-RegisterCustomer';

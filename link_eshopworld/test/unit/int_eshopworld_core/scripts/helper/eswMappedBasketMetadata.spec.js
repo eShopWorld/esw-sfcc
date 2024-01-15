@@ -24,66 +24,65 @@ global.request = Request;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', function () {
     var eswCoreHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return "price";
-                    },
-                    getCheckoutServiceName: function () {
-                        return "some service";
-                    },
-                    getOrderDiscount: function () {
-                        return "$10"
-                    },
-                    getSubtotalObject: function () {
-                        return Money();
-                    },
-                    getMappedCustomerMetadata: function () {
-                        return "eswMarketingOptIn|eswMarketingOptIn"
-                    },
-                    getUrlExpansionPairs: function () {
-                        return "EXPENSAIN PAIRS"
-                    },
-                    getMetadataItems: function () {
-                        return "some  items meta"
-                    },
-                    getSelectedInstance: function () {
-                        return "some  selected instance"
-                    },
-                    getMappedBasketMetadata: function () {
-                        return "some  site meta"
-                    },
-                    isUseDeliveryContactDetailsForPaymentContactDetailsPrefEnabled: function () {
-                        return "false"
-                    },
-                    getOverrideShipping: function () {
-                        return "";
-                    },
-                    getAvailableCountry: function () {
-                        return "some country"
-                    },
-                    getEShopWorldModuleEnabled : function () {
-                        return true;
-                    },
-                    isESWSupportedCountry : function () {
-                        return true;
-                    },
-                    checkIsEswAllowedCountry : function (param) {
-                        return true;
-                    },
-                    getAvailableCountry : function () {
-                        return true;
-                    },
-                    isCheckoutRegisterationEnabled : function () {
-                        return true;
-                    }
+        'dw/content/ContentMgr': {},
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                getCheckoutServiceName: function () {
+                    return 'some service';
+                },
+                getOrderDiscount: function () {
+                    return '$10';
+                },
+                getSubtotalObject: function () {
+                    return Money();
+                },
+                getMappedCustomerMetadata: function () {
+                    return 'eswMarketingOptIn|eswMarketingOptIn';
+                },
+                getUrlExpansionPairs: function () {
+                    return 'EXPENSAIN PAIRS';
+                },
+                getMetadataItems: function () {
+                    return 'some  items meta';
+                },
+                getSelectedInstance: function () {
+                    return 'some  selected instance';
+                },
+                getMappedBasketMetadata: function () {
+                    return 'some  site meta';
+                },
+                isUseDeliveryContactDetailsForPaymentContactDetailsPrefEnabled: function () {
+                    return 'false';
+                },
+                getOverrideShipping: function () {
+                    return '';
+                },
+                getAvailableCountry: function () {
+                    return 'some country';
+                },
+                getEShopWorldModuleEnabled: function () {
+                    return true;
+                },
+                isESWSupportedCountry: function () {
+                    return true;
+                },
+                checkIsEswAllowedCountry: function (param) {
+                    return true;
+                },
+                getAvailableCountry: function () {
+                    return true;
+                },
+                isCheckoutRegisterationEnabled: function () {
+                    return true;
                 }
             }
         },
@@ -93,7 +92,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,
-        'dw/system/Logger':  {
+        'dw/system/Logger': {
             debug: function (text) {
                 return text;
             },
@@ -102,21 +101,21 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
             }
         },
         'dw/object/CustomObjectMgr': CustomObjectMgr,
-        checkIsEswAllowedCountry : function (param) {
+        checkIsEswAllowedCountry: function (param) {
             return true;
         },
-        isESWSupportedCountry : function () {
+        isESWSupportedCountry: function () {
             return true;
         },
         'dw/web/URLAction': function () {
-            return "some url"
+            return 'some url';
         },
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': {
-			https: function() {
+            https: function () {
                 return {};
             }
-		},
+        },
         'dw/order/ShippingMgr': {
             getDefaultShippingMethod: function () {
                 return defaultShippingMethod;
@@ -130,10 +129,9 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
                 return {
                     getCustomPreferenceValue: function (value) {
                         if (value == 'eswBaseCurrency') {
-                            return {}
-                        } else {
-                            return 'true';
+                            return {};
                         }
+                        return 'true';
                     }
                 };
             }
@@ -154,24 +152,24 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
             }
         },
         'dw/order/BasketMgr': basketMgr,
-        '*/cartridge/scripts/helper/serviceHelperV3' : '',
+        '*/cartridge/scripts/helper/serviceHelperV3': ''
     }).getEswHelper;
     describe('Happy path', function () {
-        it("Should getPromoThresholdAmount", function () {
+        it('Should getPromoThresholdAmount', function () {
             let promotion = {
                 custom: {
                     eswMinThresholdAmount: [
                         '3:,3,4,5'
                     ]
                 }
-            }
+            };
             let rebuildCartUponBackFromESW = eswCoreHelper.getPromoThresholdAmount(1, promotion);
             expect(rebuildCartUponBackFromESW).to.equal('0.1');
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error", function () {
-            let promotion = undefined;
+    describe('Sad Path', function () {
+        it('Should throw error', function () {
+            let promotion;
             let rebuildCartUponBackFromESW = eswCoreHelper.getPromoThresholdAmount(promotion);
             expect(rebuildCartUponBackFromESW).to.throw;
         });

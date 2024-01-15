@@ -10,7 +10,7 @@ const Transaction = require('dw/system/Transaction');
  * @returns {string} - access token
  */
 function getOathToken() {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
     let oAuthObj = eswCoreService.getOAuthService();
     let formData = {
@@ -32,7 +32,7 @@ function getOathToken() {
  * @returns {Object} - line item payload object
  */
 function getReturnLineItemsPayload(lineItemsCollection) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let collections = require('*/cartridge/scripts/util/collections');
     let returnLineItems = [];
     collections.forEach(lineItemsCollection, function (lineItem) {
@@ -53,7 +53,7 @@ function getReturnLineItemsPayload(lineItemsCollection) {
  * @returns {Object} - Required payload for the API
  */
 function getReturnOrderPayload(order) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let orderReturnPayloadJson = {
         brandOrderReference: order.getOrderNo(),
         emailAddress: order.getCustomerEmail(),

@@ -35,13 +35,6 @@ describe('int_eshopworld_core/cartridge/scripts/jobs/CatalogFeed.js', function (
         'dw/catalog/ProductSearchModel': dwProductSearchModelMock,
         'dw/system/Transaction': dwTransactionMock,
         '*/cartridge/scripts/util/Constants': Constants,
-        '*/cartridge/scripts/helper/eswCoreHelper': {
-            getEswHelper: {
-                // eslint-disable-next-line semi
-                isEswCatalogFeatureEnabled: function () { return true; },
-                getCatalogUploadMethod: function () { return Constants.API; }
-            }
-        },
         '*/cartridge/scripts/helper/eswPricingHelper': {
             eswPricingHelper: {
 
@@ -50,25 +43,24 @@ describe('int_eshopworld_core/cartridge/scripts/jobs/CatalogFeed.js', function (
         '*/cartridge/scripts/helper/eswCatalogHelper': {
 
         },
-        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getPricingAdvisorData: function () {
-                        return {
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                isEswCatalogFeatureEnabled: function () { return true; },
+                getCatalogUploadMethod: function () { return Constants.API; },
+                getPricingAdvisorData: function () {
+                    return {
 
-                        };
-                    },
-                    queryAllCustomObjects: function () {
-                        return [
-                            { custom: 'GB' }
-                        ];
-                    },
-                    getOverrideCountry: function () { return 'country list'; },
-                    getAvailableCountry: function () { return 'country'; },
-                    getCurrentEswCurrencyCode: function () { return 'currency'; },
-                    getOverridePriceBooks: function () { return {}; }
-                };
+                    };
+                },
+                queryAllCustomObjects: function () {
+                    return [
+                        { custom: 'GB' }
+                    ];
+                },
+                getOverrideCountry: function () { return 'country list'; },
+                getAvailableCountry: function () { return 'country'; },
+                getCurrentEswCurrencyCode: function () { return 'currency'; },
+                getOverridePriceBooks: function () { return {}; }
             }
         }
     });

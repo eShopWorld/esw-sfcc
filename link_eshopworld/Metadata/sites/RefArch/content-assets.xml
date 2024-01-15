@@ -25,5 +25,16 @@
             <custom-attribute attribute-id="body" xml:lang="x-default">&lt;div&gt;&#13;    This product is a non-returnable Item&#13;&lt;/div&gt;</custom-attribute>
         </custom-attributes>
     </content>
+	
+	<content content-id="eswGeoIpChangeWarning">
+		<display-name xml:lang="x-default">Location change warning</display-name>
+		<online-flag>true</online-flag>
+		<searchable-flag>false</searchable-flag>
+		<custom-attributes>
+		  <custom-attribute attribute-id="body" xml:lang="x-default">We noticed that you are currently accessing our website from a different country than your last visit. To view all the latest products and prices available in your area, please confirm your delivery country. If no changes are required, you can ignore this warning.</custom-attribute>
+		</custom-attributes>
+		<folder-links>
+		</folder-links>
+	</content>
 
 </library>

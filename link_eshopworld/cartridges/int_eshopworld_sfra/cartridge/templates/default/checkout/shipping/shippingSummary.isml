@@ -1,3 +1,4 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page"/>
 <!--- Shipping Address --->
 <isloop var="shippingModel" items="${pdict.order.shipping}" status="shippingLoop">
     <isif condition="${shippingLoop.first}">
@@ -41,10 +42,8 @@
 <p class="summary-section-label shipping-addr-label multi-shipping">
     ${Resource.msg('order.summery.section.text', 'order', null)}
 </p>
-
 <!--- ESW Order/Package Tracking information --->
-<isif condition="${!empty(pdict.order.totals.eswTrackingNumber)}">
-    <isset name="eswTrackingUrl" value="${!empty(dw.system.Site.current.preferences.custom.eswTrackingUrl) ? dw.system.Site.current.preferences.custom.eswTrackingUrl + pdict.order.totals.eswTrackingNumber : '#'}" scope="page" />
+<isif condition="${eswHelper.isOrderDetailEnabled() && !empty(pdict.order.totals.eswTrackingURL) && !empty(pdict.order.totals.eswTrackingURL)}">
     <span class="summary-section-label shipping-addr-label">${Resource.msg('orderhistory.esw.tracking.number', 'esw', null)}</span><br>
-    <a class="shipping-addr-label" target="_blank" href="${eswTrackingUrl}">${pdict.order.totals.eswTrackingNumber}<br></a><br>
+    <a class="shipping-addr-label" target="_blank" href="${pdict.order.totals.eswTrackingURL}">${pdict.order.totals.eswTrackingNumber}<br></a><br>
 </isif>

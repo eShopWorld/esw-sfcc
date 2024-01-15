@@ -4,9 +4,9 @@
 
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Transaction = require('dw/system/Transaction');
-const logger = require('dw/system/Logger');
 const formatMoney = require('dw/util/StringUtils').formatMoney;
 const collections = require('*/cartridge/scripts/util/collections');
+const Money = require('dw/value/Money');
 
 /*
  * Function that is used to set the pricebook and update session currency
@@ -78,37 +78,7 @@ eswHelper.getOverrideCountry = function (selectedCountry, selectedCurrency) {
  * Function to apply pricebook if country is override country
  */
 eswHelper.overridePrice = function (req, selectedCountry, selectedCurrency) {
-    if (eswHelper.getSelectedCountryDetail(selectedCountry).isFixedPriceModel) {
-        let PriceBookMgr = require('dw/catalog/PriceBookMgr'),
-            overridePriceBooks = eswHelper.getOverridePriceBooks(selectedCountry),
-            priceBookCurrency = selectedCurrency,
-            arrPricebooks = [];
-        if (overridePriceBooks.length > 0) {
-            // eslint-disable-next-line array-callback-return
-            overridePriceBooks.map(function (pricebookId) {
-                let pBook = PriceBookMgr.getPriceBook(pricebookId);
-                if (!empty(pBook)) {
-                    arrPricebooks.push(pBook);
-                }
-            });
-            try {
-                PriceBookMgr.setApplicablePriceBooks(arrPricebooks);
-                priceBookCurrency = eswHelper.getPriceBookCurrency(overridePriceBooks[0]);
-                if (priceBookCurrency !== null) {
-                    eswHelper.setBaseCurrencyPriceBook(req, priceBookCurrency);
-                }
-                if (request.httpCookies['esw.currency'] === null || typeof request.httpCookies['esw.currency'] === 'undefined' || typeof request.httpCookies['esw.currency'] === 'undefined') {
-                    eswHelper.selectCountry(selectedCountry, priceBookCurrency, req.locale.id);
-                } else {
-                    eswHelper.selectCountry(selectedCountry, request.httpCookies['esw.currency'].value, req.locale.id);
-                }
-            } catch (e) {
-                logger.error(e.message + e.stack);
-            }
-        }
-        return true;
-    }
-    return false;
+    return eswHelper.overridePriceCore(req, selectedCountry, selectedCurrency);
 };
 
 /*
@@ -117,7 +87,7 @@ eswHelper.overridePrice = function (req, selectedCountry, selectedCurrency) {
 eswHelper.getOrderTotalWithShippingCost = function (totalShippingCost) {
     let BasketMgr = require('dw/order/BasketMgr');
     // eslint-disable-next-line no-mixed-operators
-    return formatMoney(new dw.value.Money(eswHelper.getFinalOrderTotalsObject().value + totalShippingCost.decimalValue - eswHelper.getShippingDiscount(BasketMgr.currentBasket), request.httpCookies['esw.currency'].value));
+    return formatMoney(new Money(eswHelper.getFinalOrderTotalsObject().value + totalShippingCost.decimalValue - eswHelper.getShippingDiscount(BasketMgr.currentBasket), request.httpCookies['esw.currency'].value));
 };
 
 /*
@@ -167,16 +137,17 @@ eswHelper.isProductRestricted = function (prdCustomAttr) {
     return false;
 };
 
+
 /**
  * This function is used to rebuild cart on redirecting back to store front from ESW Checkout for SFRA.
- * @param {boolean} isCart - true/ false
+ * @param {string|null} orderId - order id
  */
-eswHelper.rebuildCart = function () {
+eswHelper.rebuildCart = function (orderId) {
     let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
     // ESW fail order if order no is set in session
     if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
-        if (session.privacy.eswfail || !empty(session.privacy.orderNo)) { // eslint-disable-line no-undef
-            eswServiceHelper.failOrder();
+        if ((!empty(orderId)) || session.privacy.eswfail || !empty(session.privacy.orderNo)) { // eslint-disable-line no-undef
+            eswServiceHelper.failOrder(orderId);
         }
     }
 };

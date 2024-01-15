@@ -151,19 +151,36 @@ const CheckoutRequestBuilder = {
      */
     composeRequestBody: function (order, shopperCountry, shopperCurrency, shopperLocale) {
         let serviceHelperV3HL = require('*/cartridge/scripts/helper/eswServiceHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        let bodyJSON = {
-            contactDetails: this.getContactDetails(shopperCountry),
-            retailerPromoCodes: this.getRetailerPromoCodes(order),
-            lineItems: serviceHelperV3HL.getLineItemsV3(order, shopperCountry, shopperCurrency),
-            shopperCurrencyIso: shopperCurrency,
-            pricingSynchronizationId: eswHelper.getPricingSynchronizationId(),
-            deliveryCountryIso: shopperCountry,
-            retailerCheckoutExperience: this.getExpansionPairs(shopperLocale, shopperCountry),
-            shopperCheckoutExperience: serviceHelperV3HL.getShopperCheckoutExperience(shopperLocale),
-            retailerCartId: order.orderNo,
-            deliveryOptions: ('eswDeliveryOptions' in order.custom && !empty(order.custom.eswDeliveryOptions)) ? JSON.parse(order.custom.eswDeliveryOptions) : null
-        };
+            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+            preorderCheckoutServiceName = eswHelper.getCheckoutServiceName();
+        let bodyJSON = {};
+        if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
+            bodyJSON = {
+                contactDetails: this.getContactDetails(shopperCountry),
+                retailerPromoCodes: this.getRetailerPromoCodes(order),
+                lineItems: serviceHelperV3HL.getLineItemsV3(order, shopperCountry, shopperCurrency),
+                shopperCurrencyIso: shopperCurrency,
+                pricingSynchronizationId: eswHelper.getPricingSynchronizationId(),
+                deliveryCountryIso: shopperCountry,
+                retailerCheckoutExperience: this.getExpansionPairs(shopperLocale, shopperCountry),
+                shopperCheckoutExperience: serviceHelperV3HL.getShopperCheckoutExperience(shopperLocale),
+                retailerCartId: order.orderNo,
+                deliveryOptions: ('eswDeliveryOptions' in order.custom && !empty(order.custom.eswDeliveryOptions)) ? JSON.parse(order.custom.eswDeliveryOptions) : null
+            };
+        } else {
+            bodyJSON = {
+                contactDetails: this.getContactDetails(shopperCountry),
+                retailerPromoCodes: this.getRetailerPromoCodes(order),
+                cartItems: serviceHelperV3HL.getLineItemsV2(order, shopperCountry, shopperCurrency),
+                shopperCurrencyIso: shopperCurrency,
+                deliveryCountryIso: shopperCountry,
+                retailerCheckoutExperience: this.getExpansionPairs(shopperLocale, shopperCountry),
+                shopperCheckoutExperience: serviceHelperV3HL.getShopperCheckoutExperience(shopperLocale),
+                retailerCartId: order.orderNo,
+                deliveryOptions: ('eswDeliveryOptions' in order.custom && !empty(order.custom.eswDeliveryOptions)) ? JSON.parse(order.custom.eswDeliveryOptions) : null
+            };
+        }
+
         return bodyJSON;
     },
     /**
@@ -234,7 +251,11 @@ function callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocal
     }
 
     let requestBody = CheckoutRequestBuilder.composeRequestBody(order, shopperCountry, shopperCurrency, shopperLocale);
-
+    if (!empty(requestBody) && empty(requestBody.retailerCartId)) {
+        throw new Error('SFCC_ORDER_CREATION_FAILED');
+    } else if (!empty(requestBody) && (empty(requestBody.lineItems) || empty(requestBody.deliveryCountryIso))) {
+        throw new Error('ATTRIBUTES_MISSING_IN_PRE_ORDER');
+    }
     let result = preorderServiceObj.call({
         eswOAuthToken: JSON.parse(oAuthResult.object).access_token,
         requestBody: JSON.stringify(requestBody)

@@ -11,7 +11,7 @@ const Status = require('dw/system/Status');
  * @returns {array} returns selected FX rate
  */
 function getESWCurrencyFXRate(shopperCurrencyIso) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let fxRates = eswHelper.getPricingAdvisorData().fxRates,
         selectedFxRate = [];
     if (!empty(fxRates)) {
@@ -145,7 +145,7 @@ function writePromotionSchema(localizePromotion, promotionCampaignAssignmentObje
  * @returns {Object} returns allowed currencies object
  */
 function getAllowedCurrencies(excludedCurrencies) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let allowedCurrencies = eswHelper.getAllowedCurrencies();
     if (!empty(excludedCurrencies)) {
         allowedCurrencies = allowedCurrencies.filter(function (obj) {
@@ -239,7 +239,7 @@ function buildPromotionSchema(writeDirPath, basePromotionObj, localizeObj, args)
  */
 function execute(args) {
     try {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let localizedPromotionsConfig = JSON.parse(eswHelper.getLocalizedPromotionsConfig());
         if (!empty(localizedPromotionsConfig)) {
             let writeDirPath = args.impexDirPath;

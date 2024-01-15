@@ -36,7 +36,6 @@ function getSearchHit() {
 
 
 describe('search price decorator', function () {
-
     var searchPrice = proxyquire('../../../../../../cartridges/int_eshopworld_sfra/cartridge/models/product/decorators/searchPrice', {
         'dw/campaign/PromotionMgr': {
             getPromotion: function () {
@@ -46,12 +45,21 @@ describe('search price decorator', function () {
         '*/cartridge/scripts/helper/eswHelper': {
             getEswHelper: function () {
                 return {
-                    getEShopWorldModuleEnabled: function () { return true },
-                    getOverrideCountry: function () { return 'country list' },
-                    getAvailableCountry: function () { return 'country' },
-                    getCurrentEswCurrencyCode: function () { return 'currency' },
-                    getOverridePriceBooks: function () { return {} },
-                }
+                    getEShopWorldModuleEnabled: function () { return true; },
+                    getOverrideCountry: function () { return 'country list'; },
+                    getAvailableCountry: function () { return 'country'; },
+                    getCurrentEswCurrencyCode: function () { return 'currency'; },
+                    getOverridePriceBooks: function () { return {}; }
+                };
+            }
+        },
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getEShopWorldModuleEnabled: function () { return true; },
+                getOverrideCountry: function () { return 'country list'; },
+                getAvailableCountry: function () { return 'country'; },
+                getCurrentEswCurrencyCode: function () { return 'currency'; },
+                getOverridePriceBooks: function () { return {}; }
             }
         },
         'dw/util/ArrayList': ArrayList,
@@ -60,9 +68,9 @@ describe('search price decorator', function () {
             getPromotionPrice: function () { return { value: 50, available: true }; },
             getPromotions: function () {
                 return {
-                    getLength: function () { return 0 }
-                }
-            },
+                    getLength: function () { return 0; }
+                };
+            }
         },
         'dw/catalog/PriceBookMgr': {
             setApplicablePriceBooks: function () { },
@@ -102,5 +110,4 @@ describe('search price decorator', function () {
         searchPrice(object, searchHitMock, noActivePromotionsMock, getSearchHit);
         assert.isTrue(stubRangePrice.withArgs({ value: 100, available: true }, { value: 200, available: true }).calledOnce);
     });
-
 });

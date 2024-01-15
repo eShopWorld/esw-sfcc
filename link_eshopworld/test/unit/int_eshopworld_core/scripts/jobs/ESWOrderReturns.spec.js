@@ -39,24 +39,22 @@ describe('int_eshopworld_core/cartridge/scripts/jobs/CatalogFeed.js', function (
 
             }
         },
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getPricingAdvisorData: function () {
-                        return {
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getPricingAdvisorData: function () {
+                    return {
 
-                        };
-                    },
-                    queryAllCustomObjects: function () {
-                        return [
-                            { custom: 'GB' }
-                        ];
-                    },
-                    getOverrideCountry: function () { return 'country list'; },
-                    getAvailableCountry: function () { return 'country'; },
-                    getCurrentEswCurrencyCode: function () { return 'currency'; },
-                    getOverridePriceBooks: function () { return {}; }
-                };
+                    };
+                },
+                queryAllCustomObjects: function () {
+                    return [
+                        { custom: 'GB' }
+                    ];
+                },
+                getOverrideCountry: function () { return 'country list'; },
+                getAvailableCountry: function () { return 'country'; },
+                getCurrentEswCurrencyCode: function () { return 'currency'; },
+                getOverridePriceBooks: function () { return {}; }
             }
         }
     });

@@ -13,7 +13,7 @@ const Transaction = require('dw/system/Transaction');
  */
 function createESWOrder(order) {
     let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let marketPlaceOrderHelper = require('*/cartridge/scripts/helper/marketPlaceOrderHelper');
     try {
         let oAuthObj = eswCoreService.getOAuthService();

@@ -3,7 +3,7 @@
  * @return {boolean} - returns execute result
  */
 function execute() {
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         eswServices = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
         CustomObjectMgr = require('dw/object/CustomObjectMgr'),
         Transaction = require('dw/system/Transaction'),

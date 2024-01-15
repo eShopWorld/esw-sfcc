@@ -475,12 +475,10 @@ var eswPaData = {
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswPricingHelper.js', function () {
     var eswPricingHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswPricingHelper', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getPricingAdvisorData: function () { return eswPaData; },
-                    eswInfoLogger: function () { return 'a logger function'; }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getPricingAdvisorData: function () { return eswPaData; },
+                eswInfoLogger: function () { return 'a logger function'; }
             }
         }
     }).eswPricingHelper;

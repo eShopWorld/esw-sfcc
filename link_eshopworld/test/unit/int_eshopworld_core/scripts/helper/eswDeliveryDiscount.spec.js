@@ -9,22 +9,20 @@ var money = require('../../../../mocks/dw.value.Money');
 
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return 'price';
-                    },
-                    isThresholdEnabled: function () {
-                        return true;
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
+                },
+                isThresholdEnabled: function () {
+                    return true;
+                }
             }
         },
         'dw/system/Logger': Logger,

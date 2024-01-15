@@ -11,6 +11,7 @@ const Transaction = require('dw/system/Transaction');
 const logger = require('dw/system/Logger');
 const ArrayList = require('dw/util/ArrayList');
 const URLUtils = require('dw/web/URLUtils');
+const ContentMgr = require('dw/content/ContentMgr');
 
 
 const getEswHelper = {
@@ -84,16 +85,27 @@ const getEswHelper = {
     getEShopWorldModuleEnabled: function () {
         return Site.getCustomPreferenceValue('eswEshopworldModuleEnabled');
     },
+    getEswCatalogFeedProductCustomAttrFieldMapping: function () {
+        return Site.getCustomPreferenceValue('eswCatalogFeedProductCustomAttrFieldMapping');
+    },
     getAllCountries: function () {
         let allCountriesCO = this.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
             countriesArr = [];
         if (allCountriesCO.count > 0) {
             while (allCountriesCO.hasNext()) {
                 let countryDetail = allCountriesCO.next();
-                countriesArr.push({
-                    value: countryDetail.getCustom().countryCode,
-                    displayValue: countryDetail.getCustom().name
-                });
+                let countryCode = countryDetail.getCustom().countryCode;
+                let lcoale = countryDetail.getCustom().eswCountrylocale;
+                if (!empty(countryCode)) {
+                    countriesArr.push({
+                        value: countryCode,
+                        displayValue: countryDetail.getCustom().name,
+                        defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
+                        isSupportedByESW: countryDetail.getCustom().isSupportedByESW || false,
+                        isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
+                        locale: !empty(lcoale) ? lcoale : 'en_' + countryDetail.getCustom().countryCode
+                    });
+                }
             }
         }
         return countriesArr;
@@ -190,11 +202,10 @@ const getEswHelper = {
         let overridePriceBooksArr = [],
             listPriceBook = Site.getCustomPreferenceValue('eswFixedListPriceBookPattern'),
             salePriceBook = Site.getCustomPreferenceValue('eswFixedSalePriceBookPattern');
-
-        if (!empty(listPriceBook)) {
+        if (!empty(countryCode) && typeof countryCode !== 'object' && !empty(listPriceBook)) {
             overridePriceBooksArr.push(listPriceBook.replace(/{countryCode}+/g, countryCode.toLowerCase()));
         }
-        if (!empty(salePriceBook)) {
+        if (!empty(countryCode) && typeof countryCode !== 'object' && !empty(salePriceBook)) {
             overridePriceBooksArr.push(salePriceBook.replace(/{countryCode}+/g, countryCode.toLowerCase()));
         }
         return overridePriceBooksArr;
@@ -219,6 +230,9 @@ const getEswHelper = {
     },
     getUrlExpansionPairs: function () {
         return Site.getCustomPreferenceValue('eswUrlExpansionPairs');
+    },
+    getPwaUrlExpansionPairs: function () {
+        return Site.getCustomPreferenceValue('eswPwaUrlExpansionPairs');
     },
     getAdditionalExpansionPairs: function () {
         return Site.getCustomPreferenceValue('additionalExpansionPairs');
@@ -295,6 +309,9 @@ const getEswHelper = {
     },
     getBaseCurrency: function () {
         return Site.getCustomPreferenceValue('eswBaseCurrency').value;
+    },
+    isOrderDetailEnabled: function () {
+        return Site.getCustomPreferenceValue('eswEnableOrderDetail');
     },
     getSelectedCountryDetail: function (countryCode) {
         let baseCurrency = this.getBaseCurrencyPreference(countryCode),
@@ -397,7 +414,7 @@ const getEswHelper = {
         }
         let eswLanguageIsoCode;
         if (request.httpCookies['esw.LanguageIsoCode'] == null) {
-            eswLanguageIsoCode = this.createCookie('esw.LanguageIsoCode', '', '/');
+            eswLanguageIsoCode = this.createCookie('esw.LanguageIsoCode', locale, '/');
         } else {
             eswLanguageIsoCode = request.getHttpCookies()['esw.LanguageIsoCode'];
         }
@@ -530,32 +547,46 @@ const getEswHelper = {
     },
     /**
      * Check if current geo location is equals to the location cookie
-     * @returns {boolean}  - true or false
+     * @param {string} shopperCountry - Shopper country ISO code e.g. IE, CA
+     * @returns {Object} - isSameCountry, geoLocation, alertMsg
      */
-    isSameGeoIpCountry: function () {
-        if (!this.getGeoIpAlert()) {
-            // When feature not in use then we do not need to show alert
-            return { isSameCountry: true, geoLocation: null };
-        }
-        let geoLocation = request.geolocation.countryCode;
-        let countryCookie = !empty(request.httpCookies['esw.location']) ? request.httpCookies['esw.location'].value : null;
+    isSameGeoIpCountry: function (shopperCountry) {
+        const Resource = require('dw/web/Resource');
+        let geoLocation = (shopperCountry && !empty(shopperCountry) && typeof shopperCountry !== 'undefined') ? shopperCountry : request.geolocation.countryCode;
         let isAllowedCountry = this.checkIsEswAllowedCountry(geoLocation);
-
-        if (empty(countryCookie) || !isAllowedCountry || empty(geoLocation)) {
-            return { isSameCountry: true, geoLocation: isAllowedCountry ? geoLocation : null };
+        let alertMsg = {
+            title: Resource.msg('alert.geoip.title', 'esw', null),
+            body: Resource.msg('alert.geoip.message', 'esw', null)
+        };
+        if (!this.getGeoIpAlert() || !isAllowedCountry) {
+            // When feature not in use then we do not need to show alert
+            return { isSameCountry: true, geoLocation: geoLocation, alertMsg: alertMsg, r: 1 };
+        }
+        let countryCookie = !empty(request.httpCookies['esw.location']) ? request.httpCookies['esw.location'].value : null;
+        let alertMsgContent = ContentMgr.getContent('eswGeoIpChangeWarning');
+        if (!empty(alertMsgContent)) {
+            alertMsg.title = alertMsgContent.getName();
+            alertMsg.body = alertMsgContent.getCustom().body.markup;
+        }
+        if (empty(countryCookie) || empty(geoLocation)) {
+            return { isSameCountry: true, geoLocation: isAllowedCountry ? geoLocation : geoLocation, alertMsg: alertMsg, r: 2 };
         }
         if (!empty(geoLocation) && !empty(countryCookie)) {
-            return { isSameCountry: geoLocation === countryCookie, geoLocation: geoLocation };
+            return { isSameCountry: geoLocation === countryCookie, geoLocation: geoLocation, alertMsg: alertMsg, r: 3 };
         }
-        return { isSameCountry: false, geoLocation: geoLocation };
+        return { isSameCountry: false, geoLocation: geoLocation, alertMsg: alertMsg, r: 4 };
     },
     /*
      * Function to perform fxrate calculations, apply adjustments, duty and tax and returns money object
      */
     // eslint-disable-next-line consistent-return
-    getMoneyObject: function (price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam) {
+    getMoneyObject: function (price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam, promotionPriceObj) {
         let eswCalculationHelper = require('*/cartridge/scripts/helper/eswCalculationHelper').getEswCalculationHelper;
-        return eswCalculationHelper.getMoneyObject(price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam);
+        if (typeof promotionPriceObj === 'undefined' || promotionPriceObj === null) {
+            // eslint-disable-next-line no-param-reassign
+            promotionPriceObj = false;
+        }
+        return eswCalculationHelper.getMoneyObject(price, noAdjustment, formatted, promotionPriceObj === false ? noRounding : true, selectedCountryInfoObjParam, promotionPriceObj);
     },
     /*
      * applies rounding method as per the rounding model.
@@ -604,8 +635,8 @@ const getEswHelper = {
             } else if (roundingModel.direction.equalsIgnoreCase('nearest')) {
                 // eslint-disable-next-line no-unused-expressions, no-sequences
                 roundedUp = Math.ceil(price / roundingTarget) * roundingTarget,
-                roundedDown = Math.floor(price / roundingTarget) * roundingTarget,
-                roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
+                    roundedDown = Math.floor(price / roundingTarget) * roundingTarget,
+                    roundedPrice = Math.abs(roundedUp - price) >= Math.abs(price - roundedDown) ? roundedDown : roundedUp;
             }
         }
         if (isFractionalPart) {
@@ -654,7 +685,7 @@ const getEswHelper = {
                 roundingTarget = this.getRoundPrice(fractionalModel);
                 // Check if the roundingTarget is 0
                 if (!empty(roundingTarget) && Number(roundingTarget) === 0) {
-                     // If it is, the result is already 0, no rounding needed just setting the fractional part to 0.
+                    // If it is, the result is already 0, no rounding needed just setting the fractional part to 0.
                     roundedFractionalPart = 0;
                 } else {
                     // For non-zero roundingTarget, use the original expression
@@ -727,7 +758,7 @@ const getEswHelper = {
         try {
             let Money = require('dw/value/Money');
             let that = this;
-            let orderLevelProratedDiscount = that.getOrderProratedDiscount(cart);
+            let orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
             return new Money(orderLevelProratedDiscount, request.httpCookies['esw.currency'].value);
         } catch (e) {
             logger.error('Error while calculating order discount: {0} {1}', e.message, e.stack);
@@ -737,15 +768,21 @@ const getEswHelper = {
     /**
      * This function is used to get Order Prorated Discount
      * @param {dw.order.Basket} cart - DW Basket object
+     * @param {string} applyRounding - boolean
      * @returns {number} - orderLevelProratedDiscount
      */
-    getOrderProratedDiscount: function (cart) {
+    getOrderProratedDiscount: function (cart, applyRounding) {
         let orderLevelProratedDiscount = 0;
+        let discountValue;
         let allPriceAdjustmentIter = cart.priceAdjustments.iterator();
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
             if (eachPriceAdjustment.priceValue) {
-                let discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true).value;
+                if (!empty(applyRounding) && applyRounding) {
+                    discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true, null, true).value;
+                } else {
+                    discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true).value;
+                }
                 if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
                     orderLevelProratedDiscount += discountValue;
                 }
@@ -808,17 +845,33 @@ const getEswHelper = {
      * Function that is used to set the pricebook and update session currency
      */
     setBaseCurrencyPriceBook: function (currencyCode) {
-        let Currency = require('dw/util/Currency'),
-            Cart = require('*/cartridge/scripts/models/CartModel'),
-            currency = Currency.getCurrency(currencyCode);
-        Transaction.wrap(function () {
-            session.setCurrency(currency);
-            let currentCart = Cart.get();
-            if (currentCart) {
-                currentCart.updateCurrency();
-                currentCart.calculate();
-            }
-        });
+        let Currency = require('dw/util/Currency');
+        try {
+            let Cart = require('*/cartridge/scripts/models/CartModel'),
+                currency = Currency.getCurrency(currencyCode);
+            Transaction.wrap(function () {
+                session.setCurrency(currency);
+                let currentCart = Cart.get();
+                if (currentCart) {
+                    currentCart.updateCurrency();
+                    currentCart.calculate();
+                }
+            });
+        } catch (e) {
+            let BasketMgr = require('dw/order/BasketMgr');
+            let HookMgr = require('dw/system/HookMgr');
+            let currentBasket = BasketMgr.getCurrentOrNewBasket();
+            let currency = Currency.getCurrency(currencyCode);
+            Transaction.wrap(function () {
+                if (!empty(currency)) {
+                    session.setCurrency(currency);
+                }
+                // if (!empty(currentBasket.productLineItems)) {
+                currentBasket.updateCurrency();
+                HookMgr.callHook('dw.order.calculate', 'calculate', currentBasket);
+                //  }
+            });
+        }
     },
     /*
      * Get Name of country according to locale in countries.json
@@ -1165,7 +1218,7 @@ const getEswHelper = {
      * @return {boolean} - true/ false
      */
     isThresholdEnabled: function (promotion) {
-        if (promotion.custom.eswLocalizedThresholdEnabled) {
+        if (!empty(promotion) && promotion.custom.eswLocalizedThresholdEnabled) {
             return true;
         }
         return false;
@@ -1209,10 +1262,24 @@ const getEswHelper = {
         if (empty(currentBasket.priceAdjustments) && empty(currentBasket.getShippingPriceAdjustments())) {
             return;
         }
+        let countryCode = null;
         let allShippingPriceAdjustmentsIter = currentBasket.getAllShippingPriceAdjustments().iterator();
         let cartTotals = this.getSubtotalObject(currentBasket, true);
         let collections = require('*/cartridge/scripts/util/collections');
-        let fxRate = !empty(JSON.parse(session.privacy.fxRate)) ? JSON.parse(session.privacy.fxRate).rate : '1';
+        let fxRate = 1;
+        if (!empty(JSON.parse(session.privacy.fxRate))) {
+            fxRate = JSON.parse(session.privacy.fxRate).rate;
+        } else {
+            // Fix for headless architect
+            countryCode = request.httpParameters.get('country-code');
+            if (!empty(countryCode)) {
+                let cDetail = this.getSelectedCountryDetail(countryCode[0]);
+                let countryFxDetail = this.getESWCurrencyFXRate(cDetail.defaultCurrencyCode, cDetail.countryCode);
+                if (countryFxDetail.length > 0) {
+                    fxRate = countryFxDetail[0].rate;
+                }
+            }
+        }
         if (allShippingPriceAdjustmentsIter.hasNext()) {
             let shippingLineItemIter;
             if (!empty(currentBasket.defaultShipment)) {
@@ -1302,7 +1369,7 @@ const getEswHelper = {
             let currencyForSelectedCountry = this.getDefaultCurrencyForCountry(selectedCountry);
             currencyCode = (!empty(request.httpCookies['esw.currency']) && request.httpCookies['esw.currency'].value === currencyForSelectedCountry) ? request.httpCookies['esw.currency'].value :
                 currencyForSelectedCountry;
-            let locale = this.getAllowedLanguages()[0].value;
+            let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : this.getAllowedLanguages()[0].value;
             this.selectCountry(selectedCountry, currencyCode, locale);
         }
     },
@@ -1346,9 +1413,12 @@ const getEswHelper = {
 
     /**
      * Function to rebuild basket from back to ESW checkout
-     * @return {boolean} - boolean
+     * @param {string|null} orderId - order id
+     * @returns {boolean} - true/false
      */
-    rebuildCartUponBackFromESW: function () {
+    rebuildCartUponBackFromESW: function (orderId) {
+        // eslint-disable-next-line no-param-reassign
+        orderId = typeof orderId !== 'undefined' ? orderId : null;
         let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
         let BasketMgr = require('dw/order/BasketMgr');
         let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
@@ -1357,7 +1427,7 @@ const getEswHelper = {
             let eswHelper = this;
             if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
                 if (!currentBasket) {
-                    eswHelper.rebuildCart();
+                    eswHelper.rebuildCart(orderId);
                     currentBasket = BasketMgr.getCurrentBasket();
                 }
                 if (currentBasket) {
@@ -1384,13 +1454,12 @@ const getEswHelper = {
      */
     getMappedBasketMetadata: function (basket) {
         let Constants = require('*/cartridge/scripts/util/Constants');
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
         let metadataItems = this.getBasketMetadataPreference(),
             arr = new ArrayList([]),
             registration = {},
             i = 0;
 
-        let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
+        let eswCheckoutRegisterationEnabled = this.isCheckoutRegisterationEnabled();
         if (eswCheckoutRegisterationEnabled && !customer.authenticated) {
             registration[Constants.IS_REGISTERATION_NEEDED_NAME] = Constants.IS_REGISTERATION_NEEDED_VALUE;
             registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_URL_VALUE).toString();
@@ -1456,12 +1525,15 @@ const getEswHelper = {
     },
     /**
      * check if valid json
-     * @param {*} string - string to check
+     * @param {*} input - input string/json to check
      * @returns {boolean} - true or false
      */
-    isValidJson: function (string) {
+    isValidJson: function (input) {
+        if (typeof input === 'object' && input !== null && !(input instanceof Array)) {
+            return true;
+        }
         try {
-            JSON.parse(string);
+            JSON.parse(input);
         } catch (e) {
             return false;
         }
@@ -1544,6 +1616,141 @@ const getEswHelper = {
             }
         }
         return null;
+    },
+    /**
+     * Get Fx Rate of shopper currency
+     * @param {string} shopperCurrencyIso - getting from site preference
+     * @param {string} localizeCountry - shopper local country getting from site preference
+     * @returns {array} returns selected fx rate
+     */
+    getESWCurrencyFXRate: function (shopperCurrencyIso, localizeCountry) {
+        let fxRates = this.getPricingAdvisorData().fxRates;
+        let baseCurrency = this.getBaseCurrencyPreference(localizeCountry);
+        let selectedFxRate = [];
+        if (!empty(fxRates)) {
+            selectedFxRate = fxRates.filter(function (rates) {
+                return rates.toShopperCurrencyIso === shopperCurrencyIso && rates.fromRetailerCurrencyIso === baseCurrency;
+            });
+        }
+        return selectedFxRate;
+    },
+    /**
+     * Get ESW Country Adjustments for localize country
+     * @param {string} deliveryCountryIso - localize country code
+     * @returns {array} returns selected country adjustment
+     */
+    getESWCountryAdjustments: function (deliveryCountryIso) {
+        let countryAdjustment = this.getPricingAdvisorData().countryAdjustment;
+        let selectedCountryAdjustment = [];
+        if (!empty(countryAdjustment)) {
+            selectedCountryAdjustment = countryAdjustment.filter(function (adjustment) {
+                return adjustment.deliveryCountryIso === deliveryCountryIso;
+            });
+        }
+        return selectedCountryAdjustment;
+    },
+    /**
+     * This function is used to apply overide shipping id on scapi basket
+     * @param {Object} cart object
+     * @param {string} countryCode scapi country param
+     */
+    applyOverrideShipping: function (cart, countryCode) {
+        try {
+            let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+            let shippingOverrides = this.getOverrideShipping(),
+                customizationHelper = require('*/cartridge/scripts/helper/customizationHelper'),
+                ShippingMgr = require('dw/order/ShippingMgr'),
+                isOverrideCountry;
+            if (shippingOverrides.length > 0) {
+                isOverrideCountry = JSON.parse(shippingOverrides).filter(function (item) {
+                    return item.countryCode == countryCode;
+                });
+            }
+            if (!empty(isOverrideCountry) && isOverrideCountry[0] != null) {
+                if (eswHelperHL.getShippingServiceType(cart, countryCode, isOverrideCountry) === 'POST') {
+                    eswHelperHL.applyShippingMethod(cart, 'POST', countryCode, true);
+                } else {
+                    eswHelperHL.applyShippingMethod(cart, 'EXP2', countryCode, true);
+                }
+            } else {
+                let defaultShippingMethodID = customizationHelper.getDefaultShippingMethodID(ShippingMgr.getDefaultShippingMethod().getID(), cart);
+                eswHelperHL.applyShippingMethod(cart, defaultShippingMethodID, countryCode, false);
+            }
+        } catch (error) {
+            logger.error('Error while updating basket shipping {0} {1}', error.message, error.stack);
+        }
+    },
+    /**
+     * This function is used to apply overide shipping id on scapi basket
+     * @param {Object} reqBody object
+     * @param {string} requestType request type
+     * @returns {Object} returns processes response Object
+     */
+    handleWebHooks: function (reqBody, requestType) {
+        let obj = reqBody,
+            responseJSON = {},
+            eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
+        try {
+            if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
+                responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
+            } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
+                responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
+            } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
+                responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
+            }
+        } catch (error) {
+            logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
+        }
+        return responseJSON;
+    },
+    /**
+     * Override pricebook currency
+     * @param {*} req - request object
+     * @param {*} selectedCountry - selected country
+     * @param {*} selectedCurrency - selected currency
+     * @returns {boolean} - true/false
+     */
+    overridePriceCore: function (req, selectedCountry, selectedCurrency) {
+        if (this.getSelectedCountryDetail(selectedCountry).isFixedPriceModel) {
+            let PriceBookMgr = require('dw/catalog/PriceBookMgr'),
+                overridePriceBooks = this.getOverridePriceBooks(selectedCountry),
+                priceBookCurrency = selectedCurrency,
+                arrPricebooks = [];
+            if (overridePriceBooks.length > 0) {
+                // eslint-disable-next-line array-callback-return
+                overridePriceBooks.map(function (pricebookId) {
+                    let pBook = PriceBookMgr.getPriceBook(pricebookId);
+                    if (!empty(pBook)) {
+                        arrPricebooks.push(pBook);
+                    }
+                });
+                try {
+                    PriceBookMgr.setApplicablePriceBooks(arrPricebooks);
+                    priceBookCurrency = this.getPriceBookCurrency(overridePriceBooks[0]);
+                    if (priceBookCurrency !== null) {
+                        this.setBaseCurrencyPriceBook(req, priceBookCurrency);
+                    }
+                    if (request.httpCookies['esw.currency'] === null || typeof request.httpCookies['esw.currency'] === 'undefined' || typeof request.httpCookies['esw.currency'] === 'undefined') {
+                        this.selectCountry(selectedCountry, priceBookCurrency, req.locale.id);
+                    } else {
+                        this.selectCountry(selectedCountry, request.httpCookies['esw.currency'].value, req.locale.id);
+                    }
+                } catch (e) {
+                    logger.error(e.message + e.stack);
+                }
+            }
+            return true;
+        }
+        return false;
+    },
+    validatePreOrder: function (reqObj) {
+        if (empty(reqObj.retailerCartId)) {
+            session.privacy.eswRetailerCartIdNullException = true;
+            throw new Error('SFCC_ORDER_CREATION_FAILED');
+        } else if (empty(reqObj.lineItems) || empty(reqObj.deliveryCountryIso)) {
+            session.privacy.eswPreOrderException = true;
+            throw new Error('ATTRIBUTES_MISSING_IN_PRE_ORDER');
+        }
     }
 };
 

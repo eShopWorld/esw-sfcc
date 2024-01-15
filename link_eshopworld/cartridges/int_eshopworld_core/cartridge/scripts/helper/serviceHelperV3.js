@@ -4,7 +4,7 @@
 /**
  * Helper script to get all ESW site preferences
  **/
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
 const BasketMgr = require('dw/order/BasketMgr');
 const StringUtils = require('dw/util/StringUtils');
@@ -50,17 +50,27 @@ function getProductLineMetadataItems(pli) {
  * Convert promotion message, remove all HTML and done price conversion
  * base upon HTML markup e.g: <span class="esw-price">C$35</span>
  * @param {string} promotionMessageString - Promotion callout
+ * @param {Obj} selectedCountryDetail - PWA kit parameter for country detail
+ * @param {Obj} selectedCountryLocalizeObj - PWA kit parameter for country localize object
  * @returns {string} promotionMessageFinal - Converted message
  */
-function convertPromotionMessage(promotionMessageString) {
-    let promotionMessageFinal = null;
+function convertPromotionMessage(promotionMessageString, selectedCountryDetail, selectedCountryLocalizeObj) {
+    let promotionMessageFinal = null,
+        eswPrice,
+        selectedCurrency,
+        selectedFxRate;
     try {
         let eswCalculationHelper = require('*/cartridge/scripts/helper/eswCalculationHelper').getEswCalculationHelper;
-        let selectedCurrency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
+        if (!empty(selectedCountryDetail)) {
+            selectedCurrency = selectedCountryDetail.defaultCurrencyCode;
+            selectedFxRate = selectedCountryLocalizeObj.selectedFxRate;
+        } else {
+            selectedCurrency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
+            selectedFxRate = eswHelper.strToJson(session.privacy.fxRate || null);
+        }
         let storeFrontCurrencySymbol = Currency.getCurrency(selectedCurrency).symbol;
-        let PromotionMessageWithoutHtml = promotionMessageString.replace(/<(?:"[^"]*"['"]*|'[^']*'['"]*|[^'">])+>/g, '');
-        let selectedFxRate = eswHelper.strToJson(session.privacy.fxRate || null);
-        if (empty(selectedFxRate) || (!empty(promotionMessageString) && promotionMessageString.indexOf('esw-price') === -1)) {
+        let PromotionMessageWithoutHtml = !empty(promotionMessageString) ? promotionMessageString.replace(/<(?:"[^"]*"['"]*|'[^']*'['"]*|[^'">])+>/g, '') : '';
+        if (empty(selectedFxRate) || empty(promotionMessageString) || promotionMessageString.indexOf('esw-price') === -1) {
             return PromotionMessageWithoutHtml;
         }
         let enableRounding = eswHelper.isEswRoundingsEnabled();
@@ -68,7 +78,11 @@ function convertPromotionMessage(promotionMessageString) {
         let msgDiscountPriceHtml = promotionMessageString.match(/<span class="esw-price"(.*?)>(.*?)<\/span>/gi);
         let discountPriceFromHtml = (!empty(msgDiscountPriceHtml) && msgDiscountPriceHtml.length > 0) ? msgDiscountPriceHtml[0].replace(/[^0-9.]+/gi, '') : 0;
         let discountCurrency = (!empty(msgDiscountPriceHtml) && msgDiscountPriceHtml.length > 0) ? msgDiscountPriceHtml[0].replace(/[0-9.]+/gi, '').replace(/<[^>]*[>$]|&nbsp;|&zwnj;|&raquo;|&laquo;|&gt;/g, '') : storeFrontCurrencySymbol;
-        let eswPrice = eswCalculationHelper.getMoneyObject((!empty(discountPriceFromHtml)) ? Number(discountPriceFromHtml) : 0, false, disableRounding, false, null);
+        if (!empty(selectedCountryDetail)) {
+            eswPrice = eswHelper.getMoneyObject((!empty(discountPriceFromHtml)) ? Number(discountPriceFromHtml) : 0, false, disableRounding, false, selectedCountryLocalizeObj).value;
+        } else {
+            eswPrice = eswCalculationHelper.getMoneyObject((!empty(discountPriceFromHtml)) ? Number(discountPriceFromHtml) : 0, false, disableRounding, false, null);
+        }
         promotionMessageFinal = PromotionMessageWithoutHtml
             .replace(discountCurrency, storeFrontCurrencySymbol)
             .replace(discountPriceFromHtml, eswPrice);

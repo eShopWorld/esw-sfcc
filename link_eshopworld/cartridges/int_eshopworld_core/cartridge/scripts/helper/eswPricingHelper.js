@@ -10,7 +10,7 @@ const eswPricingHelper = {
         return typeof param === 'undefined' || param === null || param === '' || param.length === 0;
     },
     getESWRoundingModel: function (localizeObj) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let selectedRoundingRule = [];
         try {
             let paData = eswHelper.getPricingAdvisorData();

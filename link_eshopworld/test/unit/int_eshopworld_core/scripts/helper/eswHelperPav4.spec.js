@@ -49,13 +49,11 @@ var samplePaV4Data = {
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswHelperPav4.js', function () {
     var eswHelperPav4 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswHelperPav4', {
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getPricingAdvisorData: function () {
-                        return {};
-                    }
-                };
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getPricingAdvisorData: function () {
+                    return {};
+                }
             },
             getPricingAdvisorData: function () {
                 return {

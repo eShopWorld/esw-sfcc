@@ -44,10 +44,7 @@ function handlePreOrderRequestV2() {
 
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
-    if (empty(requestObj.retailerCartId)) {
-        session.privacy.eswRetailerCartIdNullException = true;
-        throw new Error('SFCC_ORDER_CREATION_FAILED');
-    }
+    eswHelper.validatePreOrder(requestObj);
     let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
     if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
         session.privacy.confirmedOrderID = requestObj.retailerCartId;

@@ -12,18 +12,16 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswValidateOrderinventory
     var orderConfirmationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/customer/CustomerMgr': CustomerMgrMock,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
-        '*/cartridge/scripts/helper/eswHelper': {
-            getEswHelper: function () {
-                return {
-                    getMoneyObject: function () {
-                        return Money();
-                    },
-                    isEswRoundingsEnabled: function () {
-                        return 'true';
-                    },
-                    applyRoundingModel: function () {
-                        return "price";
-                    },
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                },
+                isEswRoundingsEnabled: function () {
+                    return 'true';
+                },
+                applyRoundingModel: function () {
+                    return 'price';
                 }
             }
         },
@@ -35,22 +33,21 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswValidateOrderinventory
                     getCustomPreferenceValue: function (value) {
                         if (value == 'eswBaseCurrency') {
                             return 'some value';
-                        } else {
-                            return 'true';
                         }
+                        return 'true';
                     }
                 };
             }
-        },
+        }
     }).getEswOcHelper();
     describe('Happy path', function () {
-        it("it Should calculate order items inventory", function () {
+        it('it Should calculate order items inventory', function () {
             let inventoryResponse = orderConfirmationHelper.validateEswOrderInventory(Order);
             expect(inventoryResponse).to.be.true;
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error", function () {
+    describe('Sad Path', function () {
+        it('Should throw error', function () {
             var err = new TypeError('Cannot read properties of undefined');
             let inventoryResponse = orderConfirmationHelper.validateEswOrderInventory();
             expect(inventoryResponse).to.throw;

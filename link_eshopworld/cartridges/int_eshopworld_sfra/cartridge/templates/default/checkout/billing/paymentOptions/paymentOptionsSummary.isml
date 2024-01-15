@@ -1,0 +1,16 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page"/>
+
+<isif condition="${eswHelper.isOrderDetailEnabled() && !empty(pdict.order.totals.eswPaymentMethod)}">
+    <div class="payment-details">
+        <div class="row summary-details leading-lines">
+            <div class="col-8 start-lines">
+                <p> <span>${Resource.msg('esw.paymentMethod', 'esw', null)}</span></p>
+            </div>
+            <div class="col-4 end-lines">
+                <p class="text-right pricing shipping-method-price">
+                    ${pdict.order.totals.eswPaymentMethod}
+                </p>
+            </div>
+        </div>
+    </div>
+</isif>

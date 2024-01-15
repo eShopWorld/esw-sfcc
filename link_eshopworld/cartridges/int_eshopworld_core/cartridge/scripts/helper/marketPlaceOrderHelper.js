@@ -1,6 +1,6 @@
 'use strict';
 
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const StringUtils = require('dw/util/StringUtils');
 const Logger = require('dw/system/Logger');
 
