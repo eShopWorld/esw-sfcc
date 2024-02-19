@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<extensions xmlns="http://www.demandware.com/xml/bmmodules/2007-12-11" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.demandware.com/xml/bmmodules/2007-12-11 bmext.xsd">
+<!-- =============================================================== -->
+<!-- ==                                                           == -->
+<!-- ==               ESW Options                                 == -->
+<!-- ==                                                           == -->
+<!-- =============================================================== -->
+  <menuitem id="esw_id01" position="99999" site="true">
+    <name xml:lang="x-default">ESW</name>
+    <short_description xml:lang="x-default">ESW</short_description>
+    <description xml:lang="x-default">ESW</description>
+    <icon>icons/esw-icon.gif</icon>
+  </menuitem>
+  <menuaction id="esw_catalog_id01" menupath="esw_id01" position="999" site="true">
+    <name xml:lang="x-default">Catalog</name>
+    <short_description xml:lang="x-default">Catalog</short_description>
+    <description xml:lang="x-default">All catalog related ESW operations</description>
+    <exec pipeline="EShopWorldBM" node="Start"/>
+    <sub-pipelines>
+      <pipeline name="EShopWorldBM-Start" />
+      <pipeline name="EShopWorldBM-Search" />
+      <pipeline name="EShopWorldBM-SyncProduct" />
+      <pipeline name="EShopWorldBM-CatalogConfig" />
+      <pipeline name="EShopWorldBM-SavePostedConfig" />
+    </sub-pipelines>
+    <parameters>
+      <parameter name="menuname" value="Catalog"/>
+      <parameter name="menupath" value="esw_id01"/>
+      <parameter name="mainmenuname" value="ESW"/>
+    </parameters>
+    <icon>icons/esw-icon.gif</icon>
+  </menuaction>
+</extensions>

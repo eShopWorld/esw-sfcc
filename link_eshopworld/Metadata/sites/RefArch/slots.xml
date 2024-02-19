@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<slot-configurations xmlns="http://www.demandware.com/xml/impex/slot/2008-09-08">
+    <slot-configuration slot-id="eswLandingContent" context="global" configuration-id="New Slot Configuration - 2018-11-14 16:30:28" default="true" assigned-to-site="true">
+        <template>slots/html/htmlSlotContainer.isml</template>
+        <enabled-flag>true</enabled-flag>
+        <content>
+            <html>
+                <body xml:lang="x-default">&lt;style&gt;
+.content-asset p {
+   font-size: 14px;
+}
+.content-asset p.cookie {
+ font-size: 12px;
+line-height: 13px;
+}
+.cookie-content {
+        width: 95%;
+	margin: 0 auto;
+	text-align: center;
+}
+.cookie-section1 {
+ width: 310px;
+margin: 0 auto;
+text-align: center;
+}
+.cookie-section1 ul {
+ text-align: left;
+}
+.cookie-section1 ul li {
+ font-size: 14px;
+}
+@media screen and (max-width: 767px) {
+   .cookie-content {
+		width: 90%;
+    }
+}
+&lt;/style&gt;
+&lt;div class="cookie-content"&gt;
+&lt;div class="cookie-section1"&gt;
+&lt;ul&gt;
+&lt;li&gt;Browse &amp;amp; pay in the currency of your choice&lt;/li&gt;
+&lt;li&gt;Duties &amp;amp; taxes calculated at checkout&lt;/li&gt;
+&lt;li&gt;No additional charges on delivery&lt;/li&gt;
+&lt;/ul&gt;
+
+ &lt;br&gt;
+&lt;button type="button" id="continueButton" class="esw-btn button-fancy-large" data-url="$url('Page-SetLocale')$"&gt;Continue Shopping&lt;/button&gt;
+&lt;/div&gt;
+&lt;br&gt;
+&lt;p class="cookie"&gt;We use our own and third party cookies to improve our website and your shopping experience. Please read and agree our privacy and cookie policy which applies to you when browsing our website. If you continue browsing our website without changing your cookie settings, we'll assume that you are agreeing to our use of cookies as described in our &lt;a href="#"&gt;privacy and cookie policy.&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;</body>
+            </html>
+        </content>
+    </slot-configuration>
+
+    <slot-configuration slot-id="eswLandingWelcome" context="global" configuration-id="Welcome Message" assigned-to-site="true">
+        <template>slots/html/htmlSlotContainer.isml</template>
+        <enabled-flag>true</enabled-flag>
+        <content>
+            <html>
+                <body xml:lang="x-default">&lt;div class="esw-header-wrapper"&gt;
+       &lt;h1&gt;Welcome to RefArch&lt;/h1&gt;
+&lt;/div&gt;</body>
+            </html>
+        </content>
+    </slot-configuration>
+
+    <slot-configuration slot-id="eswGeoIpChangeWarning" context="global" configuration-id="Location change warning" assigned-to-site="true">
+        <template>slots/html/htmlSlotContainer.isml</template>
+        <enabled-flag>true</enabled-flag>
+        <content>
+            <html>
+                <body xml:lang="x-default">&lt;div class="alert alert-warning"&gt;We noticed that you are currently accessing our website from a different country than your last visit. To view all the latest products and prices available in your area, please confirm your delivery country. If no changes are required, you can ignore this warning.&lt;/div&gt;</body>
+            </html>
+        </content>
+    </slot-configuration>
+
+</slot-configurations>

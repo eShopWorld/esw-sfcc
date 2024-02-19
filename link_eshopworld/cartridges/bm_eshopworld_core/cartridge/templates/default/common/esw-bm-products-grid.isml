@@ -1,0 +1,102 @@
+<isinclude template="util/modules" />
+<isset value="${require('*/cartridge/scripts/helper/eswCatalogHelper')}" name="eswCatalogHelper" scope="page" />
+<isset value="${require('*/cartridge/scripts/helpers/eswSyncHelpers')}" name="eswSyncHelper" scope="page" />
+<isset value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" name="eswHelper" scope="page" />
+<isset value="${require('*/cartridge/scripts/util/Constants')}" name="Constants" scope="page" />
+
+<div class="productsList"
+    data-selectedsearch="${!empty(pdict.sortingValue) ? 'advanced' : !empty(pdict.idBasedSearch) ? 'byID' : ''}">
+    <isinclude template="common/esw-products-search" />
+</div>
+<isif condition="${!pdict.productsList.empty}">
+    <form action="${dw.web.URLUtils.https('EShopWorldBM-SyncProduct')}" method="GET" name="AdvProductSyncFrm" id="productGridForm">
+        <table class="esw-product-table">
+            <tr>
+                <td class="table_header w e s">
+                    <a onclick="selectAllProducts();" href="javascript:void(0)" class="tableheader disabled">
+                        ${Resource.msg('esw.bm.SelectAll', 'eswbm', null)}
+                    </a>
+                </td>
+                <td class="table_header w e s">${Resource.msg('esw.bm.ID', 'eswbm', null)}</td>
+                <td class="table_header w e s">${Resource.msg('esw.bm.Name', 'eswbm', null)}</td>
+                <td class="table_header w e s">${Resource.msg('esw.bm.LastModified', 'eswbm', null)}</td>
+                <isif condition="${eswHelper.isEswCatalogApiMethod()}">
+                    <td class="table_header w e s">${Resource.msg('esw.bm.SyncStatus', 'eswbm', null)}</td>
+                    <td class="table_header w e s">${Resource.msg('esw.bm.SyncStatusMessage', 'eswbm', null)}</td>
+                </isif>
+            </tr>
+            <input type="hidden" name="pageSize" value="${pdict.productsList.pageSize}">
+            <isloop items="${pdict.productsList.pageElements}" var="product" status="productIndex">
+                <isset name="internallyValidProductRes" value="${eswCatalogHelper.isValidProduct(product.product)}" scope="page" />
+                <tr class="esw-products-list">
+                    <td class="table_detail middle e s left">
+                        <input type="checkbox" class="select-Product" id="${product.product.ID}" name="product${productIndex.count}" value="${product.product.ID}" <isif condition="${eswCatalogHelper.isValidProduct(product.product).isError}">disabled</isif>>
+                    </td>
+                    <td class="table_detail middle e s left">
+                        <a class="table_detail_link detail_Link_underLink"
+                            href="${dw.web.URLUtils.https('ViewProduct_52-Edit', 'ProductID', product.product.UUID)}"
+                            target="_blank">
+                            <i>${product.product.ID}</i>
+                        </a>
+                    </td>
+                    <td class="table_detail middle e s left">
+                        <a class="table_detail_link detail_Link_underLink"
+                            href="${dw.web.URLUtils.https('ViewProduct_52-Edit', 'ProductID', product.product.UUID)}"
+                            target="_blank">
+                            <i>${product.product.name}</i>
+                        </a>
+                    </td>
+                    <td class="table_detail middle e s left">
+                        <isprint value="${new Date(product.product.lastModified)}"
+                            style="DATE_SHORT" />
+                        <isprint value="${new Date(product.product.lastModified)}"
+                            style="DATE_TIME" />
+                    </td>
+                    <isif condition="${eswHelper.isEswCatalogApiMethod()}">
+                        <td class="table_detail middle e s left">
+                            ${eswSyncHelper.getProductSyncStatus(product.product)}
+                        </td>
+                        <td class="table_detail middle e s left tbl-error">
+                            <isinclude template="common/esw-bm-product-sync-message" />
+                        </td>
+                    </isif>
+                </tr>
+            </isloop>
+            <iscomment>Action butons</iscomment>
+            <isif condition="${eswHelper.isEswCatalogApiMethod()}">
+                <tr class="action-btns">
+                    <td colspan="6">
+                        <button type="submit" value="true" name="SyncAll" class="button SyncAll">
+                            ${Resource.msg('paginginformation.sync.all', 'eswbm', null)}
+                        </button>
+
+                        <button type="submit" value="true" name="SyncSlected" class="button SyncSlected">
+                            ${Resource.msg('paginginformation.sync.selected', 'eswbm', null)}
+                        </button>
+                    </td>
+                </tr>
+            </isif>
+            <iscomment>End Action buttons</iscomment>
+            <iscomment>Pagination</iscomment>
+            <tr>
+                <td colspan="6">
+                    <div class="search-result-options">
+                        <isif condition="${pdict.currentController === 'Start'}">
+                            <iseswpagingbar pageurl="${URLUtils.https('EShopWorldBM-Start')}" pagingmodel="${pdict.productsList}" />
+                        <iselse/>
+                            <iseswpagingbar pageurl="${URLUtils.https('EShopWorldBM-Search', 
+                            'q', pdict.query, 
+                            'filterAttribute', pdict.filterValue,
+                            'InitialPageSize', pdict.selectedPageResultNumber,
+                            'SortingDirection', pdict.sortingValue, 
+                            'submittedFrom', pdict.submittedFrom)}"
+                            pagingmodel="${pdict.productsList}" />
+                        </isif>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </form>
+<iselse/>
+    <isinclude template="/common/esw-no-product-found" />
+</isif>

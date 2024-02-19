@@ -1,0 +1,4 @@
+!config/default.sample
+node_modules
+build
+config

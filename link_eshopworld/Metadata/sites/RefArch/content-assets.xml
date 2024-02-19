@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library xmlns="http://www.demandware.com/xml/impex/library/2006-10-31">
+    <folder folder-id="root">
+        <online-flag>true</online-flag>
+        <page-attributes/>
+    </folder>
+
+    <content content-id="esw-checkout-disclaimer-message">
+        <display-name xml:lang="x-default">ESW Checkout Disclaimer Message</display-name>
+        <description xml:lang="x-default">Disclaimer message content to be displayed under the checkout button</description>
+        <online-flag>true</online-flag>
+        <searchable-flag>false</searchable-flag>
+        <page-attributes/>
+        <custom-attributes>
+            <custom-attribute attribute-id="body" xml:lang="x-default">By clicking Check Out Now, you will be redirected to the eShopWorld checkout page where payment will be taken and your order fulfilled by eShopWorld, preferred partner for international sales.</custom-attribute>
+        </custom-attributes>
+    </content>
+
+    <content content-id="esw-display-return-prohibited-message">
+        <display-name xml:lang="x-default">ESW Display Return Prohibited Message</display-name>
+        <online-flag>true</online-flag>
+        <searchable-flag>false</searchable-flag>
+        <page-attributes/>
+        <custom-attributes>
+            <custom-attribute attribute-id="body" xml:lang="x-default">&lt;div&gt;&#13;    This product is a non-returnable Item&#13;&lt;/div&gt;</custom-attribute>
+        </custom-attributes>
+    </content>
+	
+	<content content-id="eswGeoIpChangeWarning">
+		<display-name xml:lang="x-default">Location change warning</display-name>
+		<online-flag>true</online-flag>
+		<searchable-flag>false</searchable-flag>
+		<custom-attributes>
+		  <custom-attribute attribute-id="body" xml:lang="x-default">We noticed that you are currently accessing our website from a different country than your last visit. To view all the latest products and prices available in your area, please confirm your delivery country. If no changes are required, you can ignore this warning.</custom-attribute>
+		</custom-attributes>
+		<folder-links>
+		</folder-links>
+	</content>
+
+</library>
