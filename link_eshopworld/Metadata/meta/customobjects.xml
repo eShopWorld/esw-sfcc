@@ -117,9 +117,9 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
-            <attribute-definition attribute-id="isProductFeedSupported">
-                <display-name xml:lang="x-default">Is Product Feed Supported?</display-name>
-                <description xml:lang="x-default">If checked, then product feeds for this country will be generated.</description>
+            <attribute-definition attribute-id="isLocalizedShoppingFeedSupported">
+                <display-name xml:lang="x-default">Is Localized Shopping Feed Supported?</display-name>
+                <description xml:lang="x-default">If checked, then Localized Shopping feeds for this country will be generated.</description>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -180,7 +180,7 @@
                 <attribute attribute-id="baseCurrencyCode"/>
                 <attribute attribute-id="isSupportedByESW"/>
                 <attribute attribute-id="isFixedPriceModel"/>
-                <attribute attribute-id="isProductFeedSupported"/>
+                <attribute attribute-id="isLocalizedShoppingFeedSupported"/>
             </attribute-group>
             <attribute-group group-id="eswHubAddress">
                 <display-name xml:lang="x-default">ESW HUB Address</display-name>

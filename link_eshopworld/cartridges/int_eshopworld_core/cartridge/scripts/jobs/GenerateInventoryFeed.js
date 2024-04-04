@@ -5,75 +5,21 @@ const Logger = require('dw/system/Logger');
 const Status = require('dw/system/Status');
 
 /* API Includes */
-const File = require('dw/io/File');
 const FileWriter = require('dw/io/FileWriter');
 const CSVStreamWriter = require('dw/io/CSVStreamWriter');
+const prefrenceName = 'eswMamentaFeed';
 
 const Site = require('dw/system/Site').getCurrent();
-const StringUtils = require('dw/util/StringUtils');
 const ProductSearchModel = require('dw/catalog/ProductSearchModel');
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 const InventoryUtils = {
-    /**
-     * Returns site custom preference value
-     * from ESW Catalog Integration group
-     * @param {string} customPref - field name
-     * @return {string} - value of custom preference
-     */
-    getFeedCustomPrefVal: function (customPref) {
-        return Site.getCustomPreferenceValue('eswMamentaFeed' + customPref);
-    },
-    /**
-     * ESW SFTP service
-     * @return {Object} SFTPService - service object
-     */
-    getSFTPService: function () {
-        let serviceName = this.getFeedCustomPrefVal('SFTPService');
-        let SFTPService = dw.svc.LocalServiceRegistry.createService(serviceName, {
-            createRequest: function (service, params) {
-                return params;
-            },
-            parseResponse: function (service, listOutput) {
-                return listOutput.text;
-            },
-            filterLogMessage: function (message) {
-                return message;
-            },
-            getRequestLogMessage: function (serviceRequest) {
-                return serviceRequest;
-            },
-            getResponseLogMessage: function (serviceResponse) {
-                return serviceResponse;
-            }
-        });
-        return SFTPService;
-    },
-    /**
-     * Formats time stamp into TZ date and time format
-     * @param {Object} timeStamp - the Date object
-     * @return {string} - formatted time stamp
-     */
-    formatTimeStamp: function (timeStamp) {
-        return StringUtils.formatCalendar(new dw.util.Calendar(timeStamp), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
-    },
-    /**
-     * Generates the file name with brand and leading zeros
-     * as expected from ESW side
-     * @return {string} - formatted file name
-     * @param {string} countryCode - countrycode
-     * @returns {string} - file name
-     */
-    getFileName: function (countryCode) {
-        let siteId = Site.getID();
-        let today = this.formatTimeStamp(new Date());
-        return siteId + '_' + countryCode + '_' + today + '_inventory.csv';
-    },
     /**
      * Returns the ESW inventory Feed Product Custom Fields Mapping
      * @return {Object} ESWKeyField and Product Custom Attribute Mapping JSON.
      */
     getProductCustomFieldMapping: function () {
-        let productCustomAttrFieldMapping = !empty(this.getFeedCustomPrefVal('ProductCustomAttrFieldMapping')) ? this.getFeedCustomPrefVal('ProductCustomAttrFieldMapping') : '';
+        let productCustomAttrFieldMapping = !empty(eswHelper.getFeedCustomPrefVal('ProductCustomAttrFieldMapping', prefrenceName)) ? eswHelper.getFeedCustomPrefVal('ProductCustomAttrFieldMapping', prefrenceName) : '';
         return !empty(productCustomAttrFieldMapping) ? JSON.parse(productCustomAttrFieldMapping) : '';
     },
     /**
@@ -131,7 +77,6 @@ const InventoryUtils = {
  * @returns {boolean} - returns execute result
  */
 function execute(args) {
-    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     try {
         let fileHasRecords = false;
         let localizedPricingCountries = [];
@@ -145,17 +90,10 @@ function execute(args) {
         /* eslint consistent-return: "off" */
         localizedPricingCountries.forEach(function (countryCode) {
             // file write
-            let filePath = args.impexDirPath;
-            let folder = new File(filePath);
-
-            if (!folder.exists()) {
-                folder.mkdirs();
-            }
-
-            let fileName = InventoryUtils.getFileName(countryCode);
-            let file = new File(filePath + File.SEPARATOR + fileName);
+            let fileName = eswHelper.getFileName({ countryCode: countryCode, jobType: 'inventoryFeed' });
+            let file = eswHelper.createFile('inventoryFeed', args.impexDirPath, countryCode);
             let fWriter = new FileWriter(file);
-            let catalogFeedDelimiter = (!empty(InventoryUtils.getFeedCustomPrefVal('Delimiter'))) ? InventoryUtils.getFeedCustomPrefVal('Delimiter') : '|';
+            let catalogFeedDelimiter = (!empty(eswHelper.getFeedCustomPrefVal('Delimiter', prefrenceName))) ? eswHelper.getFeedCustomPrefVal('Delimiter', prefrenceName) : '|';
             let csvWriter = new CSVStreamWriter(fWriter, catalogFeedDelimiter);
             InventoryUtils.writeHeaders(csvWriter);
             // end file write
@@ -191,7 +129,7 @@ function execute(args) {
                     return new Status(Status.ERROR);
                 }
 
-                let sftpService = InventoryUtils.getSFTPService();
+                let sftpService = eswHelper.getSFTPService(prefrenceName);
                 remotePath += fileName;
                 let result = sftpService.setOperation('putBinary', remotePath, file).call();
 

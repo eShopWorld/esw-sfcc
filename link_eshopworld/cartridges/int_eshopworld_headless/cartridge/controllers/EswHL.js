@@ -21,7 +21,7 @@ function PriceConversion() {
     let formatMoney = require('dw/util/StringUtils').formatMoney;
 
     // Script Includes
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
 
     let param = request.httpParameterMap;
     let price = Number(param.price.value);
@@ -46,29 +46,10 @@ function PriceConversion() {
  * Function to be called from ESW to check Order items inventory in SFCC side.
  */
 function validateInventory() {
-    let responseJSON = {},
-        eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
-    let inventoryAvailable = true;
-    if (eswHelper.getEnableInventoryCheck()) {
-        let OrderMgr = require('dw/order/OrderMgr'),
-            ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
-            order = OrderMgr.getOrder(obj.retailerCartId);
-        /* ***********************************************************************************************************************************************/
-        /* The following line of code checks order line items inventory availaibility from business manager.                                             */
-        /* If want to check inventory availability through third party api call please comment inventoryAvailable at line 275                            */
-        /* Update the inventoryAvailable variable with third party inventory api call response.                                                          */
-        /* Make sure value of inventoryAvailable variable is of boolean type true/false                                                                  */
-        /* To disable the inventory check disable "Enable ESW Inventory Check" custom preference from ESW checkout configuration custom preference group.*/
-        /* ***********************************************************************************************************************************************/
-        inventoryAvailable = ocHelper.validateEswOrderInventory(order);
-    }
-    responseJSON.retailerCartId = obj.retailerCartId.toString();
-    responseJSON.eShopWorldOrderNumber = obj.eShopWorldOrderNumber.toString();
-    responseJSON.inventoryAvailable = inventoryAvailable;
-    eswHelper.eswInfoLogger('Esw Inventory Check Response', JSON.stringify(responseJSON));
+    let responseJSON = eswHelper.getValidateInventoryResponseJson(obj);
     Response.renderJSON(responseJSON);
-    return;
 }
 /**
  * Function to handle order confirmation request in V2
@@ -81,7 +62,7 @@ function notify() {
         Order = require('dw/order/Order'),
         Response = require('*/cartridge/scripts/util/Response'),
         Site = require('dw/system/Site').getCurrent(),
-        eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         responseJSON = {};
     if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
         response.setStatus(401);
@@ -180,7 +161,6 @@ function notify() {
         eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
     }
     Response.renderJSON(responseJSON);
-    return;
 }
 
 /**
@@ -226,7 +206,6 @@ function cancelOrder() {
         };
     }
     Response.renderJSON(responseJSON);
-    return;
 }
 
 /** Exports of the controller

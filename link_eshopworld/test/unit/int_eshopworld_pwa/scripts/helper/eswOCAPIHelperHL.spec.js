@@ -13,7 +13,6 @@ const collections = require('../../../../mocks/dw.util.CollectionHelper');
 var orderMgrMock = require('../../../../mocks/dw/order/OrderMgr');
 const empty = require('../../../../mocks/dw.global.empty');
 
-var Request = require('../../../../mocks/dw/system/Request');
 var URLUtilsMock = require('../../../../mocks/dw/web/URLUtils');
 var ResourceMock = require('../../../../mocks/dw/web/Resource');
 global.empty = empty(global);
@@ -47,6 +46,14 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL.js', func
             },
             getCustomerCustomObject: function () {
                 return {};
+            }
+        },
+        '*/cartridge/scripts/helper/eswPricingHelper': {
+            getConvertedPrice: function () {
+                return 1;
+            },
+            isShippingCostConversionEnabled: function () {
+                return true;
             }
         },
         '*/cartridge/scripts/helper/eswHelperHL': {
@@ -168,6 +175,22 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL.js', func
         }];
         let updateTrackingNumber = eswOCAPIHelperHL.updateTrackingNumber(shipments, 'trackingnumber-73128');
         expect(updateTrackingNumber).to.be.undefined;
+    });
+    it('Calculated SubTotal', () => {
+        const productItems = [{
+            c_eswShopperCurrencyItemPriceInfo: 7,
+            price: '',
+            basePrice: '',
+            priceAfterItemDiscount: '',
+            priceAfterOrderDiscount: '',
+            priceAdjustments: [],
+            c_eswRestrictedProduct: '',
+            c_eswReturnProhibited: '',
+            c_eswReturnProhibitedMsg: '',
+            quantity: 1
+        }];
+        let calculatedSubTotal = eswOCAPIHelperHL.getCalculatedSubTotal(productItems);
+        expect(calculatedSubTotal).to.be.equals(7);
     });
     it('handle Esw Order Detail Call', () => {
         let handleEswOrderAttributes = eswOCAPIHelperHL.handleEswOrderDetailCall(Basket);

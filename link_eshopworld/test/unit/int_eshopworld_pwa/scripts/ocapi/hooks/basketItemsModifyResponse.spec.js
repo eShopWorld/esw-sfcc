@@ -12,25 +12,26 @@ describe('int_eshopworld_pwa/cartridge/scripts/ocapi/shop/basketItemsModifyRespo
         'dw/system/Site': SiteMock,
         'dw/system/Status': Status,
         '*/cartridge/scripts/helper/eswOCAPIHelperHL': {
-            basketItemsModifyResponse: function () {return {}},
-            basketModifyGETResponse_v2: function () {return {}},
+            basketItemsModifyResponse: function () { return {}; },
+            basketModifyGETResponse_v2: function () { return {}; },
             getCountryDetailByParam: function () {
                 return {};
             },
-            deleteBasketItem: function () {return {}},
+            deleteBasketItem: function () { return {}; },
+            setOverridePriceBooks: function () { return true; }
         },
         'dw/system/Transaction': Transaction,
         '*/cartridge/scripts/helper/eswPwaCoreHelper': {
             getCountryDetailByParam: function () {
                 return {};
-            },
+            }
         },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getCatalogUploadMethod: function () { return 'api'; },
                 getEShopWorldModuleEnabled: function () { return true; }
             }
-        },
+        }
 
     });
     // Unit test
@@ -48,9 +49,9 @@ describe('int_eshopworld_pwa/cartridge/scripts/ocapi/shop/basketItemsModifyRespo
     });
     it('Before Editing the basket', () => {
         let basket = {
-            custom: {eswShopperCurrency: ''},
+            custom: { eswShopperCurrency: '' },
             updateTotals: function () {}
-        }
+        };
         let beforePATCH = basketItemsModifyResponse.beforePATCH(basket, {});
         expect(beforePATCH).to.be.an('object');
     });

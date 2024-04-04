@@ -132,7 +132,9 @@ let localizePriceHelpers = {
                     selectedCountry: selectedCountryAdjustments[0].deliveryCountryIso,
                     selectedFxRate: selectedFxRate[0],
                     selectedCountryAdjustments: selectedCountryAdjustments[0],
-                    selectedRoundingRule: selectedRoundingRule[0]
+                    selectedRoundingRule: selectedRoundingRule[0],
+                    currencyCode: selectedFxRate[0].toShopperCurrencyIso,
+                    isJob: true
                 });
             }
         }

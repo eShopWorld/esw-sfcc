@@ -42,6 +42,12 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswHelperHL.js', function 
     var eswHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_pwa/cartridge/scripts/helper/eswHelperHL', {
         'dw/system/Site': SiteMock,
         'dw/value/Money': Money,
+        '*/cartridge/scripts/helper/eswPricingHelper': {
+            eswPricingHelper: {
+                getConvertedPrice: function () { return 1; },
+                isShippingCostConversionEnabled: function () { return true; }
+            }
+        },
         '*/cartridge/scripts/helper/eswPricingHelperHL': {
             isShippingCostConversionEnabled: function () {
                 return false;
@@ -79,13 +85,6 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswHelperHL.js', function 
         '*/cartridge/scripts/util/collections': collections
     });
     // Unit test
-    it('Returns basket subtotal amount', () => {
-        Basket.quantity = {
-            value: 10
-        };
-        let subtotalObject = eswHelperHL.getSubtotalObject(Basket, true, true, true, localizeObj);
-        expect(subtotalObject).to.have.property('available');
-    });
     it('Returns Order Prorated Discount', () => {
         Basket.priceAdjustments = new ArrayList([{
             promotion: {
@@ -202,5 +201,23 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswHelperHL.js', function 
     it('Returns Cart shipping cost', () => {
         let eswCartShippingCost = eswHelperHL.getEswCartShippingCost(10, localizeObj, {});
         expect(eswCartShippingCost).to.have.property('value');
+    });
+    it('Returns Threshold Enabled', () => {
+        let promotion = {
+            custom: {
+                eswLocalizedThresholdEnabled: true
+            }
+        };
+        let isThresholdEnabled = eswHelperHL.isThresholdEnabled(promotion);
+        expect(isThresholdEnabled).to.equals(true);
+    });
+    it('Returns Discount Type', () => {
+        let promotion = {
+            custom: {
+                eswPromotionDiscountType: ''
+            }
+        };
+        let discountType = eswHelperHL.getDiscountType(promotion);
+        expect(discountType).to.equals('');
     });
 });

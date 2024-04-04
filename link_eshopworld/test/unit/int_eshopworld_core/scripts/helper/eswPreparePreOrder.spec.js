@@ -220,6 +220,9 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
                 getMoneyObject: function () {
                     return Money();
                 },
+                getEnableInventoryCheck: function () {
+                    return false;
+                },
                 isEswRoundingsEnabled: function () {
                     return 'true';
                 },
@@ -264,6 +267,12 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
         getCartItemsV2: function () {
             return null;
         },
+        '*/cartridge/scripts/helper/eswPricingHelper': {
+            getConversionPreference: function () {
+                return null;
+            }
+        },
+        '*/cartridge/scripts/helper/eswHelperHL': '',
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,
@@ -325,12 +334,12 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
     describe('Happy path', function () {
         it('Should prepare pre order payload', function () {
             let basket = createApiBasket();
-            let prderPayload = preparePreOrder.preparePreOrder(basket);
+            let prderPayload = preparePreOrder.preparePreOrder(null, basket);
             expect(prderPayload).to.have.property('contactDetails');
         });
         it('it Should have checkout experience', function () {
             let basket = createApiBasket();
-            let prderPayload = preparePreOrder.preparePreOrder(basket);
+            let prderPayload = preparePreOrder.preparePreOrder(null, basket);
             expect(prderPayload).to.have.property('shopperCheckoutExperience');
         });
     });

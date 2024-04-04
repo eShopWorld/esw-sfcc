@@ -17,7 +17,7 @@ const TaxMgr = require('dw/order/TaxMgr');
 const Logger = require('dw/system/Logger');
 const Status = require('dw/system/Status');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-const basketHelper = require('*/cartridge/scripts/helper/eswBasketHelperHL');
+const basketHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper');
 
 /**
  * @function calculate

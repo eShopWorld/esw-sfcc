@@ -7,7 +7,7 @@
 /**
  * Helper script to get all ESW site preferences
  **/
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
 const BasketMgr = require('dw/order/BasketMgr');
 
@@ -20,7 +20,7 @@ const BasketMgr = require('dw/order/BasketMgr');
  * @returns {Object} - line item pricing info
  */
 function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     localizeObj.applyRoundingModel = 'true';
     let finalPrice = pricingHelper.getConvertedPrice(item.basePrice.value, localizeObj, conversionPrefs) * item.quantity.value;
     localizeObj.applyRoundingModel = 'false';
@@ -111,7 +111,7 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
  * @return {Object} Object - Discounts
  */
 function getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs) {
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let beforeDiscount = (isConversionDisabled || cart.defaultShipment.shippingTotalNetPrice.value === 0) ? cart.defaultShipment.shippingTotalNetPrice.value : pricingHelper.getConvertedPrice(Number(cart.defaultShipment.shippingTotalNetPrice), localizeObj, conversionPrefs),
         obj = {},
         currencyCode = localizeObj.localizeCountryObj.currencyCode,
@@ -168,7 +168,7 @@ function getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversio
  */
 function getLineItemsV3(order, countryCode, currencyCode) {
     let lineItems = [],
-        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
         eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
         totalQuantity = 0; // eslint-disable-line no-unused-vars
 
@@ -184,7 +184,7 @@ function getLineItemsV3(order, countryCode, currencyCode) {
     let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
     let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper');
 
-    let totalDiscount = eswHelperHL.getOrderDiscount(order, localizeObj, conversionPrefs).value,
+    let totalDiscount = eswHelperHL.getOrderDiscountHL(order, localizeObj, conversionPrefs).value,
         remainingDiscount = totalDiscount; // eslint-disable-line no-unused-vars
 
     collections.forEach(order.productLineItems, function (item) {
@@ -232,7 +232,7 @@ function getLineItemsV3(order, countryCode, currencyCode) {
  */
 function getLineItemsV2(order, countryCode, currencyCode) {
     let lineItems = [],
-        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
         eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
         totalQuantity = 0; // eslint-disable-line no-unused-vars
 
@@ -248,7 +248,7 @@ function getLineItemsV2(order, countryCode, currencyCode) {
     let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
     let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper');
 
-    let totalDiscount = eswHelperHL.getOrderDiscount(order, localizeObj, conversionPrefs).value,
+    let totalDiscount = eswHelperHL.getOrderDiscountHL(order, localizeObj, conversionPrefs).value,
         remainingDiscount = totalDiscount; // eslint-disable-line no-unused-vars
 
     collections.forEach(order.productLineItems, function (item) {

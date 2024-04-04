@@ -22,4 +22,10 @@ describe('bm_eshopworld_core/cartridge/scripts/helper/eswSearchHelpers.js', func
             chai.expect(filteredRes).to.deep.equal(null);
         });
     });
+    describe('Apply cache', function () {
+        it('Should return null', function () {
+            let appliedCached = eswSearchHelpers.applyCache({});
+            chai.expect(appliedCached).to.deep.equal(undefined);
+        });
+    });
 });

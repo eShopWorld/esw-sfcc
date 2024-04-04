@@ -15,6 +15,7 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswCheckoutHelperHL.js', f
         'dw/system/Site': SiteMock,
         'dw/system/Logger': Logger,
         'dw/web/URLUtils': '',
+        '*/cartridge/scripts/util/Constants': '',
         '*/cartridge/scripts/helper/eswPwaCoreHelper': {
             getCountryDetailByParam: function () {
                 return {};

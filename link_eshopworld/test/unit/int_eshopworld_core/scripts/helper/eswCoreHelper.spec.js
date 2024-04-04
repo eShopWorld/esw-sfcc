@@ -11,6 +11,16 @@ var Logger = require('../../../../mocks/dw/system/Logger');
 var StringUtils = require('../../../../mocks/dw/util/StringUtils');
 var CustomObjectMgr = require('../../../../mocks/dw/object/CustomObjectMgr');
 var PriceBookMgrMock = require('../../../../mocks/dw/catalog/PriceBookMgr');
+const Basket = require('../../../../mocks/dw/order/Basket');
+
+const localizeObj = {
+    applyCountryAdjustments: true,
+    localizeCountryObj: {
+        currencyCode: 'EUR',
+        countryCode: 'en-IE'
+    },
+    applyRoundingModel: 'false'
+};
 
 global.empty = empty(global);
 
@@ -29,7 +39,33 @@ var session = {
     }
 };
 
+var globalResponse = {
+    setStatus: function () {
+        return '401';
+    }
+};
+
+let lineItemContainer = {};
+lineItemContainer.shippingTotalPrice = {
+    subtract: function () {
+        return 10;
+    }
+};
+lineItemContainer.adjustedShippingTotalPrice = 10;
+lineItemContainer.getAdjustedMerchandizeTotalPrice = function(val) {
+    if (!val) {
+        return {
+            subtract: function () {
+                return 10;
+            }
+        }
+    } else {
+        return 10;
+    }
+}
+
 global.session = session;
+global.response = globalResponse;
 var LocalServiceRegMock = require('../../../../mocks/dw/svc/LocalServiceRegistry');
 const Constants = require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants');
 describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', function () {
@@ -130,6 +166,13 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
             });
         });
     });
+    it('Returns basket subtotal amount', () => {
+        Basket.quantity = {
+            value: 10
+        };
+        let subtotalObject = eswHelper.getSubtotalObject(Basket, true, true, true, localizeObj);
+        expect(subtotalObject).to.have.property('available');
+    });
     it('Should return undefined on isEswCatalogApiMethod', function () {
         let result = eswHelper.isEswCatalogApiMethod();
         chai.expect(result).to.be.undefined;
@@ -141,6 +184,7 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
             deliveryCountryIso: 'US'
         };
         // Stub the session.privacy.eswRetailerCartIdNullException property
+        eswHelper.getCheckoutServiceName = function () { return 'EswCheckoutV3Service'; };
         expect(() => eswHelper.validatePreOrder(invalidReqObj)).to.throw('SFCC_ORDER_CREATION_FAILED');
     });
     it('Should throw an error with message ATTRIBUTES_MISSING_IN_PRE_ORDER when the reqObj has no lineItems or deliveryCountryIso', function () {
@@ -149,6 +193,7 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
             retailerCartId: '123456'
         };
         // Call the validatePreOrder function with the invalid reqObj and expect an error
+        eswHelper.getCheckoutServiceName = function () { return 'EswCheckoutV3Service'; };
         expect(() => eswHelper.validatePreOrder(invalidReqObj)).to.throw('ATTRIBUTES_MISSING_IN_PRE_ORDER');
     });
     it('Returns Promo Threshold Amount', () => {
@@ -257,6 +302,18 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
         it('should return response', () => {
             const handleWebHooks = eswHelper.handleWebHooks({});
             expect(handleWebHooks).to.be.an('object');
+        });
+    });
+    describe('orderLevelDiscountTotal', function () {
+        it('should return response', () => {
+            const orderLevelDiscountTotal = eswHelper.getOrderLevelDiscountTotal(lineItemContainer);
+            expect(orderLevelDiscountTotal).to.be.an('object');
+        });
+    });
+    describe('ShippingLevelDiscountTotal', function () {
+        it('should return response', () => {
+            const ShippingLevelDiscountTotal = eswHelper.getShippingLevelDiscountTotal(lineItemContainer);
+            expect(ShippingLevelDiscountTotal).to.be.an('object');
         });
     });
 });

@@ -29,19 +29,7 @@ function setInitialCookies() {
     let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
     let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
 
-    if (request.httpCookies['esw.location'] == null) {
-        eswHelper.createCookie('esw.location', country, '/');
-    }
-    if (request.httpCookies['esw.currency'] == null) {
-        eswHelper.createCookie('esw.currency', currencyCode, '/');
-    }
-    if (request.httpCookies['esw.LanguageIsoCode'] == null) {
-        eswHelper.createCookie('esw.LanguageIsoCode', locale, '/');
-    }
-
-    eswHelper.createCookie('esw.InternationalUser', true, '/');
-    eswHelper.createCookie('esw.sessionid', customer.ID, '/');
-    eswHelper.setCustomerCookies();
+    eswHelper.createInitialCookies(country, currencyCode, locale);
 
     let selectedFxRate = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate) : '';
     if (!selectedFxRate && selectedFxRate !== null) {
@@ -301,11 +289,10 @@ function preOrderRequest() {
  */
 function handlePreOrderRequestV2() {
     let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-        logger = require('dw/system/Logger'),
-        oAuthObj = eswCoreService.getOAuthService(),
         preorderServiceObj = eswCoreService.getPreorderServiceV2(),
         eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
         redirectPreference = eswHelper.getRedirect();
+
     if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
         if (!customer.authenticated) {
             session.privacy.TargetLocation = URLUtils.https('EShopWorld-PreOrderRequest').toString();
@@ -314,19 +301,7 @@ function handlePreOrderRequestV2() {
             };
         }
     }
-
-    let formData = {
-        grant_type: 'client_credentials',
-        scope: 'checkout.preorder.api.all'
-    };
-    formData.client_id = eswHelper.getClientID();
-    formData.client_secret = eswHelper.getClientSecret();
-
-    let oAuthResult = oAuthObj.call(formData);
-    if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
-        logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
-    }
-    session.privacy.eswOAuthToken = JSON.parse(oAuthResult.object).access_token;
+    eswHelper.setOAuthToken();
 
     let cart = dw.order.BasketMgr.getCurrentOrNewBasket();
     if (empty(cart.defaultShipment.shippingMethod)) {
@@ -335,7 +310,7 @@ function handlePreOrderRequestV2() {
 
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
-    eswHelper.validatePreOrder(requestObj);
+    eswHelper.validatePreOrder(requestObj, true);
     let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
     if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
         session.privacy.confirmedOrderID = requestObj.retailerCartId;
@@ -512,34 +487,36 @@ function registerCustomer() {
     let OrderMgr = require('dw/order/OrderMgr');
     let Transaction = require('dw/system/Transaction');
     let logger = require('dw/system/Logger');
-    let orderNumber = session.privacy.confirmedOrderID;
+    let orderNumber,
+        existerCustomer;
 
-    let order = OrderMgr.getOrder(orderNumber);
-    let loginForm;
-    if (order) {
-        let existerCustomer = CustomerMgr.getCustomerByLogin(order.getCustomerEmail());
-        if (existerCustomer && existerCustomer.registered) {
-            loginForm = app.getForm('login');
-            Transaction.wrap(function () { order.setCustomer(existerCustomer); });
-            let oauthLoginForm = app.getForm('oauthlogin');
-            let orderTrackForm = app.getForm('ordertrack');
-            let loginView = app.getView('Login', {
-                RegistrationStatus: false,
-                CustomerEmail: order.getCustomerEmail()
-            });
+    try {
+        orderNumber = session.privacy.confirmedOrderID;
+        let order = OrderMgr.getOrder(orderNumber);
+        let loginForm;
+        if (order) {
+            existerCustomer = CustomerMgr.getCustomerByLogin(order.getCustomerEmail());
+            if (existerCustomer && existerCustomer.registered) {
+                loginForm = app.getForm('login');
+                Transaction.wrap(function () { order.setCustomer(existerCustomer); });
+                let oauthLoginForm = app.getForm('oauthlogin');
+                let orderTrackForm = app.getForm('ordertrack');
+                let loginView = app.getView('Login', {
+                    RegistrationStatus: false,
+                    CustomerEmail: order.getCustomerEmail()
+                });
 
-            loginForm.clear();
-            oauthLoginForm.clear();
-            orderTrackForm.clear();
+                loginForm.clear();
+                oauthLoginForm.clear();
+                orderTrackForm.clear();
 
-            if (existerCustomer.registered) {
-                loginForm.setValue('username', order.getCustomerEmail());
-                loginForm.setValue('rememberme', true);
-            }
-            session.custom.TargetLocation = URLUtils.url('Account-Show').toString();
-            loginView.render();
-        } else {
-            try {
+                if (existerCustomer.registered) {
+                    loginForm.setValue('username', order.getCustomerEmail());
+                    loginForm.setValue('rememberme', true);
+                }
+                session.custom.TargetLocation = URLUtils.url('Account-Show').toString();
+                loginView.render();
+            } else {
                 let profileValidation,
                     Customer = app.getModel('Customer'),
                     password = eswHelper.generateRandomPassword(),
@@ -575,13 +552,17 @@ function registerCustomer() {
                 } else {
                     response.redirect(URLUtils.https('Account-Show', 'registration', 'true'));
                 }
-            } catch (error) {
-                logger.error('ESW Plugin Account Creation Error: {0}', error.message);
-                response.redirect(URLUtils.url('Account-StartRegister').toString());
             }
+        } else {
+            response.redirect(URLUtils.url('Account-StartRegister').toString());
         }
-    } else {
-        response.redirect(URLUtils.url('Account-StartRegister').toString());
+    } catch (error) {
+        if ((!empty(session.privacy.confirmedOrderID) || !empty(orderNumber)) && !empty(existerCustomer) && existerCustomer.registered) {
+            response.redirect(URLUtils.url('Login-Show').toString());
+        } else {
+            response.redirect(URLUtils.url('Account-StartRegister').toString());
+        }
+        logger.error('ESW Plugin Account Creation Error: {0}', error.message);
     }
 }
 
@@ -590,26 +571,8 @@ function registerCustomer() {
  * @returns {void} - Void
  */
 function processWebHooks() {
-    let obj = JSON.parse(request.httpParameterMap.requestBodyAsString),
-        responseJSON = {},
-        requestType = request.httpHeaders.get('esw-event-type');
-    let eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper'),
-        logger = require('dw/system/Logger');
-
-    eswHelper.eswInfoLogger('Esw Order Process Webhook', JSON.stringify(obj));
-
-    if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
-        response.setStatus(401);
-        logger.error('ESW Process Webhooks Error: Basic Authentication Token did not match');
-    } else { // eslint-disable-next-line no-lonely-if
-        if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
-            responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-        } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
-            responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
-        } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
-            responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
-        }
-    }
+    let responseJSON = {};
+    responseJSON = eswHelper.handleWebHooks(JSON.parse(request.httpParameterMap.requestBodyAsString), request.httpHeaders.get('esw-event-type'));
     Response.renderJSON(responseJSON);
     return;
 }

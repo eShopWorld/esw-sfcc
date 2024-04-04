@@ -24,19 +24,7 @@ function setInitialCookies(req) {
     let Site = require('dw/system/Site').getCurrent();
     let locationParameter = req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
     eswHelper.setCustomSessionVariables(country, currencyCode);
-    if (request.httpCookies['esw.location'] == null) {
-        eswHelper.createCookie('esw.location', country, '/');
-    }
-    if (request.httpCookies['esw.currency'] == null) {
-        eswHelper.createCookie('esw.currency', currencyCode, '/');
-    }
-    if (request.httpCookies['esw.LanguageIsoCode'] == null) {
-        eswHelper.createCookie('esw.LanguageIsoCode', locale, '/');
-    }
-
-    eswHelper.createCookie('esw.InternationalUser', true, '/');
-    eswHelper.createCookie('esw.sessionid', customer.ID, '/');
-    eswHelper.setCustomerCookies();
+    eswHelper.createInitialCookies(country, currencyCode, locale);
 
     if (!empty(locationParameter.value)) {
         eswHelper.setLocation(locationParameter.value);
@@ -283,32 +271,8 @@ function getCartItem(obj, order, lineItem) {
  * ValidateInventory url will call from ESW to check Order items inventory in SFCC side.
  */
 server.post('ValidateInventory', function (req, res, next) {
-    let responseJSON = {},
-        obj = JSON.parse(req.body);
-    let inventoryAvailable = true;
-
-    if (eswHelper.getEnableInventoryCheck()) {
-        if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
-            response.setStatus(401);
-            logger.error('ESW Inventory Check Error: Basic Authentication Token did not match');
-        } else {
-            let OrderMgr = require('dw/order/OrderMgr'),
-                ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
-                order = OrderMgr.getOrder(obj.retailerCartId);
-            /* ***********************************************************************************************************************************************/
-            /* The following line of code checks order line items inventory availaibility from business manager.                                             */
-            /* If want to check inventory availability through third party api call please comment inventoryAvailable at line 275                            */
-            /* Update the inventoryAvailable variable with third party inventory api call response.                                                          */
-            /* Make sure value of inventoryAvailable variable is of boolean type true/false                                                                  */
-            /* To disable the inventory check disable "Enable ESW Inventory Check" custom preference from ESW checkout configuration custom preference group.*/
-            /* ***********************************************************************************************************************************************/
-            inventoryAvailable = ocHelper.validateEswOrderInventory(order);
-        }
-    }
-    responseJSON.retailerCartId = obj.retailerCartId.toString();
-    responseJSON.eShopWorldOrderNumber = obj.eShopWorldOrderNumber.toString();
-    responseJSON.inventoryAvailable = inventoryAvailable;
-    eswHelper.eswInfoLogger('Esw Inventory Check Response', JSON.stringify(responseJSON));
+    let obj = JSON.parse(req.body);
+    let responseJSON = eswHelper.getValidateInventoryResponseJson(obj);
     res.json(responseJSON);
     next();
 });
@@ -505,43 +469,44 @@ server.get('RegisterCustomer', function (req, res, next) {
     let CustomerMgr = require('dw/customer/CustomerMgr');
     let Transaction = require('dw/system/Transaction');
     let OrderMgr = require('dw/order/OrderMgr');
+    let orderNumber,
+        existerCustomer;
+    try {
+        orderNumber = session.privacy.confirmedOrderID;
+        let params = {},
+            registrationObj = {},
+            password;
+        let order = OrderMgr.getOrder(orderNumber);
+        if (order && order.customer.ID === req.currentCustomer.raw.ID) {
+            existerCustomer = CustomerMgr.getCustomerByLogin(order.getCustomerEmail());
+            if (existerCustomer && existerCustomer.registered) {
+                let profileForm = server.forms.getForm('profile');
+                Transaction.wrap(function () { order.setCustomer(existerCustomer); });
+                params = { rememberMe: null, userName: '', actionUrl: null, profileForm: null };
+                params.rememberMe = false;
+                params.actionUrl = URLUtils.url('Account-Login');
+                params.userName = existerCustomer.profile.email;
+                profileForm.clear();
+                params.profileForm = profileForm;
+                res.render('account/eswLoginForm', params);
+            } else {
+                password = eswHelper.generateRandomPassword();
+                registrationObj = {
+                    firstName: order.billingAddress.firstName,
+                    lastName: order.billingAddress.lastName,
+                    phone: order.billingAddress.phone,
+                    email: order.customerEmail,
+                    password: password
+                };
+                this.on('route:BeforeComplete', function (req, res) { // eslint-disable-line no-shadow
+                    let addressHelpers = require('*/cartridge/scripts/helpers/addressHelpers');
 
-    let orderNumber = session.privacy.confirmedOrderID;
-    let params = {},
-        registrationObj = {},
-        password;
-    let order = OrderMgr.getOrder(orderNumber);
-    if (order && order.customer.ID === req.currentCustomer.raw.ID) {
-        let existerCustomer = CustomerMgr.getCustomerByLogin(order.getCustomerEmail());
-        if (existerCustomer && existerCustomer.registered) {
-            let profileForm = server.forms.getForm('profile');
-            Transaction.wrap(function () { order.setCustomer(existerCustomer); });
-            params = { rememberMe: null, userName: '', actionUrl: null, profileForm: null };
-            params.rememberMe = false;
-            params.actionUrl = URLUtils.url('Account-Login');
-            params.userName = existerCustomer.profile.email;
-            profileForm.clear();
-            params.profileForm = profileForm;
-            res.render('account/eswLoginForm', params);
-        } else {
-            password = eswHelper.generateRandomPassword();
-            registrationObj = {
-                firstName: order.billingAddress.firstName,
-                lastName: order.billingAddress.lastName,
-                phone: order.billingAddress.phone,
-                email: order.customerEmail,
-                password: password
-            };
-            this.on('route:BeforeComplete', function (req, res) { // eslint-disable-line no-shadow
-                let addressHelpers = require('*/cartridge/scripts/helpers/addressHelpers');
+                    let login = registrationObj.email;
+                    let newCustomer;
+                    let authenticatedCustomer;
+                    let newCustomerProfile;
 
-                let login = registrationObj.email;
-                let newCustomer;
-                let authenticatedCustomer;
-                let newCustomerProfile;
-
-                // attempt to create a new user and log that user in.
-                try {
+                    // attempt to create a new user and log that user in.
                     Transaction.wrap(function () {
                         let error = {};
                         newCustomer = CustomerMgr.createCustomer(order.customerEmail, password);
@@ -581,20 +546,23 @@ server.get('RegisterCustomer', function (req, res, next) {
                             res.setViewData({ order: order });
                         }
                     });
-                } catch (e) {
-                    eswHelper.eswInfoLogger('Error While Creating customers account', e);
-                    res.redirect(URLUtils.url('Login-Show').toString());
+
+                    eswHelper.sendRegisterCustomerEmail(authenticatedCustomer, password);
+
+                    res.redirect(URLUtils.url('Account-Show', 'registration', 'submitted').toString());
                     next();
-                }
-
-                eswHelper.sendRegisterCustomerEmail(authenticatedCustomer, password);
-
-                res.redirect(URLUtils.url('Account-Show', 'registration', 'submitted').toString());
-                next();
-            });
+                });
+            }
+        } else {
+            res.redirect(URLUtils.url('Login-Show', 'showRegistration', 'true').toString());
         }
-    } else {
-        res.redirect(URLUtils.url('Login-Show').toString());
+    } catch (error) {
+        if ((!empty(session.privacy.confirmedOrderID) || !empty(orderNumber)) && !empty(existerCustomer) && existerCustomer.registered) {
+            res.redirect(URLUtils.url('Login-Show').toString());
+        } else {
+            res.redirect(URLUtils.url('Login-Show', 'showRegistration', 'true').toString());
+        }
+        eswHelper.eswInfoLogger('Error While Creating customers account', error);
     }
     next();
 });
@@ -604,22 +572,7 @@ server.get('RegisterCustomer', function (req, res, next) {
  */
 server.post('ProcessWebHooks', function (req, res, next) {
     let responseJSON = {};
-    if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
-        response.setStatus(401);
-        logger.error('ESW Process Webhooks Check Error: Basic Authentication Token did not match');
-    } else {
-        let eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
-        let obj = JSON.parse(req.body);
-        let requestType = request.httpHeaders.get('esw-event-type');
-        eswHelper.eswInfoLogger('ProcessWebhook Log', JSON.stringify(obj));
-        if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
-            responseJSON = eswOrderProcessHelper.markOrderAppeasement(JSON.parse(req.body));
-        } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
-            responseJSON = eswOrderProcessHelper.markOrderAsReturn(JSON.parse(req.body));
-        } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
-            responseJSON = eswOrderProcessHelper.cancelAnOrder(JSON.parse(req.body));
-        }
-    }
+    responseJSON = eswHelper.handleWebHooks(JSON.parse(req.body), request.httpHeaders.get('esw-event-type'));
     res.json(responseJSON);
     next();
 });

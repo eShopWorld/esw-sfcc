@@ -17,8 +17,14 @@ defaultShipment.getShippingAddress = function () {
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelper', {
         '*/cartridge/scripts/helper/eswCoreHelper': {
-            getEswHelper: {}
+            getEswHelper: {
+                getUrlExpansionPairs: function () { return [];},
+                getMetadataItems: function () { return '' },
+                getSelectedInstance: function () { return ''},
+                getEnableInventoryCheck: function () { return ''},
+            }
         },
+        'dw/web/URLAction': {},
         'dw/order/BasketMgr': '',
         'dw/system/Transaction': Transaction,
         'dw/order/OrderMgr': OrderMgr,
@@ -51,6 +57,18 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
         it('Should return null', function () {
             let shipmentShippingAddress = serviceHelper.getShipmentShippingAddress();
             expect(shipmentShippingAddress).to.equal(null);
+        });
+    });
+    describe('failOrder', function () {
+        it('Should return true', function () {
+            let shipmentShippingAddress = serviceHelper.failOrder();
+            expect(shipmentShippingAddress).to.equal(true);
+        });
+    });
+    describe('Expansion Pairs', function () {
+        it('Should expansionPairs object', function () {
+            let expansionPairs = serviceHelper.getExpansionPairs();
+            expect(expansionPairs).to.be.an('object');
         });
     });
 });

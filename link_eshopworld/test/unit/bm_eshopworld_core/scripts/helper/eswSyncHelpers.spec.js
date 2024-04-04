@@ -52,6 +52,19 @@ var bachProductsPayload = [
     }
 ];
 
+let product = {
+    online: true,
+    availabilityModel: {
+        getAvailabilityLevels: function () {
+            return {
+                notAvailable: {
+                    value: 0
+                }
+            };
+        }
+    }
+};
+
 describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', function () {
     let eswSyncHelpers = proxyquire('../../../../../cartridges/bm_eshopworld_core/cartridge/scripts/helpers/eswSyncHelpers.js', {
         '*/cartridge/scripts/helper/eswCatalogHelper': {
@@ -61,10 +74,19 @@ describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', functi
             generateProductBatchPayload: function () {
                 return bachProductsPayload;
             },
-            sendCatalogData: function () {}
+            sendCatalogData: function () {},
+            isValidProduct: function () {
+                return {
+                    isError: true
+                };
+            }
         },
         'dw/util/Calendar': calendarMock,
-        'dw/web/Resource': {},
+        'dw/web/Resource': {
+            msg: function () {
+                return 'someResourceString';
+            }
+        },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {}
         },
@@ -78,6 +100,18 @@ describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', functi
         it('Should return true if synced products successfully', function () {
             let eswSyncApiResponse = eswSyncHelpers.syncSelectedProducts(saleableProducts);
             chai.expect(eswSyncApiResponse).to.be.an.instanceof(Status);
+        });
+    });
+    describe('success cases', function () {
+        it('Should return product status', function () {
+            let productStatus = eswSyncHelpers.getProductSyncStatus(product);
+            chai.expect(productStatus).to.deep.equal('someResourceString');
+        });
+    });
+    describe('success cases', function () {
+        it('Should return getSync Status Info', function () {
+            let productStatus = eswSyncHelpers.getSyncStatusInfo(product);
+            chai.expect(productStatus).to.deep.equal('unknown');
         });
     });
 });

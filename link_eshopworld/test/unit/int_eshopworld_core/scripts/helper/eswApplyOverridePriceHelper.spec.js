@@ -137,7 +137,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
     });
     describe('Happy path', function () {
         it("it Should calculate order discount", function () {
-            let getOrderDiscount = eswCalculationHelper.getOrderDiscount(basketMgr.getCurrentBasket());
+            let getOrderDiscount = eswCalculationHelper.getOrderDiscount(basketMgr.getCurrentBasket(), {});
             expect(getOrderDiscount.getCurrencyCode()).to.equal('CAD');
         });
     });
@@ -157,7 +157,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
             global.request.httpCookies = cookie.httpCookies;
         });
         it("it Should calculate order discount for Dynamic Model", function () {
-            let getOrderDiscount = eswCalculationHelper.getOrderDiscount(basketMgr.getCurrentBasket());
+            let getOrderDiscount = eswCalculationHelper.getOrderDiscount(basketMgr.getCurrentBasket(), {});
             expect(getOrderDiscount.getCurrencyCode()).to.equal('EUR');
         });
     });

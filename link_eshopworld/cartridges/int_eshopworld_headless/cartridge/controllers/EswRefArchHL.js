@@ -7,7 +7,7 @@ const logger = require('dw/system/Logger');
 const Order = require('dw/order/Order');
 
 /* Script Modules */
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 /**
  * function to get cart item
@@ -156,7 +156,7 @@ server.get('PriceConversion', function (req, res, next) {
     let formatMoney = require('dw/util/StringUtils').formatMoney;
 
     // Script Includes
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let responseJSON;
     try {
         let param = request.httpParameterMap;

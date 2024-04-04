@@ -12,7 +12,6 @@ Basket.calculateTotals = function () { return 0; };
 
 const collections = require('../../../../mocks/dw.util.CollectionHelper');
 const SiteMock = require('../../../../mocks/dw/system/Site');
-var Request = require('../../../../mocks/dw/system/Request');
 const Money = require('../../../../mocks/dw.value.Money');
 const URLUtilsMock = require('../../../../mocks/dw/web/URLUtils');
 const Logger = require('../../../../mocks/dw/system/Logger');
@@ -28,6 +27,12 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
     var eswServiceHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL', {
         'dw/system/Logger': Logger,
         'dw/system/Site': SiteMock,
+        '*/cartridge/scripts/helper/eswPricingHelper': {
+            eswPricingHelper: {
+                getConvertedPrice: function () { return 1; },
+                getConversionPreference: function () { return {}; }
+            }
+        },
         '*/cartridge/scripts/helper/eswPricingHelperHL': {
             getShopperCurrency: function () {
                 return 'EUR';
@@ -165,10 +170,6 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
         }
     });
     // Unit test
-    it('returns shopper checkout experience for version 3', () => {
-        let shopperCheckoutExperience = eswServiceHelperHL.getShopperCheckoutExperience('en-IE');
-        expect(shopperCheckoutExperience).to.have.property('emailMarketingOptIn');
-    });
     it('returns delivery discounts', () => {
         Basket.defaultShipment = {
             shippingTotalNetPrice: 10,
@@ -195,40 +196,5 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
         };
         let shopperCheckoutExperience = eswServiceHelperHL.getDeliveryDiscounts(Basket, false, localizeObj, {});
         expect(shopperCheckoutExperience).to.have.property('ShippingDiscounts');
-    });
-    it('returns line items for version 3', () => {
-        Basket.productLineItems = [{
-            UUID: 12029384756,
-            calloutMsg: 'some call out message',
-            basedOnCoupon: false,
-            price: { value: 'some value', currencyCode: 'usd' },
-            basePrice: { value: 'some value', currencyCode: 'usd' },
-            adjustedPrice: { value: 'some value', currencyCode: 'usd' },
-            proratedPrice: { value: 'some value', currencyCode: 'usd' },
-            lineItemText: 'someString',
-            promotion: { calloutMsg: 'some call out message' },
-            appliedDiscount: {
-                type: 'discount'
-            },
-            custom: {},
-            quantity: {
-                value: 10
-            },
-            product: {
-                variationModel: {
-                    getProductVariationAttribute: function () {
-                        return {};
-                    },
-                    getSelectedValue: function () {
-                        return {};
-                    }
-                }
-            },
-            lineItemCtnr: {
-                allLineItems: []
-            }
-        }];
-        let lineItemsV3 = eswServiceHelperHL.getLineItemsV3(Basket, 'en-IE', 'EUR');
-        expect(lineItemsV3).to.be.an('array');
     });
 });

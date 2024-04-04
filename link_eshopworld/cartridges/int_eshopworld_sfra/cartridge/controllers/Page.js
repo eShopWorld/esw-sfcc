@@ -28,12 +28,12 @@ server.append(
         let session = req.session.raw;
         let QueryString = server.querystring;
         let queryStringObj = new QueryString(req.querystring.queryString || '');
-        let Site = require('dw/system/Site').getCurrent();
+        let currentLocale = request.getLocale();
 
         if (eswHelper.getEShopWorldModuleEnabled()) {
-            let currencyCode = req.querystring.currency;
-            let selectedCountry = req.querystring.country;
-            let language = req.querystring.language;
+            let currencyCode = req.querystring.currency || null;
+            let selectedCountry = req.querystring.country || null;
+            let language = req.querystring.language || null;
 
             if (eswHelper.checkIsEswAllowedCountry(selectedCountry)) {
                 if (req.setLocale(language)) {
@@ -72,15 +72,23 @@ server.append(
             let redirectUrl = URLUtils.url(req.querystring.action).toString();
 
             if (Object.hasOwnProperty.call(request, 'httpReferer') && !empty(request.httpReferer) &&
-                !Site.getCustomPreferenceValue('eswEnableLandingPageRedirect')) {
-                redirectUrl = request.getHttpReferer();
+                !eswHelper.isEnableLandingPageRedirect()) {
+                let newLocale = request.httpLocale;
+                let httpReferer = request.getHttpReferer();
+                let qsConnectStr = httpReferer.indexOf('?') >= 0 ? '&' : '?';
+                if (httpReferer.indexOf('lang') === -1) {
+                    httpReferer += qsConnectStr + 'lang=' + currentLocale || language || newLocale;
+                }
+                redirectUrl = httpReferer;
+                if (!empty(currentLocale) && (!empty(newLocale) || !empty(language))) {
+                    redirectUrl = httpReferer.replace(currentLocale, language || newLocale);
+                }
             } else {
                 let qsConnector = redirectUrl.indexOf('?') >= 0 ? '&' : '?';
                 redirectUrl = Object.keys(queryStringObj).length === 0
                     ? redirectUrl += queryStringObj.toString()
                     : redirectUrl += qsConnector + queryStringObj.toString();
             }
-
             res.json({
                 success: true,
                 redirectUrl: redirectUrl
