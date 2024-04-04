@@ -32,9 +32,12 @@ describe('int_eshopworld_sfra/cartridge/scripts/helper/eswHelper.js', function (
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 // eslint-disable-next-line semi
-                getOverridePriceBook: function () { return { countryCode: 'fake countryCode' } }
+                getOverridePriceBook: function () { return { countryCode: 'fake countryCode' } },
+                overridePriceCore: function () { return {}; },
+                getEShopWorldModuleEnabled: function () { return false; }
             }
         },
+        '*/cartridge/scripts/helper/serviceHelper': {},
         '*/cartridge/scripts/util/collections': '',
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
@@ -55,6 +58,18 @@ describe('int_eshopworld_sfra/cartridge/scripts/helper/eswHelper.js', function (
         it('Should throw error', function () {
             let overrideCountry = eswHelper.getOverrideCountry();
             expect(overrideCountry).to.throw;
+        });
+    });
+    describe('overridePrice', function () {
+        it('return overridePrice book pbject', function () {
+            let overrideCountry = eswHelper.overridePrice();
+            expect(overrideCountry).to.be.an('object');
+        });
+    });
+    describe('rebuildCart', function () {
+        it('return cart rebuild result', function () {
+            let rebuildCart = eswHelper.rebuildCart('fakeID');
+            expect(rebuildCart).to.be.an('undefined');
         });
     });
 });

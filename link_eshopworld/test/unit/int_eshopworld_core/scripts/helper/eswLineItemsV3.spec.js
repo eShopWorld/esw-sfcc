@@ -55,6 +55,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                 }
             }
         },
+        '*/cartridge/scripts/helper/eswPricingHelper': '',
         'dw/system/Transaction': Transaction,
         'dw/order/OrderMgr': '',
         '*/cartridge/scripts/helper/serviceHelperV3': '',
@@ -80,13 +81,13 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
     });
     describe('Happy path', function () {
         it('it Should return lineitems V3', function () {
-            let lineItemsV3 = serviceHelperV3.getLineItemsV3(basketMgr);
+            let lineItemsV3 = serviceHelperV3.getLineItemsV3(null, null, null);
             expect(lineItemsV3).to.have.property('lineItems');
         });
     });
     describe('Happy path', function () {
         it('it Should return lineitems V3 Object', function () {
-            let lineItemsV3 = serviceHelperV3.getLineItemsV3();
+            let lineItemsV3 = serviceHelperV3.getLineItemsV3(null, null, null);
             expect(lineItemsV3).to.have.property('finalCartSubtotal');
         });
     });

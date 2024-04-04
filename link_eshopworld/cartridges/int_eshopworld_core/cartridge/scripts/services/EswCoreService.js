@@ -7,6 +7,19 @@ const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelp
 
 const eShopWorldServices = {
     /*
+     * service for setting headers
+     */
+    createRequest: function (service, params) {
+        let clientID = eswHelper.getClientID(),
+            bearerToken = 'Bearer ' + params;
+        clientID = clientID.substring(0, clientID.indexOf('.'));
+        // eslint-disable-next-line no-param-reassign
+        service.URL = service.URL + '/' + clientID;
+        service.addHeader('Content-type', 'application/json');
+        service.addHeader('Authorization', bearerToken);
+        service.setRequestMethod('get');
+    },
+    /*
      * service for getting oAuth Token
      */
     getOAuthService: function () {
@@ -38,14 +51,7 @@ const eShopWorldServices = {
         let priceFeedServiceName = eswHelper.getSelectedPriceFeedInstance() === 'production' ? 'EswPriceFeedV3Service.PROD' : 'EswPriceFeedV3Service';
         let priceFeedV3Service = LocalServiceRegistry.createService(priceFeedServiceName, {
             createRequest: function (service, params) {
-                let clientID = eswHelper.getClientID(),
-                    bearerToken = 'Bearer ' + params;
-                clientID = clientID.substring(0, clientID.indexOf('.'));
-                // eslint-disable-next-line no-param-reassign
-                service.URL = service.URL + '/' + clientID;
-                service.addHeader('Content-type', 'application/json');
-                service.addHeader('Authorization', bearerToken);
-                service.setRequestMethod('get');
+                eShopWorldServices.createRequest(service, params);
             },
             parseResponse: function (service, listOutput) {
                 eswHelper.eswInfoLogger('Esw Price Feed Response', listOutput.text);
@@ -70,14 +76,7 @@ const eShopWorldServices = {
         let priceFeedServiceName = eswHelper.getSelectedPriceFeedInstance() === 'production' ? 'EswPriceFeedService.PROD' : 'EswPriceFeedService';
         let priceFeedV4Service = LocalServiceRegistry.createService(priceFeedServiceName, {
             createRequest: function (service, params) {
-                let clientID = eswHelper.getClientID(),
-                    bearerToken = 'Bearer ' + params;
-                clientID = clientID.substring(0, clientID.indexOf('.'));
-                // eslint-disable-next-line no-param-reassign
-                service.URL = service.URL + '/' + clientID;
-                service.addHeader('Content-type', 'application/json');
-                service.addHeader('Authorization', bearerToken);
-                service.setRequestMethod('get');
+                eShopWorldServices.createRequest(service, params);
             },
             parseResponse: function (service, listOutput) {
                 eswHelper.eswInfoLogger('Esw Price Feed Response', listOutput.text);

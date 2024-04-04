@@ -21,9 +21,10 @@ stubLocalizeObj.apply({
     applyCountryAdjustments: false
 });
 
-describe('int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeProductFeed.js', function () {
-    var generateLocalizeProductFeed = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeProductFeed', {
+describe('int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeShoppingFeed.js', function () {
+    var GenerateLocalizeShoppingFeed = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeShoppingFeed', {
         'dw/system/Logger': dwLoggerMock,
+        'dw/catalog/CatalogMgr': '',
         'dw/system/Status': dwStatusMock,
         'dw/io/File': dwFileMock,
         'dw/io/FileWriter': dwFileWriterMock,
@@ -60,7 +61,7 @@ describe('int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeProductFeed
     });
 
     it('Should return ERROR status', function () {
-        let fff = generateLocalizeProductFeed.execute();
+        let fff = GenerateLocalizeShoppingFeed.execute();
         chai.expect(fff).to.be.an.instanceof(dwStatusMock);
     });
 });

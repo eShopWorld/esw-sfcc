@@ -409,8 +409,26 @@ function convertPrice() {
     return true;
 }
 
+/**
+ * function to set registration tab on account creation error
+ */
+function selectRegistrationTab() {
+    // Get the query string from the URL
+    var queryString = window.location.search;
+
+    // Create a new URLSearchParams object
+    var urlParams = new URLSearchParams(queryString);
+
+    // Get the value of a specific parameter
+    var paramValue = urlParams.get('showRegistration');
+    if (paramValue && $('#register-tab').length > 0) {
+        $('#register-tab').click();
+    }
+}
+
 $(document).ready(function () {
     updateCountryList();
+    selectRegistrationTab();
     if ($('.eswModal').length > 0) {
         // Logic to enable/disable welcome matt currency dropdowns
         let $selectedCurrency = $('#selected-currency');

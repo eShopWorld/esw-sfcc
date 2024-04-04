@@ -148,9 +148,9 @@
                 }
             },
             {
-                "@type-id": "custom.ESW_LocalizedProductFeed",
-                "description": "This job is used to create price feeds for different marketplaces.",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeProductFeed.js",
+                "@type-id": "custom.ESW_LocalizedShoppingFeed",
+                "description": "This job is used to create price feeds for different localized shoppings.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeShoppingFeed.js",
                 "transactional": "false",
                 "function": "execute",
                 "@supports-organization-context": false,
@@ -161,7 +161,7 @@
                             "@type": "string",
                             "@required": "true",
                             "description": "Define IMPEX directory path here.",
-                            "default-value": "Impex/src/product-feeds"
+                            "default-value": "Impex/src/localized-shopping-feeds"
                         }
                     ]
                 }

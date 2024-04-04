@@ -608,6 +608,17 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <externally-defined-flag>false</externally-defined-flag>
                 <min-length>0</min-length>
             </attribute-definition>
+            <attribute-definition attribute-id="eswLocalizedShoppingProduct">
+                <display-name xml:lang="x-default">ESW Localized Shopping Product</display-name>
+                <description xml:lang="x-default">ESW Localized Shopping Product</description>
+                <type>boolean</type>
+                <site-specific-flag>false</site-specific-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <visible-flag>false</visible-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <order-required-flag>false</order-required-flag>
+                <externally-defined-flag>false</externally-defined-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="eswConfig">
@@ -621,6 +632,7 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswProductPriceFreezeCountries"/>
                 <attribute attribute-id="eswSync"/>
                 <attribute attribute-id="eswSyncMessage"/>
+				<attribute attribute-id="eswLocalizedShoppingProduct"/>
             </attribute-group>
         </group-definitions>
     </type-extension>
@@ -941,6 +953,30 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
 
     <type-extension type-id="SitePreferences">
         <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswLocalizedShoppingFeedDelimiter">
+                <display-name xml:lang="x-default">ESW Localized Shopping Feed Delimiter</display-name>
+                <type>enum-of-string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <value-definitions>
+                    <value-definition default="true">
+                        <display xml:lang="x-default">|</display>
+                        <value>|</value>
+                    </value-definition>
+                    <value-definition>
+                        <display xml:lang="x-default">,</display>
+                        <value>,</value>
+                    </value-definition>
+                </value-definitions>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswLocalizedShoppingFeedCustomAttrFieldMapping">
+                <display-name xml:lang="x-default">ESW Shopping Feed Product Custom Fields Mapping</display-name>
+                <description xml:lang="x-default">Map Product custom attributes IDs to ESW Shopping Feed keys using this preference.
+                Example:{ "EswKeyField1": "ProductCustomAttributeID1", "EswKeyField2": "ProductCustomAttributeID2"}</description>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
             <attribute-definition attribute-id="enableGeoLookup">
                 <display-name xml:lang="x-default">Enable Geo Lookup</display-name>
                 <type>boolean</type>
@@ -1498,6 +1534,11 @@ Example: &#13;
             </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
+            <attribute-group group-id="ESW Localized Shopping Feed Configuration">
+                <display-name xml:lang="x-default">ESW Localized Shopping Feed Configuration</display-name>
+                <attribute attribute-id="eswLocalizedShoppingFeedDelimiter"/>
+                <attribute attribute-id="eswLocalizedShoppingFeedCustomAttrFieldMapping"/>
+            </attribute-group>
             <attribute-group group-id="ESW General Configuration">
                 <display-name xml:lang="x-default">ESW General Configuration</display-name>
                 <attribute attribute-id="eswEshopworldModuleEnabled"/>

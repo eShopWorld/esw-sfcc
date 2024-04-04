@@ -29,6 +29,16 @@ ObjectTypeDefMock.getAttributeGroups = function () { return new ArrayList([]); }
 const ExtensibleObjectMock = require('../../../../mocks/dw/object/ExtensibleObject');
 ExtensibleObjectMock.describe = function () { return ObjectTypeDefMock; };
 
+let attributeDefinition = {
+    getID: function () { return 'testID'; },
+    getDisplayName: function () { return 'fakename'; },
+    getDefaultValue: function () { return 'fakevalue'; },
+    isMandatory: function () { return 'false'; },
+    getObjectTypeDefinition: function () { return 'false'; },
+    valueTypeCode: 6,
+    getValues: function () { return 'false'; }
+};
+
 
 describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helpers/eswBmGeneralHelper.js', function () {
     let eswBmGeneralHelpers = proxyquire('../../../../../cartridges/bm_eshopworld_core/cartridge/scripts/helpers/eswBmGeneralHelper.js', {
@@ -50,7 +60,123 @@ describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helper
                 getCatalogUploadMethod: function () { return 'api'; }
             }
         },
-        '*/cartridge/scripts/helper/eswBmHelper': {}
+        '*/cartridge/scripts/helper/eswBmHelper': {
+            getFieldType: function (fieldTypeDwId) {
+                let fieldTypes = {
+                    8: {
+                        type: 'Boolean',
+                        template: 'form-fields/boolean-field'
+                    },
+                    6: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    11: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    12: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    31: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    33: {
+                        type: 'Set of String',
+                        template: 'form-fields/dropdown-field'
+                    },
+                    5: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    7: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    1: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    9: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    2: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    13: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    10: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    21: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    22: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    23: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    3: {
+                        type: 'String',
+                        template: 'form-fields/string-field'
+                    },
+                    4: {
+                        type: 'Text',
+                        template: 'form-fields/text-field'
+                    }
+                };
+                return fieldTypes[fieldTypeDwId];
+            },
+            mapAttribute: function() {
+                return {
+                    id: 'fakeID',
+                    displayName: 'fakename',
+                    isMandatory: false,
+                    completeObjInfo: ''
+                };
+            },
+            loadGroups: function () {
+                return {
+                    id: 'testGroup',
+                    prefrences: []
+                };
+            }
+        }
+    });
+
+    describe('Return Field Type', function () {
+        it('Should return FieldType', function () {
+            let fieldType = eswBmGeneralHelpers.getFieldType(8);
+            chai.expect(fieldType).to.deep.equal({
+                type: 'Boolean',
+                template: 'form-fields/boolean-field'
+            });
+        });
+    });
+
+    describe('Return Mapped Attribute', function () {
+        it('Should return MappedAttribute', function () {
+            let mappedAttribute = eswBmGeneralHelpers.mapAttribute(attributeDefinition);
+            chai.expect(mappedAttribute).to.be.an('object');
+        });
+    });
+
+    describe('Return loadGroups Attribute', function () {
+        it('Should return loadGroups', function () {
+            let loadGroupsAttr = eswBmGeneralHelpers.loadGroups({}, 'testURL', {}, 8);
+            chai.expect(loadGroupsAttr).to.be.an('object');
+        });
     });
 
 

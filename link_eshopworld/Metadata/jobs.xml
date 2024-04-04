@@ -231,15 +231,15 @@
             </run-once>
         </triggers>
     </job>
-    <job job-id="eswLocalizedProductFeed" priority="0">
+    <job job-id="eswLocalizedShoppingFeed" priority="0">
         <description/>
         <parameters/>
         <flow>
             <context site-id="RefArch"/>
-            <step step-id="eswLocalizedProductFeed" type="custom.ESW_LocalizedProductFeed" enforce-restart="false">
-                <description>This job is used to create price feeds for different marketplaces</description>
+            <step step-id="eswLocalizedShoppingFeed" type="custom.ESW_LocalizedShoppingFeed" enforce-restart="false">
+                <description>This job is used to create price feeds for different ShoppingFeed</description>
                 <parameters>
-                    <parameter name="impexDirPath">Impex/src/product-feeds</parameter>
+                    <parameter name="impexDirPath">Impex/src/shopping-feeds</parameter>
                 </parameters>
             </step>
         </flow>

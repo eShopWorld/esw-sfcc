@@ -15,6 +15,9 @@ const ContentMgr = require('dw/content/ContentMgr');
 
 
 const getEswHelper = {
+    isEnableLandingPageRedirect: function () {
+        return Site.getCustomPreferenceValue('eswEnableLandingPageRedirect');
+    },
     isEswCatalogFeatureEnabled: function () {
         return Site.getCustomPreferenceValue('isEswCatalogFeatureEnabled');
     },
@@ -373,11 +376,12 @@ const getEswHelper = {
     /**
      * Check if product is return prohibited in current selected Country
      * @param {Object} product - Product object
+     * @param {Object} shopperCountry - shopperCountry
      * @return {boolean} - true/ false
      */
-    isReturnProhibited: function (product) {
+    isReturnProhibited: function (product, shopperCountry) {
         if (this.getReturnProhibitionEnabled()) {
-            let currCountry = this.getAvailableCountry();
+            let currCountry = shopperCountry || this.getAvailableCountry();
             let returnProhibitedCountries = ('eswProductReturnProhibitedCountries' in product.custom) ? product.custom.eswProductReturnProhibitedCountries : null;
             if (!empty(returnProhibitedCountries)) {
                 // eslint-disable-next-line no-restricted-syntax
@@ -655,7 +659,7 @@ const getEswHelper = {
         }
     },
     /*
-     * applies rounding model received from V3 price feed.
+     * applies rounding model received from price feed.
      */
     applyRoundingModel: function (price, roundingModel) {
         try {
@@ -721,9 +725,9 @@ const getEswHelper = {
     /*
      * This function is used to get total of cart or productlineitems based on input
      */
-    getSubtotalObject: function (cart, isCart, listPrice, unitPrice) {
+    getSubtotalObject: function (cart, isCart, listPrice, unitPrice, localizeObj, conversionPrefs) {
         let eswCalculationHelper = require('*/cartridge/scripts/helper/eswCalculationHelper').getEswCalculationHelper;
-        return eswCalculationHelper.getSubtotalObject(cart, isCart, listPrice, unitPrice);
+        return eswCalculationHelper.getSubtotalObject(cart, isCart, listPrice, unitPrice, localizeObj, conversionPrefs);
     },
 
     /*
@@ -752,18 +756,37 @@ const getEswHelper = {
     /**
      * This function is used to get order discount if it exist
      * @param {dw.order.Basket} cart - DW Basket object
+     * @param {dw.order.Basket} localizeCountryObj - localizeCountryObj
      * @returns {dw.value.Money} - DW Money object
      */
-    getOrderDiscount: function (cart) {
+    getOrderDiscount: function (cart, localizeCountryObj) {
         try {
+            if (!empty(localizeCountryObj) && 'localizeCountryObj' in localizeCountryObj) {
+                localizeCountryObj = localizeCountryObj.localizeCountryObj;
+            }
             let Money = require('dw/value/Money');
             let that = this;
             let orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
-            return new Money(orderLevelProratedDiscount, request.httpCookies['esw.currency'].value);
+            return new Money(orderLevelProratedDiscount, !empty(localizeCountryObj) && !empty(localizeCountryObj.currencyCode) ? localizeCountryObj.currencyCode : request.httpCookies['esw.currency'].value);
         } catch (e) {
             logger.error('Error while calculating order discount: {0} {1}', e.message, e.stack);
             return null;
         }
+    },
+    /**
+    * This function is used to get order discount if it exist
+    * @param {Object} order - Order API object
+    * @param {Object} localizeObj - local country currency preference
+    * @param {Object} conversionPrefs - the conversion preferences which contains selected fxRate, countryAdjustments and roundingRule
+    * @returns {Object} order discount
+    */
+    getOrderDiscountHL: function (order, localizeObj, conversionPrefs) {
+        let eswHelper = this,
+            discount;
+        localizeObj.selectedFxRate = conversionPrefs.selectedFxRate[0];
+        localizeObj.selectedCountryAdjustments = conversionPrefs.selectedCountryAdjustments[0];
+        discount = eswHelper.getOrderDiscount(order, localizeObj);
+        return !empty(discount) && discount !== null ? discount : 0;
     },
     /**
      * This function is used to get Order Prorated Discount
@@ -1141,11 +1164,20 @@ const getEswHelper = {
     isDeliveryDiscountBasedOnCoupon: function (cart) {
         let collections = require('*/cartridge/scripts/util/collections');
         let shippingPriceAdjustmentIter = cart.defaultShipment.shippingPriceAdjustments.iterator(),
-            isBasedOnCoupon = false;
+            isBasedOnCoupon = false,
+            couponPriceAdjustmentIter = !empty(cart.couponLineItems) ? cart.couponLineItems.iterator() : null;
         while (shippingPriceAdjustmentIter.hasNext()) {
             let shippingPriceAdjustment = shippingPriceAdjustmentIter.next();
             if (shippingPriceAdjustment.basedOnCoupon) {
                 isBasedOnCoupon = true;
+            }
+        }
+        if (!isBasedOnCoupon && !empty(couponPriceAdjustmentIter)) {
+            while (couponPriceAdjustmentIter.hasNext()) {
+                let couponPriceAdjustment = couponPriceAdjustmentIter.next();
+                if (!couponPriceAdjustment.priceAdjustments.empty) {
+                    isBasedOnCoupon = true;
+                }
             }
         }
         if (!isBasedOnCoupon) {
@@ -1366,9 +1398,11 @@ const getEswHelper = {
             selectedCountry = request.httpCookies['esw.location'].value;
         }
         if (selectedCountry && this.checkIsEswAllowedCountry(selectedCountry)) {
-            let currencyForSelectedCountry = this.getDefaultCurrencyForCountry(selectedCountry);
-            currencyCode = (!empty(request.httpCookies['esw.currency']) && request.httpCookies['esw.currency'].value === currencyForSelectedCountry) ? request.httpCookies['esw.currency'].value :
-                currencyForSelectedCountry;
+            if (request.httpCookies['esw.currency'] == null) {
+                currencyCode = this.getDefaultCurrencyForCountry(selectedCountry);
+            } else {
+                currencyCode = request.getHttpCookies()['esw.currency'].value;
+            }
             let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : this.getAllowedLanguages()[0].value;
             this.selectCountry(selectedCountry, currencyCode, locale);
         }
@@ -1690,16 +1724,22 @@ const getEswHelper = {
         let obj = reqBody,
             responseJSON = {},
             eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
-        try {
-            if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
-                responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-            } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
-                responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
-            } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
-                responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
+        if (empty(requestType) || (this.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + this.encodeBasicAuth()))) {
+            response.setStatus(401);
+            logger.error('ESW Process Webhooks Check Error: Basic Authentication Token did not match OR requestType not Available in request Headers');
+        } else {
+            this.eswInfoLogger('ProcessWebhook Log', JSON.stringify(reqBody));
+            try {
+                if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
+                    responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
+                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
+                    responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
+                } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
+                    responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
+                }
+            } catch (error) {
+                logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
             }
-        } catch (error) {
-            logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
         }
         return responseJSON;
     },
@@ -1743,14 +1783,291 @@ const getEswHelper = {
         }
         return false;
     },
-    validatePreOrder: function (reqObj) {
-        if (empty(reqObj.retailerCartId)) {
-            session.privacy.eswRetailerCartIdNullException = true;
-            throw new Error('SFCC_ORDER_CREATION_FAILED');
-        } else if (empty(reqObj.lineItems) || empty(reqObj.deliveryCountryIso)) {
-            session.privacy.eswPreOrderException = true;
-            throw new Error('ATTRIBUTES_MISSING_IN_PRE_ORDER');
+    validatePreOrder: function (reqObj, setSessionVariable) {
+        let checkoutServiceName = this.getCheckoutServiceName();
+        if (checkoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
+            if (empty(reqObj.retailerCartId)) {
+                if (setSessionVariable) {
+                    session.privacy.eswRetailerCartIdNullException = true;
+                }
+                throw new Error('SFCC_ORDER_CREATION_FAILED');
+            } else if (empty(reqObj.lineItems) || empty(reqObj.deliveryCountryIso)) {
+                if (setSessionVariable) {
+                    session.privacy.eswPreOrderException = true;
+                }
+                throw new Error('ATTRIBUTES_MISSING_IN_PRE_ORDER');
+            }
         }
+    },
+    /**
+     * Get validate inventory json response
+     * @param {Object} obj - Webhook payload
+     * @returns {Object} - response json
+     */
+    getValidateInventoryResponseJson: function (obj) {
+        let inventoryAvailable = true;
+        if (this.getEnableInventoryCheck()) {
+            if (this.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + this.encodeBasicAuth())) {
+                response.setStatus(401);
+                logger.error('ESW Inventory Check Error: Basic Authentication Token did not match');
+            } else {
+                let OrderMgr = require('dw/order/OrderMgr'),
+                    ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
+                    order = OrderMgr.getOrder(obj.retailerCartId);
+                /* ***********************************************************************************************************************************************/
+                /* The following line of code checks order line items inventory availaibility from business manager.                                             */
+                /* If want to check inventory availability through third party api call please comment inventoryAvailable at line 275                            */
+                /* Update the inventoryAvailable variable with third party inventory api call response.                                                          */
+                /* Make sure value of inventoryAvailable variable is of boolean type true/false                                                                  */
+                /* To disable the inventory check disable "Enable ESW Inventory Check" custom preference from ESW checkout configuration custom preference group.*/
+                /* ***********************************************************************************************************************************************/
+                inventoryAvailable = ocHelper.validateEswOrderInventory(order);
+            }
+        }
+        let responseJSON = {};
+        responseJSON.retailerCartId = obj.retailerCartId.toString();
+        responseJSON.eShopWorldOrderNumber = obj.eShopWorldOrderNumber.toString();
+        responseJSON.inventoryAvailable = inventoryAvailable;
+        this.eswInfoLogger('Esw Inventory Check Response', JSON.stringify(responseJSON));
+        return responseJSON;
+    },
+    /**
+     * Set customer initial cookies
+     * @param {string} country - country ISO
+     * @param {string} currencyCode - currencyISO
+     * @param {string} locale - locale
+     */
+    createInitialCookies: function (country, currencyCode, locale) {
+        if (request.httpCookies['esw.location'] == null) {
+            this.createCookie('esw.location', country, '/');
+        }
+        if (request.httpCookies['esw.currency'] == null) {
+            this.createCookie('esw.currency', currencyCode, '/');
+        }
+        if (request.httpCookies['esw.LanguageIsoCode'] == null) {
+            this.createCookie('esw.LanguageIsoCode', locale, '/');
+        }
+        this.createCookie('esw.InternationalUser', true, '/');
+        this.createCookie('esw.sessionid', customer.ID, '/');
+        this.setCustomerCookies();
+    },
+    /**
+     * Sets OAuth Token
+     */
+    setOAuthToken: function () {
+        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
+        let oAuthObj = eswCoreService.getOAuthService();
+        let formData = {
+            grant_type: 'client_credentials',
+            scope: 'checkout.preorder.api.all'
+        };
+        formData.client_id = this.getClientID();
+        formData.client_secret = this.getClientSecret();
+        let oAuthResult = oAuthObj.call(formData);
+        if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
+            logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+        }
+        session.privacy.eswOAuthToken = JSON.parse(oAuthResult.object).access_token;
+    },
+    /**
+     * Returns site custom preference value
+     * from ESW Catalog Integration group
+     * @param {string} customPref - field name
+     * @param {string} feedInitial - feedInitial
+     * @return {string} - value of custom preference
+     */
+    getFeedCustomPrefVal: function (customPref, feedInitial) {
+        feedInitial = !empty(feedInitial) ? feedInitial : '';
+        return Site.getCustomPreferenceValue(feedInitial + customPref);
+    },
+    /**
+     * Formats time stamp into TZ date and time format
+     * @param {Object} timeStamp - the Date object
+     * @return {string} - formatted time stamp
+     */
+    formatTimeStamp: function (timeStamp) {
+        const StringUtils = require('dw/util/StringUtils');
+        return StringUtils.formatCalendar(new dw.util.Calendar(timeStamp), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
+    },
+    /**
+     * ESW SFTP service
+     * @param {string} feedInitial - feedInitial
+     * @return {Object} SFTPService - service object
+     */
+    getSFTPService: function (feedInitial) {
+        let serviceName = this.getFeedCustomPrefVal(feedInitial + 'SFTPService');
+        let SFTPService = dw.svc.LocalServiceRegistry.createService(serviceName, {
+            createRequest: function (service, params) {
+                return params;
+            },
+            parseResponse: function (service, listOutput) {
+                return listOutput.text;
+            },
+            filterLogMessage: function (message) {
+                return message;
+            },
+            getRequestLogMessage: function (serviceRequest) {
+                return serviceRequest;
+            },
+            getResponseLogMessage: function (serviceResponse) {
+                return serviceResponse;
+            }
+        });
+        return SFTPService;
+    },
+    /**
+     * Returns the retailer catalog feed file count
+     * stored in hidden custom site preference
+     * @return {string} - file count
+     */
+    getCatalogFileCount: function () {
+        return Site.getCustomPreferenceValue('eswRetailerCatalogFeedFileCount');
+    },
+    /**
+     * Generates the file name with brand and leading zeros
+     * as expected from ESW side
+     * @param {Object} feedObj - feedObj
+     * @returns {string} - file name
+     */
+    getFileName: function (feedObj) {
+        if (feedObj && 'jobType' in feedObj && feedObj.jobType === 'LocalizedShoppingFeed') {
+            let siteId = Site.getID();
+            let today = this.formatTimeStamp(new Date());
+            return siteId + '_' + feedObj.countryCode + '_' + today + feedObj.jobType + '.csv';
+        } else if (feedObj && 'jobType' in feedObj && feedObj.jobType === 'catalogFeed') {
+            let brandCode = Site.getCustomPreferenceValue('eswRetailerBrandCode');
+            let instanceID = (!empty(this.getFeedCustomPrefVal('InstanceID', 'eswCatalogFeed'))) ? this.getFeedCustomPrefVal('InstanceID', 'eswCatalogFeed') : '';
+            return 'Catalog-' + brandCode + '-' + instanceID + ('000000000' + this.getCatalogFileCount()).substr(-8) + '.csv';
+        } else {
+            let feedType = feedObj && 'jobType' in feedObj && feedObj.jobType === 'inventoryFeed' ? '_inventory' : '_catalog';
+            let siteId = Site.getID();
+            let today = this.formatTimeStamp(new Date());
+            return siteId + '_' + feedObj.countryCode + '_' + today + feedType + '.csv';
+        }
+    },
+    /**
+     * Generates the file with brand and leading zeros
+     * as expected from ESW side
+     * @param {string} jobType - jobType
+     * @param {string} impexDirPath - impexDirPath
+     * @param {string} countryCode - countryCode
+     * @returns {string} - file name
+     */
+    createFile: function (jobType, impexDirPath, countryCode) {
+        let File = require('dw/io/File');
+        let filePath,
+            fileName,
+            folder;
+        if (jobType === 'inventoryFeed' || jobType === 'productFeed') {
+            filePath = impexDirPath;
+            folder = new File(filePath);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+            fileName = this.getFileName({ countryCode: countryCode, jobType: jobType });
+        } else {
+            filePath = this.getFeedCustomPrefVal('LocalPath', 'eswCatalogFeed') + Site.ID;
+            folder = new File(filePath);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+            fileName = this.getFileName({ jobType: 'catalogFeed' });
+        }
+        return new File(filePath + File.SEPARATOR + fileName);
+    },
+    /**
+     * Gets the shipping discount total by subtracting the adjusted shipping total from the
+     *      shipping total price
+     * @param {dw.order.LineItemCtnr} lineItemContainer - Current users's basket
+     * @param {boolean} isESWSupportedCountry - flag to check if current country isESWSupportedCountry
+     * @returns {Object} an object that contains the value and formatted value of the shipping discount
+     */
+    getShippingLevelDiscountTotal: function (lineItemContainer, isESWSupportedCountry) {
+        let formatMoney = require('dw/util/StringUtils').formatMoney;
+        let totalExcludingShippingDiscount = lineItemContainer.shippingTotalPrice;
+        let totalIncludingShippingDiscount = lineItemContainer.adjustedShippingTotalPrice;
+        let shippingDiscount = isESWSupportedCountry ? this.getShippingDiscount(lineItemContainer) : totalExcludingShippingDiscount.subtract(totalIncludingShippingDiscount);
+
+        return {
+            value: shippingDiscount.value,
+            formatted: formatMoney(shippingDiscount)
+        };
+    },
+    /**
+     * Gets the order discount amount by subtracting the basket's total including the discount from
+     *      the basket's total excluding the order discount.
+     * @param {dw.order.LineItemCtnr} lineItemContainer - Current users's basket
+     * @param {boolean} isESWSupportedCountry - flag to check if current country isESWSupportedCountry
+     * @returns {Object} an object that contains the value and formatted value of the order discount
+     */
+    getOrderLevelDiscountTotal: function (lineItemContainer, isESWSupportedCountry) {
+        let formatMoney = require('dw/util/StringUtils').formatMoney;
+        let totalExcludingOrderDiscount = lineItemContainer.getAdjustedMerchandizeTotalPrice(false);
+        let totalIncludingOrderDiscount = lineItemContainer.getAdjustedMerchandizeTotalPrice(true);
+        let orderDiscount = isESWSupportedCountry ? this.getOrderDiscount(lineItemContainer) : totalExcludingOrderDiscount.subtract(totalIncludingOrderDiscount);
+
+        return {
+            value: orderDiscount.value,
+            formatted: formatMoney(orderDiscount)
+        };
+    },
+    /**
+     * Adds discounts to a discounts object
+     * @param {dw.util.Collection} collection - a collection of price adjustments
+     * @param {Object} discounts - an object of price adjustments
+     * @param {boolean} isShippingDiscount - discount type is shipping?
+     * @returns {Object} an object of price adjustments
+     */
+    createDiscountObject: function (collection, discounts, isShippingDiscount) {
+        let result = discounts,
+            collections = require('*/cartridge/scripts/util/collections'),
+            formatMoney = require('dw/util/StringUtils').formatMoney,
+            coreHelperThis = this;
+        collections.forEach(collection, function (item) {
+            if (!item.basedOnCoupon) {
+                // convert price to shopper currency if it is shipping discount,
+                // if it is order/ product discount then, don't convert price on amount off type of discount.
+                let itemPrice = isShippingDiscount ? coreHelperThis.getMoneyObject(item.price, true, false, true) : (item.appliedDiscount.type === dw.campaign.Discount.TYPE_AMOUNT) ? new dw.value.Money(item.price.value, coreHelperThis.getCurrentEswCurrencyCode()) : coreHelperThis.getMoneyObject(item.price, false, false, true); // eslint-disable-line no-nested-ternary
+                result[item.UUID] = {
+                    UUID: item.UUID,
+                    lineItemText: item.lineItemText,
+                    price: formatMoney(itemPrice),
+                    type: 'promotion',
+                    callOutMsg: (typeof item.promotion !== 'undefined' && item.promotion !== null) ? item.promotion.calloutMsg : ''
+                };
+            }
+        });
+
+        return result;
+    },
+    /**
+    * creates an array of discounts.
+    * @param {dw.order.LineItemCtnr} lineItemContainer - the current line item container
+    * @returns {Array} an array of objects containing promotion and coupon information
+    */
+    getDiscounts: function (lineItemContainer) {
+        let discounts = {},
+            collections = require('*/cartridge/scripts/util/collections');
+        collections.forEach(lineItemContainer.couponLineItems, function (couponLineItem) {
+            let priceAdjustments = collections.map(
+                couponLineItem.priceAdjustments,
+                function (priceAdjustment) {
+                    return { callOutMsg: (typeof priceAdjustment.promotion !== 'undefined' && priceAdjustment.promotion !== null) ? priceAdjustment.promotion.calloutMsg : '' };
+                });
+            discounts[couponLineItem.UUID] = {
+                type: 'coupon',
+                UUID: couponLineItem.UUID,
+                couponCode: couponLineItem.couponCode,
+                applied: couponLineItem.applied,
+                valid: couponLineItem.valid,
+                relationship: priceAdjustments
+            };
+        });
+        discounts = this.createDiscountObject(lineItemContainer.priceAdjustments, discounts, false);
+        discounts = this.createDiscountObject(lineItemContainer.allShippingPriceAdjustments, discounts, true);
+        return Object.keys(discounts).map(function (key) {
+            return discounts[key];
+        });
     }
 };
 

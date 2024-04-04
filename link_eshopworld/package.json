@@ -1,6 +1,6 @@
 {
   "name": "EShopWorld",
-  "version": "21.2.0",
+  "version": "24.2.0",
   "description": "New Overlay Cartridge",
   "main": "index.js",
   "engines": {
@@ -19,7 +19,7 @@
     "uploadCartridge": "sgmf-scripts --uploadCartridge int_eshopworld_sfra && sgmf-scripts --uploadCartridge modules",
     "watch": "sgmf-scripts --watch",
     "validate": "npm run lint && npm run test",
-    "cover": " nyc --reporter=html --reporter=lcov --reporter=text-summary sgmf-scripts --cover 'test/unit/**/*.js'",
+    "cover": " nyc --reporter=html --reporter=lcov --reporter=text-summary --reporter=cobertura sgmf-scripts --cover 'test/unit/**/*.js'",
     "cover:report": "npm run cover report"
   },
   "repository": {

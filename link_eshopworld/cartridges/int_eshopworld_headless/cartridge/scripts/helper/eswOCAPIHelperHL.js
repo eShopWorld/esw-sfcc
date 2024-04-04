@@ -19,7 +19,7 @@ const OCAPIHelper = {
      * @param {Object} doc - Response document
      */
     eswPdpPriceConversions: function (scriptProduct, doc) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
         let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
         let param = request.httpParameters;
 
@@ -98,7 +98,7 @@ const OCAPIHelper = {
      * @param {Object} doc - Response document
      */
     eswPlpPriceConversions: function (doc) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
         let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
         let param = request.httpParameters;
 
@@ -186,7 +186,7 @@ const OCAPIHelper = {
      * sets the basketCurrency for pricebook override
      */
     setOverridePriceBooks: function (basket) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code'])) {
@@ -202,7 +202,7 @@ const OCAPIHelper = {
      * @param {Object} orderResponse - Order object from OCAPI Response
      */
     handleEswPreOrderCall: function (order, orderResponse) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
             eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
@@ -234,7 +234,7 @@ const OCAPIHelper = {
      * @param {Object} basket - basket object SFCC API
      */
     handleEswBasketAttributes: function (basket) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
             eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
@@ -261,7 +261,7 @@ const OCAPIHelper = {
      * @param {Object} order - Order object SFCC API
      */
     handleEswOrderAttributes: function (order) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL'),
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
             eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;

@@ -66,4 +66,8 @@ describe('int_eshopworld_sfra/cartridge/scripts/helper/eswOrderImportHelper.js',
         let eswOrderAttr = orderImportHelper.updateEswOrderAttributes(Order, {});
         expect(eswOrderAttr).to.be.undefined;
     });
+    it('should handleOrderRequest', function () {
+        let orderRequest = orderImportHelper.handleOrderRequest(Order, '');
+        expect(orderRequest).to.be.an('object');
+    });
 });

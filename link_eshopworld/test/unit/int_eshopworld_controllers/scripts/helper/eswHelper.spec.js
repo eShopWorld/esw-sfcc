@@ -34,8 +34,13 @@ describe('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper.js', fun
             getEswHelper: {
                 // eslint-disable-next-line semi
                 getOverridePriceBook: function () { return { countryCode: 'fake countryCode' } },
-                getOverridePriceBooks: function () { return {}; }
+                getOverridePriceBooks: function () { return {}; },
+                getEShopWorldModuleEnabled: function () { return true; },
+                isESWSupportedCountry: function () { return true; }
             }
+        },
+        '*/cartridge/scripts/helper/serviceHelper': {
+            failOrder: function () { return ''; }
         },
         'dw/catalog/PriceBookMgr': PriceBookMgrMock,
         '*/cartridge/scripts/util/collections': '',
@@ -58,6 +63,12 @@ describe('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper.js', fun
         it('Should return boolean', function () {
             let overridePrice = eswHelper.overridePrice('EUR');
             expect(overridePrice).to.equal(false);
+        });
+    });
+    describe('rebuild Cart', function () {
+        it('Should return null', function () {
+            let rebuildCart = eswHelper.rebuildCart();
+            expect(rebuildCart).to.equal(undefined);
         });
     });
 });

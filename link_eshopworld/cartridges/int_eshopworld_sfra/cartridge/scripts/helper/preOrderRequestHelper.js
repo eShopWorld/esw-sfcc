@@ -18,33 +18,21 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
 function handlePreOrderRequestV2() {
     let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
         preorderServiceObj = eswCoreService.getPreorderServiceV2(),
-        oAuthObj = eswCoreService.getOAuthService(),
         eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
         redirectPreference = eswHelper.getRedirect();
     if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
         if (!customer.authenticated) {
             session.privacy.TargetLocation = URLUtils.https('EShopWorld-PreOrderRequest').toString();
-
             return {
                 status: 'REDIRECT'
             };
         }
     }
-    let formData = {
-        grant_type: 'client_credentials',
-        scope: 'checkout.preorder.api.all'
-    };
-    formData.client_id = eswHelper.getClientID();
-    formData.client_secret = eswHelper.getClientSecret();
-    let oAuthResult = oAuthObj.call(formData);
-    if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
-        logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
-    }
-    session.privacy.eswOAuthToken = JSON.parse(oAuthResult.object).access_token;
+    eswHelper.setOAuthToken();
 
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
-    eswHelper.validatePreOrder(requestObj);
+    eswHelper.validatePreOrder(requestObj, true);
     let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
     if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
         session.privacy.confirmedOrderID = requestObj.retailerCartId;

@@ -2,7 +2,10 @@
 <div class="esw-branding">
     <img src="${dw.web.URLUtils.staticURL('/icons/esw-icon.gif')}" alt="branding picture">
     <h3>&nbsp;</h3>
-    <p>DTC eCommerce Experts</p>
+    <p>
+        DTC eCommerce Experts <br />
+        <small>${Resource.msg('esw.cartridges.version.label', 'esw', null) + Resource.msg('esw.cartridges.version.number', 'esw', null)}</small>
+    </p>
 </div>
 <div class="esw-menu-items">
     <ul>

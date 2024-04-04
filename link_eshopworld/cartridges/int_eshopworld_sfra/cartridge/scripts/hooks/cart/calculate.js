@@ -75,7 +75,7 @@ exports.calculate = function (basket, isESWOrderCalculate) {
     // =====   Apply product and order and 			 =====
     // =====   shipping promotions.                  =====
     // ===================================================
-    if (!eswHelper.getEShopWorldModuleEnabled() || !isESWOrderCalculate || !eswHelper.isDeliveryDiscountBasedOnCoupon(basket)) {
+    if (!eswHelper.getEShopWorldModuleEnabled() || !isESWOrderCalculate ) {
         PromotionMgr.applyDiscounts(basket);
     }
 
@@ -88,16 +88,11 @@ exports.calculate = function (basket, isESWOrderCalculate) {
     // ===================================================
     // =====         CALCULATE TAX                   =====
     // ===================================================
-    if (!eswHelper.getEShopWorldModuleEnabled() || !isESWOrderCalculate) {
         HookMgr.callHook('dw.order.calculateTax', 'calculateTax', basket);
-    }
-
     // ===================================================
     // =====         CALCULATE BASKET TOTALS         =====
     // ===================================================
-    if (!isESWOrderCalculate) {
         basket.updateTotals();
-    }
     // ===================================================
     // =====            DONE                         =====
     // ===================================================

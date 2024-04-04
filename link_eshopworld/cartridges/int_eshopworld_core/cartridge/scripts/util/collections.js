@@ -141,6 +141,25 @@ function find(collection, match, scope) {
 
     return result;
 }
+/**
+ * forEach method for dw.util.filter subclass instances
+ * @param {dw.util.iterator} iterator - Collection subclass instance to map over
+ * @param {Function} callback - Callback function for each item
+ * @param {Object} [scope] - Optional execution scope to pass to callback
+ * @returns {list} - filtered collection
+ */
+function filter(iterator, callback, scope) {
+    var list = new ArrayList();
+    let index = 0;
+    while (iterator.hasNext()) {
+        let item = iterator.next();
+        let filterCheck = scope ? callback.call(scope, item, index, iterator)
+                : callback(item, index, iterator);
+        if (filterCheck) list.add(item);
+        index++;
+    }
+    return list;
+}
 
 /**
  * Gets the first item from dw.util.Collection subclass instance
@@ -183,5 +202,6 @@ module.exports = {
     pluck: pluck,
     find: find,
     first: first,
-    every: every
+    every: every,
+    filter: filter
 };

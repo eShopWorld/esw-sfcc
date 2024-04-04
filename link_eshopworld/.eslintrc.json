@@ -1,7 +1,7 @@
 {
     "root": true,
     "extends": "airbnb-base/legacy",
-    "ignorePatterns": ["temp.js", "**/esw-pwa/*.js"],
+    "ignorePatterns": ["temp.js", "**/esw-pwa-app/*.js"],
     "globals": {
         "dw": false,
         "customer": false,
@@ -13,6 +13,8 @@
     },
     "rules": {
         "import/no-unresolved": "off",
+        "no-else-return": "off",
+        "no-param-reassign": "off",
         "indent": [
             "error",
             4,

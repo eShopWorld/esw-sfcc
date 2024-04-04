@@ -60,6 +60,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
                 }
             }
         },
+        '*/cartridge/scripts/helper/eswPricingHelper': '',
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,

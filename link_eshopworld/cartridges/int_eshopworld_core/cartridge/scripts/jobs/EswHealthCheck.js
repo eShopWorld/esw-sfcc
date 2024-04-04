@@ -228,7 +228,7 @@ function execute(args) {
     try {
         let eswDiagnosticData = {
             sfccArchitectVersion: Resource.msg('global.version.number', 'version', 'SG'),
-            eswCartridgeVersion: Resource.msg('esw.cartridges.version.number', 'int_eshopworld_core', '3.8.2')
+            eswCartridgeVersion: Resource.msg('esw.cartridges.version.number', 'esw', '4.2.0')
         };
         let servicesMockObj = getServicesMock();
         let keys = Object.keys(servicesMockObj);

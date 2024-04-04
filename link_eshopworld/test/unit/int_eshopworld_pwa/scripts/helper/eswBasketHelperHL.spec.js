@@ -20,7 +20,7 @@ global.request.httpParameters = {
 };
 
 describe('int_eshopworld_pwa/cartridge/scripts/helper/eswBasketHelperHL.js', function () {
-    var eswBasketHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_pwa/cartridge/scripts/helper/eswBasketHelperHL', {
+    var eswBasketHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreApiHelper.js', {
         'dw/system/Logger': Logger,
         'dw/system/Site': SiteMock,
         '*/cartridge/scripts/helper/eswPricingHelperHL': {

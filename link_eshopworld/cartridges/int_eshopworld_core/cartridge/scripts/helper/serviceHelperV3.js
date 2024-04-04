@@ -95,32 +95,59 @@ function convertPromotionMessage(promotionMessageString, selectedCountryDetail, 
 /**
  * function to get product unit price info
  * @param {Object} item - productLineItem
+ * @param {Object} order - order
+ * @param {Object} localizeObj - localizeObj
+ * @param {Object} conversionPrefs - conversionPrefs
  * @returns {Object} - line item pricing info
  */
-function getProductUnitPriceInfo(item) {
+function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+    let finalPrice;
     try {
-        let finalPrice = eswHelper.getMoneyObject(item.basePrice.value, false, false).value,
-            itemDiscounts = [],
-            currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode,
+        if (!empty(order)) {
+            finalPrice = pricingHelper.getConvertedPrice(item.basePrice.value, localizeObj, conversionPrefs) * item.quantity.value;
+        } else {
+            finalPrice = eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
+        }
+        let itemDiscounts = [],
+            currencyCode,
             liOrderDiscount,
             discountType,
             discountedAmount,
             productUnitPriceInfo;
+        if (!empty(localizeObj)) {
+            currencyCode = localizeObj.localizeCountryObj.currencyCode;
+        } else {
+            currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
+        }
         // Apply product level promotions
         // eslint-disable-next-line no-loop-func
         collections.forEach(item.priceAdjustments, function (priceAdjustment) {
             if (priceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
                 discountedAmount = eswHelper.getMoneyObject(priceAdjustment.appliedDiscount.fixedPrice, false, false).value * priceAdjustment.quantity;
                 if (priceAdjustment.quantity < item.quantity.value) {
-                    discountedAmount += (item.quantity.value - priceAdjustment.quantity) * eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
+                    if (!empty(localizeObj)) {
+                        discountedAmount = pricingHelper.getConvertedPrice(priceAdjustment.appliedDiscount.fixedPrice, localizeObj, conversionPrefs) * item.quantity.value;
+                    } else {
+                        discountedAmount += (item.quantity.value - priceAdjustment.quantity) * eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
+                    }
                 }
                 discountedAmount = (finalPrice - (discountedAmount / priceAdjustment.quantity));
             } else if (priceAdjustment.appliedDiscount.type === 'BONUS_CHOICE') {
-                discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false).value / item.quantity.value);
+                if (!empty(localizeObj)) {
+                    discountedAmount = (pricingHelper.getConvertedPrice((priceAdjustment.priceValue * -1), localizeObj, conversionPrefs) / item.quantity.value).toFixed(2);
+                } else {
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false).value / item.quantity.value);
+                }
             } else {
-                discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, true).value / item.quantity.value);
+                // eslint-disable-next-line no-lonely-if
+                if (!empty(localizeObj)) {
+                    discountedAmount = (pricingHelper.getConvertedPrice((priceAdjustment.priceValue * -1), localizeObj, conversionPrefs) / item.quantity.value).toFixed(2);
+                } else {
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, true).value / item.quantity.value);
+                }
             }
-            discountedAmount = discountedAmount.toFixed(3);
+            discountedAmount = empty(order) ? discountedAmount.toFixed(3) : discountedAmount;
             finalPrice = finalPrice.toFixed(3);
             let itemDiscount = {
                 'title': priceAdjustment.promotionID,
@@ -210,17 +237,42 @@ function getCartDiscountPriceInfo(cart, beforeDiscountParam) {
 
 /**
  * function to get line items for version 3
- * @returns {Object} - cart items
+ * @param {Object} order - order
+ * @param {Object} countryCode - countryCode
+ * @param {Object} currencyCode - currencyCode
+* @returns {Object} - cart items
  */
-function getLineItemsV3() {
+function getLineItemsV3(order, countryCode, currencyCode) {
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let Transaction = require('dw/system/Transaction');
-    let currentBasket = BasketMgr.currentBasket,
+    let currentBasket = order || BasketMgr.currentBasket,
         lineItems = [],
-        loopCtr = 1,
+        loopCtr = 1;
+    let totalQuantity = 0,
+        finalCartSubtotal = 0,
+        localizeObj,
+        conversionPrefs;
+    if (empty(currencyCode)) {
         currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
-    let totalDiscount = eswHelper.getOrderDiscount(currentBasket).value,
-        totalQuantity = 0,
-        finalCartSubtotal = 0;
+    }
+    if (!empty(order)) {
+        localizeObj = {
+            localizeCountryObj: {
+                countryCode: countryCode,
+                currencyCode: currencyCode
+            },
+            applyCountryAdjustments: 'true',
+            applyRoundingModel: 'true'
+        };
+
+        conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
+        let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper');
+
+        let totalDiscount = eswHelper.getOrderDiscountHL(order, localizeObj, conversionPrefs).value,
+            remainingDiscount = totalDiscount; // eslint-disable-line no-unused-vars
+    } else {
+        let totalDiscount = eswHelper.getOrderDiscount(currentBasket).value;
+    }
 
     collections.forEach(currentBasket.allProductLineItems, function (item) {
         if (!item.bonusProductLineItem) {
@@ -233,10 +285,12 @@ function getLineItemsV3() {
             liOrderDiscount,
             discountType;
 
-        // eslint-disable-next-line no-loop-func
-        Transaction.wrap(function () {
-            item.custom.eswLineItemId = loopCtr++;
-        });
+        if (empty(order)) {
+            // eslint-disable-next-line no-loop-func
+            Transaction.wrap(function () {
+                item.custom.eswLineItemId = loopCtr++;
+            });
+        }
         let color,
             size,
             eswImageType;
@@ -257,13 +311,13 @@ function getLineItemsV3() {
                 'upc': null,
                 'title': productTitle,
                 'description': item.productName, // we are using product name/title instead of description. ESW checkout page displays description as product title. same field is used for product title name in ESW OMS which is used for logistic flows.
-                'productUnitPriceInfo': getProductUnitPriceInfo(item),
+                'productUnitPriceInfo': !empty(order) ? getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) : getProductUnitPriceInfo(item),
                 'imageUrl': !empty(eswImageType) ? item.product.getImage(eswImageType, 0).httpURL.toString() : '',
                 'color': !empty(color) ? color : '',
                 'size': !empty(size) ? size : '',
                 'isNonStandardCatalogItem': false,
                 'metadataItems': getProductLineMetadataItems(item),
-                'isReturnProhibited': eswHelper.isReturnProhibited(item.product)
+                'isReturnProhibited': eswHelper.isReturnProhibited(item.product, countryCode)
             },
             'cartGrouping': 'Group 1',
             'metadataItems': null
@@ -276,9 +330,10 @@ function getLineItemsV3() {
 
 /**
  * function to get shopper checkout experience for version 3
+ * @param {string} shopperLocale - shopperLocale
  * @returns {Object} target object
  */
-function getShopperCheckoutExperience() {
+function getShopperCheckoutExperience(shopperLocale) {
     let currentBasket = BasketMgr.getCurrentBasket();
     let metaDataObj = eswHelper.getMappedBasketMetadata(currentBasket);
     let checkoutExp = {
@@ -286,7 +341,7 @@ function getShopperCheckoutExperience() {
         'emailMarketingOptIn': customer.profile && customer.profile.custom.eswMarketingOptIn ? customer.profile.custom.eswMarketingOptIn : false,
         'smsMarketingOptIn': customer.profile && customer.profile.custom.eswSMSMarketingOptIn ? customer.profile.custom.eswSMSMarketingOptIn : false,
         'registeredProfileId': customer.profile ? customer.profile.customerNo : null,
-        'shopperCultureLanguageIso': request.getHttpCookies()['esw.LanguageIsoCode'].value.replace(/[_]+/g, '-'),
+        'shopperCultureLanguageIso': !empty(shopperLocale) ? shopperLocale.replace(/[_]+/g, '-') : request.getHttpCookies()['esw.LanguageIsoCode'].value.replace(/[_]+/g, '-'),
         'expressPaymentMethod': null,
         'metadataItems': metaDataObj.metaDataArray,
         'registration': metaDataObj.registration,

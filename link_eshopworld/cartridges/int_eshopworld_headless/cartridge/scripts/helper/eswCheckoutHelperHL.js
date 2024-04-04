@@ -5,142 +5,9 @@
 
 // API Includes
 const Logger = require('dw/system/Logger');
-const Site = require('dw/system/Site').getCurrent();
-const URLUtils = require('dw/web/URLUtils');
 
 // Private Methods
 const CheckoutRequestBuilder = {
-    /**
-     * function to get customer/ shopper details
-     * @param {string} shopperCountry - countryCode of the shopper
-     * @returns {Object} - the customer address array object
-     */
-    getContactDetails: function (shopperCountry) {
-        if (customer.profile == null) {
-            return [];
-        }
-        let addresses = (customer.profile != null) ? customer.profile.addressBook.addresses : null,
-            address = {
-                contactDetailsType: 'isDelivery',
-                email: customer.profile.email,
-                country: shopperCountry
-            },
-            addressObj = [],
-            metaDataArr = [],
-            collections = require('*/cartridge/scripts/util/collections');
-        metaDataArr.push({
-            name: 'customerNumber',
-            value: customer.profile ? customer.profile.customerNo : null
-        });
-
-        if (addresses != null && !empty(addresses)) {
-            collections.forEach(addresses, function (addr) {
-                if (shopperCountry === addr.countryCode.value) {
-                    address = {
-                        contactDetailsType: 'isDelivery',
-                        email: customer.profile.email,
-                        contactDetailsNickName: addr.ID,
-                        addressId: addr.ID,
-                        address1: addr.address1,
-                        address2: addr.address2,
-                        address3: null,
-                        city: addr.city,
-                        region: addr.stateCode,
-                        country: addr.countryCode.value,
-                        postalCode: addr.postalCode,
-                        telephone: addr.phone,
-                        poBox: addr.postBox,
-                        firstName: addr.firstName,
-                        lastName: addr.lastName,
-                        metadataItems: metaDataArr
-                    };
-                    addressObj.push(address);
-                }
-            });
-        }
-
-        if (addressObj === null || empty(addressObj)) {
-            addressObj.push(address);
-        }
-
-        return addressObj;
-    },
-    /**
-     * function to get promo(s) or voucher code(s) entered on the cart by the shopper
-     * @param {Object} order - Order API object
-     * @returns {Object} - the coupons Array
-     */
-    getRetailerPromoCodes: function (order) {
-        let coupons = [],
-            collections = require('*/cartridge/scripts/util/collections');
-        // eslint-disable-next-line no-prototype-builtins
-        if ((order.hasOwnProperty('couponLineItems') || order.couponLineItems) && !empty(order.couponLineItems)) {
-            collections.forEach(order.couponLineItems, function (couponLineItem) {
-                let couponObject = {};
-                couponObject.promoCode = couponLineItem.couponCode;
-                couponObject.title = !empty(couponLineItem.getPriceAdjustments()) ? couponLineItem.getPriceAdjustments()[0].promotion.name : '';
-                // eslint-disable-next-line no-prototype-builtins
-                couponObject.description = !empty(couponLineItem.getPriceAdjustments()) ? couponLineItem.getPriceAdjustments()[0].promotion.hasOwnProperty('description') ? couponLineItem.getPriceAdjustments()[0].promotion.description.toString() : '' : ''; // eslint-disable-line no-nested-ternary
-                coupons.push(couponObject);
-            });
-        }
-        return coupons;
-    },
-    /**
-     * function to get the Checkout metadata Items
-     * @param {string} shopperLocale - LanguageISOCode of the shopper (current locale)
-     * @returns {Object} - the metadataItems Array
-     */
-    getRetailerCheckoutMetadataItems: function (shopperLocale) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
-            metadataItems = eswHelper.getMetadataItems(),
-            currentInstance = eswHelper.getSelectedInstance(),
-            obj = {},
-            arr = [],
-            i = 0;
-        for (let item in metadataItems) {
-            let metadataItem = metadataItems[item];
-            i = metadataItem.indexOf('|');
-            if (currentInstance === 'production' && (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') !== -1 || metadataItem.indexOf('OrderConfirmationUri') !== -1)) {
-                continue; // eslint-disable-line no-continue
-            } else {
-                obj.Name = metadataItem.substring(0, i);
-                if (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') !== -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
-                    obj.Value = eswHelper.encodeBasicAuth();
-                } else if (metadataItem.indexOf('OrderConfirmationUri') !== -1) {
-                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale)).toString();
-                } else {
-                    obj.Value = metadataItem.substring(i + 1);
-                }
-            }
-            arr.push(obj);
-            obj = {};
-        }
-        return arr;
-    },
-    /**
-     * function to get the additional expansion pairs
-     * @param {string} shopperLocale - LanguageISOCode of the shopper (current locale)
-     * @param {string} shopperCountry - Shopper selected localize country
-     * @returns {Object} - expansion pairs in JSON format
-     */
-    getExpansionPairs: function (shopperLocale, shopperCountry) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
-            urlExpansionPairs = eswHelper.getUrlExpansionPairs(),
-            obj = {},
-            i = 0;
-        for (let index in urlExpansionPairs) {
-            i = urlExpansionPairs[index].indexOf('|');
-            let actionURL = urlExpansionPairs[index].split('|')[1];
-            if (actionURL.substring(0, 4).toLowerCase() === 'http') {
-                obj[urlExpansionPairs[index].substring(0, i)] = actionURL.replace(/{countryCode}+/g, shopperCountry.toLowerCase());
-            } else {
-                obj[urlExpansionPairs[index].substring(0, i)] = URLUtils.https(new dw.web.URLAction(urlExpansionPairs[index].substring(i + 1), Site.ID, shopperLocale)).toString();
-            }
-        }
-        obj.metadataItems = this.getRetailerCheckoutMetadataItems(shopperLocale);
-        return obj;
-    },
     /**
      * Composes the request body for PreOrder/ Checkout API call
      * @param {Object} order - Order API object
@@ -150,37 +17,9 @@ const CheckoutRequestBuilder = {
      * @returns {Object} - request body JSON
      */
     composeRequestBody: function (order, shopperCountry, shopperCurrency, shopperLocale) {
-        let serviceHelperV3HL = require('*/cartridge/scripts/helper/eswServiceHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
-            preorderCheckoutServiceName = eswHelper.getCheckoutServiceName();
-        let bodyJSON = {};
-        if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
-            bodyJSON = {
-                contactDetails: this.getContactDetails(shopperCountry),
-                retailerPromoCodes: this.getRetailerPromoCodes(order),
-                lineItems: serviceHelperV3HL.getLineItemsV3(order, shopperCountry, shopperCurrency),
-                shopperCurrencyIso: shopperCurrency,
-                pricingSynchronizationId: eswHelper.getPricingSynchronizationId(),
-                deliveryCountryIso: shopperCountry,
-                retailerCheckoutExperience: this.getExpansionPairs(shopperLocale, shopperCountry),
-                shopperCheckoutExperience: serviceHelperV3HL.getShopperCheckoutExperience(shopperLocale),
-                retailerCartId: order.orderNo,
-                deliveryOptions: ('eswDeliveryOptions' in order.custom && !empty(order.custom.eswDeliveryOptions)) ? JSON.parse(order.custom.eswDeliveryOptions) : null
-            };
-        } else {
-            bodyJSON = {
-                contactDetails: this.getContactDetails(shopperCountry),
-                retailerPromoCodes: this.getRetailerPromoCodes(order),
-                cartItems: serviceHelperV3HL.getLineItemsV2(order, shopperCountry, shopperCurrency),
-                shopperCurrencyIso: shopperCurrency,
-                deliveryCountryIso: shopperCountry,
-                retailerCheckoutExperience: this.getExpansionPairs(shopperLocale, shopperCountry),
-                shopperCheckoutExperience: serviceHelperV3HL.getShopperCheckoutExperience(shopperLocale),
-                retailerCartId: order.orderNo,
-                deliveryOptions: ('eswDeliveryOptions' in order.custom && !empty(order.custom.eswDeliveryOptions)) ? JSON.parse(order.custom.eswDeliveryOptions) : null
-            };
-        }
-
+        let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
+        let bodyJSON = eswServiceHelper.preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale);
+        bodyJSON.retailerCartId = order.orderNo;
         return bodyJSON;
     },
     /**
@@ -188,7 +27,7 @@ const CheckoutRequestBuilder = {
      * @returns {Object} - Service Object
      */
     getPreorderServiceV2: function () {
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             preorderCheckoutServiceName = eswHelper.getCheckoutServiceName(),
             param = request.httpParameters,
             shopperCountry = param['country-code'][0];
@@ -232,7 +71,7 @@ const CheckoutRequestBuilder = {
 function callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocale) {
     // Script Include
     let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
-    let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
     let oAuthObj = eswCoreService.getOAuthService(),
         preorderServiceObj = CheckoutRequestBuilder.getPreorderServiceV2();
@@ -251,11 +90,8 @@ function callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocal
     }
 
     let requestBody = CheckoutRequestBuilder.composeRequestBody(order, shopperCountry, shopperCurrency, shopperLocale);
-    if (!empty(requestBody) && empty(requestBody.retailerCartId)) {
-        throw new Error('SFCC_ORDER_CREATION_FAILED');
-    } else if (!empty(requestBody) && (empty(requestBody.lineItems) || empty(requestBody.deliveryCountryIso))) {
-        throw new Error('ATTRIBUTES_MISSING_IN_PRE_ORDER');
-    }
+    eswHelper.validatePreOrder(requestBody);
+
     let result = preorderServiceObj.call({
         eswOAuthToken: JSON.parse(oAuthResult.object).access_token,
         requestBody: JSON.stringify(requestBody)
@@ -276,7 +112,7 @@ function setEswBasketAttributes(basket, localizeObj, conversionPrefs) {
     }
 
     let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelperHL');
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let lineItemItr = basket.allProductLineItems.iterator();
     let lineItemId = 1;
     while (lineItemItr.hasNext()) {
@@ -316,8 +152,7 @@ function setEswBasketAttributes(basket, localizeObj, conversionPrefs) {
  */
 function setEswOrderAttributes(order, localizeObj, conversionPrefs) {
     let PaymentMgr = require('dw/order/PaymentMgr'),
-        eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
-        eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+        eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
     order.paymentInstruments[0].paymentTransaction.paymentProcessor = PaymentMgr.getPaymentMethod(order.paymentInstruments[0].getPaymentMethod()).getPaymentProcessor();
     if (!empty(conversionPrefs.selectedFxRate)) {
@@ -334,7 +169,10 @@ function setEswOrderAttributes(order, localizeObj, conversionPrefs) {
             }
         }
     }
-    order.custom.eswShopperCurrencyTotalOrderDiscount = eswHelperHL.getOrderDiscount(order, localizeObj, conversionPrefs).value;
+    let orderDiscount = eswHelper.getOrderDiscountHL(order, localizeObj, conversionPrefs);
+    if (!empty(orderDiscount) && typeof orderDiscount === 'object') {
+        order.custom.eswShopperCurrencyTotalOrderDiscount = orderDiscount.value;
+    }
 }
 
 /**
@@ -345,7 +183,7 @@ function setEswOrderAttributes(order, localizeObj, conversionPrefs) {
  */
 function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
     let cart = order,
-        eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+        eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
         serviceHelperV3HL = require('*/cartridge/scripts/helper/eswServiceHelperHL'),
         shopperCountry = localizeObj.localizeCountryObj.countryCode,

@@ -480,7 +480,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswPricingHelper.js', fun
                 getPricingAdvisorData: function () { return eswPaData; },
                 eswInfoLogger: function () { return 'a logger function'; }
             }
-        }
+        },
+        'dw/system/Logger': require('../../../../mocks/dw/system/Logger')
     }).eswPricingHelper;
     describe('Happy path', function () {
         it('Should Get Rounding Model for localize country', function () {
