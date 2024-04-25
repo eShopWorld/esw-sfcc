@@ -192,7 +192,7 @@ const asnUtils = {
  */
 function execute() {
     let orders = OrderMgr.searchOrders(
-        'shippingStatus = {0} AND (custom.eswShopperCurrencyCode != null) AND (custom.eswReceivedASN = null OR custom.eswReceivedASN = false)',
+        'shippingStatus = {0} AND (custom.eswShopperCurrencyCode != null) AND (custom.eswReceivedASN = null OR custom.eswReceivedASN = false) AND (custom.eswCreateOutboundShipment = null OR custom.eswCreateOutboundShipment = false)',
         'creationDate desc',
         dw.order.Order.SHIPPING_STATUS_SHIPPED
     );
@@ -228,4 +228,7 @@ function execute() {
     }
 }
 
-exports.execute = execute;
+module.exports = {
+    execute: execute,
+    getSendASNtoESWUtils: asnUtils
+};

@@ -1,0 +1,119 @@
+<form action="${dw.web.URLUtils.https('EShopWorldBM-PkgAsnExport')}" method="GET">
+    <table cellspacing="0" cellpadding="4" width="100%" class="infobox w e s">
+        <tbody>
+            <tr>
+                <td class="infobox_title_search" colspan="3" nowrap="nowrap">Order Search</td>
+                <td align="right" nowrap="nowrap" class="infobox_item_search">
+                    <a href="javascript:void(0);"
+                        class="switch_link frm-opener simple-search-frm ${empty(pdict.submitFromForm) || pdict.submitFromForm === 'findSimple' ? 'selected-search-method' : ''}">Simple</a>&nbsp;
+                    <a href="javascript:void(0);"
+                        class="switch_link frm-opener adv-search-frm ${pdict.submitFromForm === 'findAdv' ? 'selected-search-method' : ''}">Advanced</a>&nbsp;
+                    <a href="javascript:void(0);"
+                        class="switch_link  frm-opener by_id-frm ${pdict.submitFromForm === 'findByIds' ? 'selected-search-method' : ''}">By
+                        Number</a>
+                </td>
+            </tr>
+            <tr>
+            </tr>
+            <tr>
+                <td colspan="4" width="100%">
+                    <table
+                        class="search-frm simple-frm ${!empty(pdict.submitFromForm) && pdict.submitFromForm !== 'findSimple' ? 'display-none' : ''}"
+                        border="0" cellpadding="0" cellspacing="0">
+                        <tbody>
+                            <tr class="search-form simple-frm">
+                                <td nowrap="nowrap">
+                                    <label for="">
+                                        Order Number:&nbsp;
+                                    </label>
+                                </td>
+                                <td nowrap="nowrap">
+                                    <input type="text" name="q" value="${!empty(pdict.q) ? pdict.q : ''}" size="35">
+                                    <input name="findSimple" class="button" type="submit" value="Find">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!-- Adv frm -->
+                    <table class="search-frm adv-form ${pdict.submitFromForm === 'findAdv' ? '' : 'display-none'}"
+                        border="0" cellpadding="0" cellspacing="0">
+                        <colgroup>
+                            <col width="15%">
+                            <col width="15%">
+                            <col width="10%">
+                            <col width="15%">
+                            <col width="8%">
+                            <col width="15%">
+                            <col width="22%">
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <td class="infobox_item" nowrap="nowrap">
+                                    <label for="">
+                                        Filter By:
+                                    </label>
+                                </td>
+                                <td class="infobox_item_search">
+                                    <select name="exportStatus" style="width:16em;" class="select perm_not_disabled"
+                                        onfocus="addSorting('filterAttribute');">
+                                        <option value="all"> All</option>
+                                        <option value="${Constants.EXPORTED}" ${!empty(pdict.exportStatus) && pdict.exportStatus == Constants.EXPORTED ? 'selected' : ''}>Exported</option>
+                                        <option value="${Constants.NOT_EXPORTED}" ${!empty(pdict.exportStatus) && pdict.exportStatus == Constants.NOT_EXPORTED ? 'selected' : ''}>Pending
+                                        </option>
+                                        <option value="${Constants.EXPORT_FAILED}" ${!empty(pdict.exportStatus) && pdict.exportStatus == Constants.EXPORT_FAILED ? 'selected' : ''}>Failed
+                                        </option>
+                                    </select>
+                                </td>
+                                <td class="infobox_item_search">&nbsp;</td>
+                                <td class="infobox_item_search">
+                                    <select id="SortingDirection" name="SortingDirection" style="width:15em;"
+                                        class="select">
+                                        <option value="asc" ${!empty(pdict.sortingDirection) && pdict.sortingDirection == 'asc' ? 'selected' : ''}>Ascending
+                                        </option>
+                                        <option value="desc" ${!empty(pdict.sortingDirection) && pdict.sortingDirection == 'desc' ? 'selected' : ''}>Descending
+                                        </option>
+                                    </select>
+                                </td>
+                                <td class="infobox_item_search">&nbsp;</td>
+                                <td class="infobox_item_search">
+                                    <select name="sz" style="width:18em;" class="select">
+                                        <isloop items="${Constants.PAGE_SIZES}" var="sz" status="index">
+                                            <option value="${sz}" ${!empty(pdict.sz) && pdict.sz == sz ? 'selected' : ''}>
+                                                ${sz} results per page
+                                            </option>
+                                        </isloop>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td valign="bottom" colspan="7" align="right" style="padding: 0 4px 4px 0;">
+                                    <input type="Submit" name="findAdv" class="button" value="Find" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!--/ End adv frm -->
+                    <!-- By IDs -->
+                    <table class="search-frm by_id-form ${pdict.submitFromForm === 'findByIds' ? '' : 'display-none'}"
+                        border="0" cellpadding="0" cellspacing="0">
+                        <tbody>
+                            <tr>
+                                <td valign="top" nowrap="nowrap">
+                                    <span class="tooltipstered">List of Number:</span>
+                                </td>
+                                <td class="infobox_item_search" valign="top" align="left">
+                                    <textarea style="float: left" rows="3" cols="80" name="orderNumbersList"
+                                        id="orderNumbersList">${!empty(pdict.orderNumbersList) ? pdict.orderNumbersList : ''}</textarea>
+                                </td>
+                                <td valign="top">
+                                    <input type="Submit" name="findByIds" class="button" value="Find" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!--/ By IDs -->
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</form>

@@ -358,7 +358,8 @@
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
             <attribute-definition attribute-id="isAppeasement">
-                <display-name xml:lang="x-default">isAppeasedOrder</display-name>
+                <display-name xml:lang="x-default">Is ESW Appeased Order?</display-name>
+                <description xml:lang="x-default">Indicates whether an outbound shipment has been created in the ESW system</description>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -379,6 +380,13 @@
             <attribute-definition attribute-id="eswSMSMarketingOptIn">
                 <display-name xml:lang="x-default">ESW SMS Marketing Opt In</display-name>
                 <description xml:lang="x-default">Does shopper opted in for this order?</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswCreateOutboundShipment">
+                <display-name xml:lang="x-default">IS ESW Outbound Shipment Created?</display-name>
+                <description xml:lang="x-default">ESW Create Outbound Shipment?</description>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -460,6 +468,7 @@
                 <display-name xml:lang="x-default">ESW Order Returns</display-name>
                 <attribute attribute-id="eswRmaJson"/>
                 <attribute attribute-id="eswIsReturned"/>
+                <attribute attribute-id="eswCreateOutboundShipment"/>
             </attribute-group>
             <attribute-group group-id="Appeasement">
                 <display-name xml:lang="x-default">Appeasement</display-name>
@@ -1532,6 +1541,20 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>true</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswDarkProdCode">
+                <display-name xml:lang="x-default">ESW Dark Prod Code</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswCheckoutOnlyPackagesExport">
+                <display-name xml:lang="x-default">ESW Checkout Only Packages Export?</display-name>
+                <description xml:lang="x-default">Only export packages that originate from ESW checkout</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="ESW Localized Shopping Feed Configuration">
@@ -1614,6 +1637,10 @@ Example: &#13;
                 <attribute attribute-id="eswCatalogFeedDelimiter"/>
                 <attribute attribute-id="isEswCatalogInternalValidationEnabled"/>
             </attribute-group>
+            <attribute-group group-id="ESW Returns Configuration">
+                <display-name xml:lang="x-default">ESW Returns Configuration</display-name>
+                <attribute attribute-id="eswCheckoutOnlyPackagesExport"/>
+            </attribute-group>
         </group-definitions>
     </type-extension>
     <type-extension type-id="Promotion">
@@ -1623,7 +1650,6 @@ Example: &#13;
                 <description xml:lang="x-default">Enables localized Threshold feature</description>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
-                <default-value>false</default-value>
             </attribute-definition>
             <attribute-definition attribute-id="eswPromotionDiscountType">
                 <display-name xml:lang="x-default">Promotion Discount Type</display-name>
@@ -1643,7 +1669,6 @@ Example: &#13;
                         <value>free</value>
                     </value-definition>
                 </value-definitions>
-                <default-value>amount_off</default-value>
             </attribute-definition>
             <attribute-definition attribute-id="eswMinThresholdAmount">
                 <display-name xml:lang="x-default">Minimum Thresholds Amount</display-name>
@@ -1669,5 +1694,22 @@ Example: &#13;
                 <mandatory-flag>false</mandatory-flag>
             </attribute-definition>
         </custom-attribute-definitions>
+    </type-extension>
+    <type-extension type-id="Shipment">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswOutboundShipmentJson">
+                <display-name xml:lang="x-default">ESW Outbound Shipment Response</display-name>
+                <description xml:lang="x-default">ESW Outbound Shipment Response JSON</description>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="ESW Returns">
+                <display-name xml:lang="x-default">ESW Returns</display-name>
+                <attribute attribute-id="eswOutboundShipmentJson"/>
+            </attribute-group>
+        </group-definitions>
     </type-extension>
 </metadata>

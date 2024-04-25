@@ -72,7 +72,7 @@
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>EswOAuthCredentials</credential-id>
     </service>
-    
+
     <service service-id="EswPriceFeedService">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>

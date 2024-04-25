@@ -1,7 +1,6 @@
 <isdecorate template="application/ESWMenuFrame">
     <isinclude template="util/modules" />
     <isset value="${require('*/cartridge/scripts/helper/eswCatalogHelper')}" name="eswCatalogHelper" scope="page" />
-    <link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/tooltip.css?v=')}${new Date()}">
     <iscomment> end left menu</iscomment>
     <isinclude template="common/esw-bm-products-grid" />
 </isdecorate>

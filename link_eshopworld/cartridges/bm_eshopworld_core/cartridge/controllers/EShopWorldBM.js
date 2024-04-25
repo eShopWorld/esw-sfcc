@@ -11,11 +11,15 @@ const Site = require('dw/system/Site');
 const URLUtils = require('dw/web/URLUtils');
 const Transaction = require('dw/system/Transaction');
 const Resource = require('dw/web/Resource');
+const OrderMgr = require('dw/order/OrderMgr');
+const Logger = require('dw/system/Logger');
+const Order = require('dw/order/Order');
 
 const Constants = require('*/cartridge/scripts/util/Constants');
 const bmHelper = require('*/cartridge/scripts/helpers/eswBmGeneralHelper');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswSyncHelpers = require('*/cartridge/scripts/helpers/eswSyncHelpers');
+const bmOrdersHelper = require('~/cartridge/scripts/helpers/eswBmOrdersHelper.js');
 
 /**
  * Function to return to cart page after rebuilding cart
@@ -243,6 +247,141 @@ server.post('SavePostedConfig', function (req, res, next) {
     });
     res.json({ success: true, data: reqForm });
     return next();
+});
+
+server.get('ReturnsConfig', function (req, res, next) {
+    let csrf = request.httpParameterMap.csrf_token.stringValue;
+    let sitePrefFields = bmHelper.loadGroups(
+        Site.getCurrent().getPreferences(),
+        URLUtils.url('ViewApplication-BM', 'csrf_token', csrf),
+        '#/?preference#site_preference_group_attributes!id!{0}',
+        'ESW Returns Configuration'
+    );
+    res.render('/returns/returns-config-form', {
+        sitePrefFields: sitePrefFields,
+        currentController: 'ReturnsConfig'
+    });
+    next();
+});
+
+server.get('PkgAsnExport', function (req, res, next) {
+    let parameterMap = request.httpParameterMap;
+    let submitFromForm = null;
+
+    if (parameterMap.findSimple && !parameterMap.findSimple.empty) {
+        submitFromForm = 'findSimple';
+    } else if (parameterMap.findAdv && !parameterMap.findAdv.empty) {
+        submitFromForm = 'findAdv';
+    } else if (parameterMap.findByIds && !parameterMap.findByIds.empty) {
+        submitFromForm = 'findByIds';
+    }
+
+    let exportStatus = parameterMap.exportStatus || null;
+    let searchOrderQuery = 'status != ' + Order.ORDER_STATUS_FAILED + ' AND status != ' + Order.ORDER_STATUS_CANCELLED + ' AND shippingStatus = ' + Order.SHIPPING_STATUS_SHIPPED + ' AND (custom.eswReceivedASN != true OR custom.eswReceivedASN = null) ';
+    let sortOrder = 'creationDate desc';
+    // simple form
+    let orderNumber = parameterMap.q || null;
+    if (!empty(submitFromForm) && submitFromForm === 'findSimple') {
+        if (!empty(orderNumber) && !empty(orderNumber.value)) {
+            searchOrderQuery += ' AND orderNo = \'' + orderNumber.value + '\'';
+        }
+    } else {
+        orderNumber = null;
+    }
+
+    // Search by order numbers list
+    let orderNumbersList = parameterMap.orderNumbersList || [];
+    let pageLimit = 0; // Display all records in case of list search
+    if (!empty(submitFromForm) && submitFromForm === 'findByIds') {
+        if (!empty(orderNumbersList) && !empty(orderNumbersList.value)) {
+            let orderIds = new ArrayList(empty(orderNumbersList) ? orderNumbersList : orderNumbersList.value.split(/[\n,]+/)).iterator();
+            searchOrderQuery = ' orderNo = ';
+            let orderIdsCounter = 0;
+            while (orderIds.hasNext()) {
+                let currentOrderId = orderIds.next();
+                if (orderIdsCounter === 0) {
+                    searchOrderQuery += ' \'' + currentOrderId + '\'';
+                } else {
+                    searchOrderQuery += ' OR orderNo = \'' + currentOrderId + '\'';
+                }
+                orderIdsCounter++;
+            }
+            pageLimit = orderIdsCounter;
+        }
+    } else {
+        orderNumbersList = '';
+    }
+    let searchedOrders = OrderMgr.queryOrders(searchOrderQuery, sortOrder);
+    // Advance form
+    let ordersInSearch = new ArrayList([]);
+    let sortingDirection = parameterMap.SortingDirection || null;
+    if (!empty(submitFromForm) && submitFromForm === 'findAdv') {
+        while (searchedOrders.hasNext()) {
+            let currentOrder = searchedOrders.next();
+            if (!empty(exportStatus) && !empty(exportStatus.value) && exportStatus.value !== 'all') {
+                if (bmOrdersHelper.getOrderExportStatus(currentOrder).status === exportStatus.value) {
+                    ordersInSearch.add(currentOrder);
+                }
+            } else {
+                ordersInSearch.add(currentOrder);
+            }
+        }
+        if (sortingDirection && sortingDirection.value === 'desc') {
+            ordersInSearch.reverse();
+        }
+    }
+
+    let ordersPagingModel = null;
+    if (ordersInSearch.isEmpty() && submitFromForm !== 'findAdv') {
+        ordersPagingModel = new PagingModel(searchedOrders, searchedOrders.count);
+    } else {
+        ordersPagingModel = new PagingModel(ordersInSearch.iterator(), ordersInSearch.size());
+    }
+    let pageSize = (pageLimit > 0) ? pageLimit : (parameterMap.sz.intValue || 10);
+    ordersPagingModel.setPageSize(pageSize);
+    let start = parameterMap.start.intValue || 0;
+    ordersPagingModel.setStart(start);
+    res.render('/returns/pkg-asn-export', {
+        currentController: 'PkgAsnExport',
+        orders: ordersPagingModel,
+        q: orderNumber,
+        exportStatus: exportStatus,
+        submitFromForm: submitFromForm,
+        sz: pageSize,
+        start: start,
+        sortingDirection: sortingDirection,
+        orderNumbersList: orderNumbersList
+    });
+    next();
+});
+
+server.post('ExportOrderShipment', function (req, res, next) {
+    let requestObj = request.httpParameterMap;
+    let syncArray = [];
+    let status;
+    let eswRetailerOutboundShippment = require('*/cartridge/scripts/jobs/eswRetailerOutboundShippment');
+    if (('SyncAll' in requestObj && !empty(requestObj.SyncAll.value))) {
+        // running job to sync all site catalog products
+        status = eswRetailerOutboundShippment.execute();
+    } else if (('pageSize' in requestObj && !empty(requestObj.pageSize.value))) {
+        for (let i = 1; i <= requestObj.pageSize.value; i++) {
+            if (!empty(requestObj['orderCheckbox-' + i].value)) {
+                let order = OrderMgr.getOrder(requestObj['orderCheckbox-' + i].value);
+                if (order) {
+                    syncArray.push(order);
+                }
+            }
+        }
+        if (syncArray && syncArray.length > 0) {
+            // Syncing selcoded products
+            status = eswSyncHelpers.exportSelectedOrders(syncArray);
+        }
+    }
+    if (empty(status) && status.message !== 'OK') {
+        Logger.error('ESW BM ExportOrderShipment Error: ' + status.message);
+    }
+    res.redirect(URLUtils.url('EShopWorldBM-PkgAsnExport'));
+    next();
 });
 
 module.exports = server.exports();

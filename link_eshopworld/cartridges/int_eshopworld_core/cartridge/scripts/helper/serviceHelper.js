@@ -30,7 +30,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
     if (currentBasket != null) {
         if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
             let lineItemsV3 = eswServiceHelperV3.getLineItemsV3(order, shopperCountry, shopperCurrency);
-            let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal);
+            let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal, shopperCurrency);
             if (empty(shopperCurrency)) {
                 shopperCurrency = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
             }
@@ -62,7 +62,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
             }
         } else {
             let cartItemsV2 = getCartItemsV2(order, shopperCountry, shopperCurrency);
-            let cartDiscounts = getCartDiscounts(currentBasket, cartItemsV2.finalCartSubtotal);
+            let cartDiscounts = getCartDiscounts(currentBasket, cartItemsV2.finalCartSubtotal, shopperCurrency);
             if (!empty(cartDiscounts) && cartDiscounts.length > 0) {
                 requestObj = {
                     'contactDetails': getContactDetails(currentBasket.getCustomerEmail(), shopperCountry),
@@ -237,9 +237,10 @@ function getCartItemsV2(order, shopperCountry, shopperCurrency) {
  * function to get order level discount info
  * @param {Object} cart - cart
  * @param {number} beforeDiscountParam - amount before discount
+ * @param {string} shopperCurrency - The currency of the shopper
  * @returns {Object} - cart discount price info
  */
-function getCartDiscounts(cart, beforeDiscountParam) {
+function getCartDiscounts(cart, beforeDiscountParam, shopperCurrency) {
     let cartSubTotal = eswHelper.getSubtotalObject(cart, true),
         obj = {},
         cartDiscounts = [],
@@ -247,6 +248,9 @@ function getCartDiscounts(cart, beforeDiscountParam) {
         allPriceAdjustmentIter = cart.priceAdjustments.iterator(),
         beforeDiscount = beforeDiscountParam,
         cartDiscountTotal = 0;
+    if (!empty(shopperCurrency)) {
+        currencyCode = shopperCurrency;
+    }
     while (allPriceAdjustmentIter.hasNext()) {
         let eachPriceAdjustment = allPriceAdjustmentIter.next();
         if (eachPriceAdjustment.promotion && eswHelper.isThresholdEnabled(eachPriceAdjustment.promotion)) {

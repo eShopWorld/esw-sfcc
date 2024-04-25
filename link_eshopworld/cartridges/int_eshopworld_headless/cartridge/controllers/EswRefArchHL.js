@@ -104,26 +104,39 @@ server.post('Notify', function (req, res, next) {
                 if (order.status.value === Order.ORDER_STATUS_CREATED) {
                     ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req);
                     // update ESW order custom attributes
-                    ocHelper.updateEswOrderAttributesV3(obj, order);
+                    if ('checkoutTotal' in obj) { // OC response v3.0
+                        ocHelper.updateEswOrderAttributesV3(obj, order);
+                    } else { // OC response v2.0
+                        ocHelper.updateEswOrderAttributesV2(obj, order);
+                    }
                     // update ESW order Item custom attributes
-                    let ocLineItemObject = obj.lineItems;
+                    let ocLineItemObject = ('lineItems' in obj) ? obj.lineItems : obj.cartItems;
                     if (ocLineItemObject != null && ocLineItemObject[0].product.productCode) {
                         let cartItem;
                         // eslint-disable-next-line no-restricted-syntax, guard-for-in
                         for (let lineItem in order.productLineItems) {
                             cartItem = getCartItem(ocLineItemObject, order, lineItem);
-                            ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
+                            if ('lineItems' in obj) { // OC response v3.0
+                                ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
+                            } else { // OC response v2.0
+                                ocHelper.updateEswOrderItemAttributesV2(obj, order.productLineItems[lineItem], cartItem);
+                            }
                         }
-                        ocHelper.updateOrderLevelAttrV3(obj, order);
+                        if ('lineItems' in obj) { // OC response v3.0
+                            ocHelper.updateOrderLevelAttrV3(obj, order);
+                        }
                     }
                     // update ESW order Item custom attributes
                     ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
                     // update ESW Payment instrument custom attributes
                     ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
+
                     OrderMgr.placeOrder(order);
                     order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
                     order.setExportStatus(Order.EXPORT_STATUS_READY);
-
+                    if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId) && obj.shopperCheckoutExperience.saveAddressForNextPurchase) {
+                        ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId);
+                    }
                     if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
                         order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
                     }

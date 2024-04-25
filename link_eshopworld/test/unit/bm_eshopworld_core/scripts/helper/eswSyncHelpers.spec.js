@@ -6,9 +6,31 @@ var calendarMock = require('../../../../mocks/dw/util/Calendar');
 var ArrayList = require('../../../../mocks/dw.util.Collection');
 var Logger = require('../../../../mocks/dw/system/Logger');
 var Status = require('../../../../mocks/dw/system/Status');
+const OrderMock = require('../../../../mocks/dw/order/Order');
 
 var saleableProducts = new ArrayList([{
     product: {
+        online: true,
+        availabilityModel: {
+            getAvailabilityLevels: function () {
+                return {
+                    notAvailable: {
+                        value: 0
+                    }
+                };
+            }
+        }
+    },
+    custom: {},
+    productID: 'someID',
+    quantityValue: 2,
+    productCode: 'testId',
+    name: 'testName',
+    unitPrice: 'testPrice'
+}]);
+
+var saleableOrders = new ArrayList([{
+    productLineitem: {
         online: true,
         availabilityModel: {
             getAvailabilityLevels: function () {
@@ -67,6 +89,11 @@ let product = {
 
 describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', function () {
     let eswSyncHelpers = proxyquire('../../../../../cartridges/bm_eshopworld_core/cartridge/scripts/helpers/eswSyncHelpers.js', {
+        '*/cartridge/scripts/jobs/sendASNtoESW': {
+            getSendASNtoESWUtils: {
+                sendASNForPackage: function () {}
+            }
+        },
         '*/cartridge/scripts/helper/eswCatalogHelper': {
             convertArrayToChunks: function () {
                 return saleableProducts;
@@ -81,6 +108,7 @@ describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', functi
                 };
             }
         },
+        'dw/system/Transaction': '',
         'dw/util/Calendar': calendarMock,
         'dw/web/Resource': {
             msg: function () {
@@ -96,10 +124,21 @@ describe('bm_eshopworld_core/cartridge/scripts/helper/eswSyncHelpers.js', functi
             CATALOG_API_CHUNK: 100
         }
     });
-    describe('success cases', function () {
-        it('Should return true if synced products successfully', function () {
-            let eswSyncApiResponse = eswSyncHelpers.syncSelectedProducts(saleableProducts);
-            chai.expect(eswSyncApiResponse).to.be.an.instanceof(Status);
+    it('Should return true if synced products successfully', function () {
+        let eswSyncApiResponse = eswSyncHelpers.syncSelectedProducts(saleableProducts);
+        chai.expect(eswSyncApiResponse).to.be.an.instanceof(Status);
+    });
+    it('Should return true if synced orders successfully', function () {
+        let eswSyncApiResponse = eswSyncHelpers.exportSelectedOrders(saleableOrders);
+        chai.expect(eswSyncApiResponse).to.be.an.instanceof(Status);
+    });
+
+
+    describe('shipOrders', function () {
+        it('should return undefined when empty orders', function () {
+            // Assuming shipOrders returns true for successful operation
+            const result = eswSyncHelpers.shipOrders([]);
+            chai.expect(result).to.be.undefined;
         });
     });
     describe('success cases', function () {
