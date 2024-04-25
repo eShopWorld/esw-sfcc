@@ -18,3 +18,9 @@ exports.SIMPLE_FORM = 'simpleForm';
 exports.ADVANCE_FORM = 'advanceForm';
 exports.By_ID_FORM = 'searchByIdForm';
 exports.REGISTERATION_PWA_URL_VALUE = 'EShopWorld-RegisterCustomer';
+exports.EXPORTED = 'EXPORTED';
+exports.NOT_EXPORTED = 'NOT_EXPORTED';
+exports.EXPORT_FAILED = 'EXPORT_FAILED';
+exports.N_A = 'N_A';
+exports.PAGE_SIZES = ['10', '50', '100', '500', '1000'];
+

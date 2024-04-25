@@ -2,7 +2,9 @@
 <isinclude url="${URLUtils.url('SiteNavigationBar-IncludeFrameTop', 'SelectedMenuItem', pdict.SelectedMenuItem, 'CurrentMenuItemId', pdict
               .CurrentMenuItemId)}" sf-toolkit="on" />
 <link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/fa/all.min.css')}" />
-<link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/bm-style.css?v=1.0.0')}">
+<link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/bm-style.css?v=2.0.0')}" />
+<link rel="stylesheet" href="${dw.web.URLUtils.staticURL('/css/tooltip.css?v=1.0.0')}" />
+
 <div id="esw-snackbar"></div>
 <div id="esw-overlay">
   <div class="cv-spinner">
@@ -20,9 +22,14 @@
     </td>
   </tr>
 </table>
-<script src="//code.jquery.com/jquery-3.6.3.js"></script>
-<script src="${dw.web.URLUtils.staticURL('/js/eswCommon.js?v=1.0.0')}"></script>
-<isif condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-CatalogConfig') !== -1}">
-  <script src="${dw.web.URLUtils.staticURL('/js/catalog.js?v=1.0.0')}"></script>
+<script src="${dw.web.URLUtils.staticURL('/js/jquery-3.6.3.min.js')}"></script>
+<script src="${dw.web.URLUtils.staticURL('/js/eswCommon.js?v=2.0.0')}"></script>
+<isif
+  condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-CatalogConfig') !== -1 || dw.web.URLUtils.continueURL()
+           .toString().indexOf('EShopWorldBM-Start') !== -1}">
+  <script src="${dw.web.URLUtils.staticURL('/js/catalog.js?v=1.0.1')}"></script>
+</isif>
+<isif condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-PkgAsnExport') !== -1}">
+  <script src="${dw.web.URLUtils.staticURL('/js/returns.js?v=1.0.1')}"></script>
 </isif>
 <isinclude url="${URLUtils.url('SiteNavigationBar-IncludeFrameBottom')}" sf-toolkit="on" />

@@ -13,7 +13,7 @@
         <table class="esw-product-table">
             <tr>
                 <td class="table_header w e s">
-                    <a onclick="selectAllProducts();" href="javascript:void(0)" class="tableheader disabled">
+                    <a onclick="selectAllProducts();" href="javascript:void(0)" class="tableheader disabled selectAllCheckbox">
                         ${Resource.msg('esw.bm.SelectAll', 'eswbm', null)}
                     </a>
                 </td>
@@ -29,7 +29,7 @@
             <isloop items="${pdict.productsList.pageElements}" var="product" status="productIndex">
                 <isset name="internallyValidProductRes" value="${eswCatalogHelper.isValidProduct(product.product)}" scope="page" />
                 <tr class="esw-products-list">
-                    <td class="table_detail middle e s left">
+                    <td class="table_detail middle e s center">
                         <input type="checkbox" class="select-Product" id="${product.product.ID}" name="product${productIndex.count}" value="${product.product.ID}" <isif condition="${eswCatalogHelper.isValidProduct(product.product).isError}">disabled</isif>>
                     </td>
                     <td class="table_detail middle e s left">
@@ -70,7 +70,7 @@
                             ${Resource.msg('paginginformation.sync.all', 'eswbm', null)}
                         </button>
 
-                        <button type="submit" value="true" name="SyncSlected" class="button SyncSlected">
+                        <button disabled type="submit" value="true" name="SyncSlected" class="button SyncSlected">
                             ${Resource.msg('paginginformation.sync.selected', 'eswbm', null)}
                         </button>
                     </td>

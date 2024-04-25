@@ -61,7 +61,6 @@ function notify() {
         logger = require('dw/system/Logger'),
         Order = require('dw/order/Order'),
         Response = require('*/cartridge/scripts/util/Response'),
-        Site = require('dw/system/Site').getCurrent(),
         eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         responseJSON = {};
     if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
@@ -105,16 +104,15 @@ function notify() {
                 }
                 // If order exist with created status in SFCC then perform order confirmation
                 if (order.status.value === Order.ORDER_STATUS_CREATED) {
-                    let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
-                    let appliedShipping = eswHelperHL.applyShippingMethod(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, true);
-                    if (appliedShipping == null) {
-                        eswHelper.setBaseCurrencyPriceBook(Site.defaultCurrency);
-                        appliedShipping = eswHelperHL.applyShippingMethod(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, true);
-                    }
+                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso);
                     // update ESW order custom attributes
-                    ocHelper.updateEswOrderAttributesV3(obj, order);
+                    if ('checkoutTotal' in obj) { // OC response v3.0
+                        ocHelper.updateEswOrderAttributesV3(obj, order);
+                    } else { // OC response v2.0
+                        ocHelper.updateEswOrderAttributesV2(obj, order);
+                    }
                     // update ESW order Item custom attributes
-                    let ocLineItemObject = obj.lineItems;
+                    let ocLineItemObject = ('lineItems' in obj) ? obj.lineItems : obj.cartItems;
                     if (ocLineItemObject != null && ocLineItemObject[0].product.productCode) {
                         let cartItem;
                         for (let lineItem in order.productLineItems) {
@@ -123,9 +121,15 @@ function notify() {
                                     return value;
                                 }
                             });
-                            ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
+                            if ('lineItems' in obj) { // OC response v3.0
+                                ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
+                            } else { // OC response v2.0
+                                ocHelper.updateEswOrderItemAttributesV2(obj, order.productLineItems[lineItem], cartItem);
+                            }
                         }
-                        ocHelper.updateOrderLevelAttrV3(obj, order);
+                        if ('lineItems' in obj) { // OC response v3.0
+                            ocHelper.updateOrderLevelAttrV3(obj, order);
+                        }
                     }
                     // update ESW order Item custom attributes
                     ocHelper.updateShopperAddressDetails(obj.contactDetails, order);

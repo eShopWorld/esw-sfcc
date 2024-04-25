@@ -405,3 +405,45 @@ input.esw-bm-input-text {
     left: 50%;
     font-weight: bold;
 }
+
+.esw-menu:not(.selected) .esw-submenu {
+    display: none;
+}
+
+li:not(.selected) span.icon::before {
+    font-family: "FontAwesome";
+    content: "\f107";
+    font-weight: 900;
+}
+
+li.selected span.icon::before {
+    font-family: "FontAwesome";
+    content: "\f106";
+    font-weight: 900;
+}
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    background-color: #eee;
+}
+
+input[type="checkbox"]:checked {
+    background-color: #007BFF;
+}
+
+.display-none {
+    display: none;
+}
+
+.selected-search-method{
+    background-color: #f5f5f5 !important;
+    color: #00629b !important;
+    font-weight: bold !important;
+}
+
+.json-txt {
+    white-space: pre-line;
+}
+
+.width-600{min-width: 600px !important;}

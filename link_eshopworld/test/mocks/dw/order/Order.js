@@ -74,6 +74,7 @@ Order.prototype.getDeliveryItem = function(){};
 Order.prototype.getDeliveryItems = function(){};
 Order.prototype.getReturnCaseItem = function(){};
 Order.prototype.getProductLineItems = function(){};
+Order.prototype.getShipments = function(){};
 Order.prototype.status=null;
 Order.prototype.orderNo=null;
 Order.prototype.exportStatus=null;

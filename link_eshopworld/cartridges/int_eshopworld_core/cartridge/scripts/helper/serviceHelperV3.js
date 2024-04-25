@@ -183,9 +183,10 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
  * function to get product unit price info
  * @param {Object} cart - productLineItem
  * @param {number} beforeDiscountParam - amount before discount
+ * @param {string} shopperCurrency - The currency of the shopper
  * @returns {Object} - cart discount price info
  */
-function getCartDiscountPriceInfo(cart, beforeDiscountParam) {
+function getCartDiscountPriceInfo(cart, beforeDiscountParam, shopperCurrency) {
     try {
         let cartSubTotal = eswHelper.getSubtotalObject(cart, true),
             beforeDiscount = beforeDiscountParam,
@@ -194,6 +195,9 @@ function getCartDiscountPriceInfo(cart, beforeDiscountParam) {
             currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode,
             allPriceAdjustmentIter = cart.priceAdjustments.iterator(),
             cartDiscount = {};
+        if (!empty(shopperCurrency)) {
+            currencyCode = shopperCurrency;
+        }
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
             if (eachPriceAdjustment.promotion && eswHelper.isThresholdEnabled(eachPriceAdjustment.promotion)) {

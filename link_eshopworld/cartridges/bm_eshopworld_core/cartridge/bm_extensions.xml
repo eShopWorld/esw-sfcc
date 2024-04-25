@@ -11,7 +11,7 @@
     <description xml:lang="x-default">ESW</description>
     <icon>icons/esw-icon.gif</icon>
   </menuitem>
-  <menuaction id="esw_catalog_id01" menupath="esw_id01" position="999" site="true">
+  <menuaction id="esw_catalog_id01" menupath="esw_id01" position="800" site="true">
     <name xml:lang="x-default">Catalog</name>
     <short_description xml:lang="x-default">Catalog</short_description>
     <description xml:lang="x-default">All catalog related ESW operations</description>
@@ -29,5 +29,23 @@
       <parameter name="mainmenuname" value="ESW"/>
     </parameters>
     <icon>icons/esw-icon.gif</icon>
+  </menuaction>
+  <menuaction id="esw_returns_menu" menupath="esw_id01" position="801" site="true">
+        <name xml:lang="x-default">Returns</name>
+        <short_description xml:lang="x-default">ESW returns related operations</short_description>
+        <description xml:lang="x-default">ESW returns related operations</description>
+        <!-- no icon specified -->
+        <exec pipeline="EShopWorldBM" node="PkgAsnExport" />
+        <sub-pipelines>
+          <pipeline name="EShopWorldBM-ReturnsConfig" />
+          <pipeline name="EShopWorldBM-PkgAsnExport" />
+          <pipeline name="EShopWorldBM-ExportOrderShipment" />
+        </sub-pipelines>
+         <parameters>
+            <parameter name="menuname" value="Returns" />
+            <parameter name="menupath" value="esw_id01"/>
+            <parameter name="mainmenuname" value="ESW"/>
+        </parameters>
+        <icon>icons/esw-icon.gif</icon>
   </menuaction>
 </extensions>

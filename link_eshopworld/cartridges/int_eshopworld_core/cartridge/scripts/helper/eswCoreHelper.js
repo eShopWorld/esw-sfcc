@@ -1732,7 +1732,7 @@ const getEswHelper = {
             try {
                 if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
+                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent' || requestType === 'logistics-return-order-retailer') {
                     responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
                 } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
@@ -1831,6 +1831,9 @@ const getEswHelper = {
         this.eswInfoLogger('Esw Inventory Check Response', JSON.stringify(responseJSON));
         return responseJSON;
     },
+    isEswCheckoutOnlyPackagesExportEnabled: function () {
+        return Site.getCustomPreferenceValue('eswCheckoutOnlyPackagesExport');
+    },
     /**
      * Set customer initial cookies
      * @param {string} country - country ISO
@@ -1838,8 +1841,12 @@ const getEswHelper = {
      * @param {string} locale - locale
      */
     createInitialCookies: function (country, currencyCode, locale) {
+        let parameterMap = request.httpParameterMap;
         if (request.httpCookies['esw.location'] == null) {
             this.createCookie('esw.location', country, '/');
+        }
+        if (!empty(parameterMap.country.value) && request.httpCookies['esw.currency'] != null && request.httpCookies['esw.currency'].value != parameterMap.country.value) {
+            this.updateCookieValue(request.getHttpCookies()['esw.currency'], currencyCode);
         }
         if (request.httpCookies['esw.currency'] == null) {
             this.createCookie('esw.currency', currencyCode, '/');
@@ -2068,6 +2075,9 @@ const getEswHelper = {
         return Object.keys(discounts).map(function (key) {
             return discounts[key];
         });
+    },
+    beautifyJsonAsString: function (jsonStr) {
+        return JSON.stringify(jsonStr, null, '\t');
     }
 };
 

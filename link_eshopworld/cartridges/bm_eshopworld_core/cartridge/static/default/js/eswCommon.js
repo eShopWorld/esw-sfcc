@@ -78,13 +78,19 @@ function sendAjax(formAction, formData, sneakBarMsgHtml, reloadPage) {
 function submitForm($productGridForm, clickEvent) {
     let formAction = $($productGridForm).attr('action');
     let formData = $($productGridForm).serialize() + '&' + clickEvent + '=' + clickEvent;
-    sendAjax(formAction, formData, 'Sync request has been generated for the products.', true);
+    sendAjax(formAction, formData, 'Sync request has been generated for the products/orders.', true);
 }
 
 $(document).ready(function () {
     // Left menu
     $(".esw-menu > a").click(function () {
-        $(this).next('.esw-submenu').slideToggle();
+        $(this).next('.esw-submenu').slideToggle(function () {
+            if ($(this).is(":visible")) {
+                $(this).parent('.esw-menu').addClass('selected');
+            } else {
+                $(this).parent('.esw-menu').removeClass('selected');
+            }
+        });
     });
     // form selection
     if ($('#productGridForm')) {

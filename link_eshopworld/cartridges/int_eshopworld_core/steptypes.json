@@ -212,6 +212,16 @@
                 "parameters": {
                     "parameters": []
                 }
+            },
+            {
+                "@type-id": "custom.ESW_RetailerOutboundShippment",
+                "timeout-in-seconds": "180000",
+                "description": "This job is responsible for outbond shipment from retailer to ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswRetailerOutboundShippment.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
             }
         ]
     }
