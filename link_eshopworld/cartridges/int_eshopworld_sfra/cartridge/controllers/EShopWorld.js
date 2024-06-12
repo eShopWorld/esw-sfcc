@@ -326,7 +326,8 @@ server.post('Notify', function (req, res, next) {
                 }
                 // If order exist with created status in SFCC then perform order confirmation
                 if (order.status.value === Order.ORDER_STATUS_CREATED) {
-                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req);
+                    let currentMethodID = order.shipments[0].shippingMethodID;
+                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req, currentMethodID);
                     // update ESW order custom attributes
                     if ('checkoutTotal' in obj) { // OC response v3.0
                         ocHelper.updateEswOrderAttributesV3(obj, order);
@@ -354,7 +355,7 @@ server.post('Notify', function (req, res, next) {
                     // update ESW order Item custom attributes
                     ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
                     // update ESW Payment instrument custom attributes
-                    ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
+                    ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand, obj);
 
                     OrderMgr.placeOrder(order);
                     order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);

@@ -47,6 +47,9 @@ global.session = session;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', function () {
     var eswCoreHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
+        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
+            getCountryDetailByParam: function () { return null; }
+        },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getMoneyObject: function () {

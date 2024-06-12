@@ -30,7 +30,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
     if (currentBasket != null) {
         if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
             let lineItemsV3 = eswServiceHelperV3.getLineItemsV3(order, shopperCountry, shopperCurrency);
-            let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal, shopperCurrency);
+            let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal, shopperCurrency, (!empty(order) ? true : null));
             if (empty(shopperCurrency)) {
                 shopperCurrency = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
             }
@@ -62,7 +62,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
             }
         } else {
             let cartItemsV2 = getCartItemsV2(order, shopperCountry, shopperCurrency);
-            let cartDiscounts = getCartDiscounts(currentBasket, cartItemsV2.finalCartSubtotal, shopperCurrency);
+            let cartDiscounts = getCartDiscounts(currentBasket, cartItemsV2.finalCartSubtotal, shopperCurrency, (!empty(order) ? true : null));
             if (!empty(cartDiscounts) && cartDiscounts.length > 0) {
                 requestObj = {
                     'contactDetails': getContactDetails(currentBasket.getCustomerEmail(), shopperCountry),
@@ -123,21 +123,24 @@ function getRetailerPromoCodes(order) {
  */
 function getCartItemsV2(order, shopperCountry, shopperCurrency) {
     let Transaction = require('dw/system/Transaction');
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let currentBasket = order || BasketMgr.currentBasket,
         cartItems = [],
         loopCtr = 1,
         totalQuantity = 0,
         remainingDiscount,
-        currencyCode;
+        currencyCode,
+        localizeObj,
+        conversionPrefs;
+    let selectedCountryLocalizeObj;
     if (!empty(shopperCurrency)) {
         currencyCode = shopperCurrency;
     } else {
         currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
     }
     if (!empty(order)) {
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
-            eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
-        let localizeObj = {
+        let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+        localizeObj = {
             localizeCountryObj: {
                 countryCode: shopperCountry,
                 currencyCode: currencyCode
@@ -146,7 +149,7 @@ function getCartItemsV2(order, shopperCountry, shopperCurrency) {
             applyRoundingModel: 'true'
         };
 
-        let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
+        conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
         let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper');
 
         let totalDiscount = eswHelper.getOrderDiscountHL(order, localizeObj, conversionPrefs).value;
@@ -162,10 +165,15 @@ function getCartItemsV2(order, shopperCountry, shopperCurrency) {
         }
     });
     let finalCartSubtotal = 0;
+    if (!empty(localizeObj)) {
+        let selectedCountryDetail = eswHelper.getCountryDetailByParam(request.httpParameters);
+        selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
+        localizeObj.applyRoundingModel = selectedCountryLocalizeObj.applyRoundingModel.toString();
+    }
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (let lineItemNumber in currentBasket.productLineItems) {
         let item = currentBasket.productLineItems[lineItemNumber],
-            beforeDiscount = eswHelper.getMoneyObject(item.basePrice.value, false, false).value * item.quantity.value,
+            beforeDiscount = !empty(order) ? pricingHelper.getConvertedPrice(item.basePrice.value, localizeObj, conversionPrefs) * item.quantity.value : eswHelper.getMoneyObject(item.basePrice.value, false, false).value * item.quantity.value,
             price = beforeDiscount,
             discountAmount,
             liOrderDiscount,
@@ -173,14 +181,20 @@ function getCartItemsV2(order, shopperCountry, shopperCurrency) {
         // Apply product level promotions
         // eslint-disable-next-line no-loop-func
         collections.forEach(item.priceAdjustments, function (priceAdjustment) {
+            if (!empty(order) && priceAdjustment.appliedDiscount.type !== dw.campaign.Discount.TYPE_FIXED_PRICE) {
+                localizeObj.applyRoundingModel = 'false';
+            }
             if (priceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
-                price = eswHelper.getMoneyObject(priceAdjustment.appliedDiscount.fixedPrice, false, false).value * priceAdjustment.quantity;
+                price = !empty(order) ? eswHelper.getMoneyObject(priceAdjustment.appliedDiscount.fixedPrice, false, false, false, selectedCountryLocalizeObj).value * item.quantity.value : eswHelper.getMoneyObject(priceAdjustment.appliedDiscount.fixedPrice, false, false).value * priceAdjustment.quantity;
                 if (priceAdjustment.quantity < item.quantity.value) {
                     price += (item.quantity.value - priceAdjustment.quantity) * eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
                 }
             } else {
-                let adjustedUnitPrice = eswHelper.getMoneyObject(priceAdjustment.price, false, false, false).value;
+                let adjustedUnitPrice = !empty(order) ? eswHelper.getMoneyObject(priceAdjustment.price, false, false, false, selectedCountryLocalizeObj).value : eswHelper.getMoneyObject(priceAdjustment.price, false, false, false).value;
                 price -= (adjustedUnitPrice) * -1;
+            }
+            if (!empty(order)) {
+                localizeObj.applyRoundingModel = 'true';
             }
         });
         price = (price / item.quantity.value).toFixed(3);
@@ -238,9 +252,10 @@ function getCartItemsV2(order, shopperCountry, shopperCurrency) {
  * @param {Object} cart - cart
  * @param {number} beforeDiscountParam - amount before discount
  * @param {string} shopperCurrency - The currency of the shopper
+ * @param {boolean} isExternalCall - isExternalCall
  * @returns {Object} - cart discount price info
  */
-function getCartDiscounts(cart, beforeDiscountParam, shopperCurrency) {
+function getCartDiscounts(cart, beforeDiscountParam, shopperCurrency, isExternalCall) {
     let cartSubTotal = eswHelper.getSubtotalObject(cart, true),
         obj = {},
         cartDiscounts = [],
@@ -257,7 +272,7 @@ function getCartDiscounts(cart, beforeDiscountParam, shopperCurrency) {
             /* eslint-disable no-continue */
             continue;
         }
-        let discountValue = eswHelper.getMoneyObject((eachPriceAdjustment.priceValue * -1), true, false, true).value;
+        let discountValue = empty(isExternalCall) ? eswHelper.getMoneyObject((eachPriceAdjustment.priceValue * -1), false, false, true).value : eswServiceHelperV3.getHeadlessCartDiscountamount(shopperCurrency, eachPriceAdjustment);
         if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
             let cartDiscount = {
                 'shopperCurrencyCartDiscountAmount': {
@@ -672,9 +687,10 @@ function getShippingRates(v2Flag, shopperCurrency) {
      * @param {string} shippingMethodID string
      * @param {string} country string
      * @param {boolean} ignoreCurrency string
+     * @param {string} currentMethodID string
      * @returns {Object} target object
      */
-function applyShippingMethod(obj, shippingMethodID, country, ignoreCurrency) {
+function applyShippingMethod(obj, shippingMethodID, country, ignoreCurrency, currentMethodID) {
     let Transaction = require('dw/system/Transaction'),
         ShippingMgr = require('dw/order/ShippingMgr'),
         isOverrideShippingCountry;
@@ -703,7 +719,7 @@ function applyShippingMethod(obj, shippingMethodID, country, ignoreCurrency) {
                     // eslint-disable-next-line no-loop-func
                     Transaction.wrap(function () {
                         shipment.setShippingMethod(method);
-                        dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart);
+                        dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, false, currentMethodID);
                     });
                     return method;
                 }
@@ -711,7 +727,7 @@ function applyShippingMethod(obj, shippingMethodID, country, ignoreCurrency) {
                 // eslint-disable-next-line no-loop-func
                 Transaction.wrap(function () {
                     shipment.setShippingMethod(method);
-                    dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart);
+                    dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, false, currentMethodID);
                 });
                 return method;
             }
@@ -722,7 +738,7 @@ function applyShippingMethod(obj, shippingMethodID, country, ignoreCurrency) {
                     Transaction.wrap(function () {
                         shipment.setShippingMethod(method);
                         ShippingMgr.applyShippingCost(cart);
-                        dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, true);
+                        dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, true, currentMethodID);
                         updatePaymentInstrument(cart);
                     });
                     return method;

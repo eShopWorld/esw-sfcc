@@ -28,7 +28,7 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
  *
  * @param {object} basket The basket to be calculated
  */
-exports.calculate = function (basket, isESWOrderCalculate) {
+exports.calculate = function (basket, isESWOrderCalculate, currentMethodID) {
     // ===================================================
     // =====   CALCULATE PRODUCT LINE ITEM PRICES    =====
     // ===================================================
@@ -75,8 +75,11 @@ exports.calculate = function (basket, isESWOrderCalculate) {
     // =====   Apply product and order and 			 =====
     // =====   shipping promotions.                  =====
     // ===================================================
-    if (!eswHelper.getEShopWorldModuleEnabled() || !isESWOrderCalculate ) {
+    if (!eswHelper.getEShopWorldModuleEnabled() || !isESWOrderCalculate  || !eswHelper.isDeliveryDiscountBasedOnCoupon(basket, currentMethodID) ) {
         PromotionMgr.applyDiscounts(basket);
+        if (isESWOrderCalculate) {
+            eswHelper.removeCouponsIfNoPromotions(basket);
+        }
     }
 
     // since we might have bonus product line items, we need to

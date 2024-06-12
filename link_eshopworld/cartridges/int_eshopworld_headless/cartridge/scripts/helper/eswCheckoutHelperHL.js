@@ -194,6 +194,11 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
         discountObj = {},
         shippingMethod = null,
         isOverrideCountry;
+    let preorderCheckoutServiceName = eswHelper.getCheckoutServiceName();
+    let v2Flag = true;
+    if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
+        v2Flag = false;
+    }
 
     if (shippingOverrides.length > 0) {
         isOverrideCountry = JSON.parse(shippingOverrides).filter(function (item) {
@@ -202,6 +207,7 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
     }
 
     if (!empty(isOverrideCountry)) {
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
         if (!empty(isOverrideCountry[0].shippingMethod.ID)) {
             localizeObj.applyRoundingModel = 'true';
             localizeObj.applyCountryAdjustments = 'false';
@@ -210,21 +216,34 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
                 shippingMethod = eswHelperHL.applyShippingMethod(cart, isOverrideCountry[0].shippingMethod.ID[rate], shopperCountry, false);
                 if (shippingMethod != null && cart.adjustedShippingTotalPrice.valueOrNull != null) {
                     discountObj = serviceHelperV3HL.getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs);
-                    shippingRate = {
-                        deliveryOption: shippingMethod.displayName,
-                        deliveryOptionOverridePriceInfo: {
-                            price: {
-                                currency: currencyIso,
-                                amount: discountObj.finalPrice.toFixed(2)
+                    let adjustedShippingCost = (isConversionDisabled || cart.adjustedShippingTotalPrice.value === 0) ? cart.adjustedShippingTotalPrice.value : pricingHelper.getConvertedPrice(Number(cart.adjustedShippingTotalPrice), localizeObj, conversionPrefs);
+                    if (!v2Flag) {
+                        shippingRate = {
+                            deliveryOption: shippingMethod.displayName,
+                            deliveryOptionOverridePriceInfo: {
+                                price: {
+                                    currency: currencyIso,
+                                    amount: discountObj.finalPrice.toFixed(2)
+                                },
+                                discounts: discountObj.ShippingDiscounts
                             },
-                            discounts: discountObj.ShippingDiscounts
-                        },
-                        metadataItems: null
-                    };
+                            metadataItems: null
+                        };
+                    } else {
+                        shippingRate = {
+                            deliveryOption: shippingMethod.displayName,
+                            ShopperCurrencyOveridePriceInfo: {
+                                Title: 'SCOPI_Title',
+                                Description: 'SCOPI_Description',
+                                Price: currencyIso + adjustedShippingCost
+                            },
+                            MetadataItems: null
+                        };
+                    }
                     shippingRates.push(shippingRate);
                 }
             }
-            shippingMethod = !empty(shippingRates) ? eswHelperHL.applyShippingMethod(cart, shippingRates[0].deliveryOption, shopperCountry, false) : null;
+            shippingMethod = !empty(shippingRates) ? eswHelperHL.applyShippingMethod(cart, shippingRates[0].deliveryOption, shopperCountry, true) : null;
             cart.custom.eswDeliveryOptions = JSON.stringify(shippingRates);
             localizeObj.applyCountryAdjustments = 'true';
         }

@@ -36,6 +36,9 @@ cart.priceAdjustments = new ArrayList([{
 cart.defaultShipment.shippingPriceAdjustments = new ArrayList([{
     basedOnCoupon: true
 }]);
+cart.shipments = [
+    {shippingMethodID: ''}
+]
 cart.getPriceAdjustments = function () {
     return new ArrayList([{
         basedOnCampaign: true,
@@ -96,6 +99,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
         'dw/web/URLUtils': stubURLUtils,
         'dw/value/Money': Money,
         'dw/content/ContentMgr': {},
+        'dw/campaign/PromotionMgr': {},
         'dw/system/Site': {
             getCurrent: function () {
                 return {
@@ -187,7 +191,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
     });
     describe('Happy path', function () {
         it("it Should confirm if delivery based coupon applied", function () {
-            let getOrderDiscount = eswCalculationHelper.isDeliveryDiscountBasedOnCoupon(cart);
+            let getOrderDiscount = eswCalculationHelper.isDeliveryDiscountBasedOnCoupon(cart, '');
             expect(getOrderDiscount).to.equal(true);
         });
     });

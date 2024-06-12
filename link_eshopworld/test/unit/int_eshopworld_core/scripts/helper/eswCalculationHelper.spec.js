@@ -147,6 +147,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                     options.selectedCountryAdjustments.estimatedRates.dutyPercentage,
                     options.selectedCountryAdjustments.estimatedRates.taxPercentage, options.selectedFxRate.rate
                 );
+                options.currencyCode = 'USD';
+
                 const moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                 expect(moneyObject.available).to.equal(expectedPrice);
             });
@@ -180,6 +182,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                     options.selectedCountryAdjustments.estimatedRates.dutyPercentage,
                     options.selectedCountryAdjustments.estimatedRates.taxPercentage, options.selectedFxRate.rate
                 );
+                options.currencyCode = 'USD';
                 const moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                 expect(moneyObject.available).to.equal(expectedPrice);
             });
@@ -213,6 +216,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                     options.selectedCountryAdjustments.estimatedRates.dutyPercentage,
                     options.selectedCountryAdjustments.estimatedRates.taxPercentage, options.selectedFxRate.rate
                 );
+                options.currencyCode = 'USD';
                 const moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                 expect(moneyObject.available).to.equal(expectedPrice);
             });
@@ -266,6 +270,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                         options.selectedFxRate.rate,
                         options.selectedCountryAdjustments.estimatedRates.feePercentage
                     );
+                    options.currencyCode = 'USD';
                     let moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                     expect(moneyObject.available.toFixed(toFixedNum), '\nError in data ===> ' + JSON.stringify(PaV4Inputs[i]) + '\n').to.equal(expectedPrice);
                 }
@@ -305,6 +310,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                     options.selectedFxRate.rate,
                     options.selectedCountryAdjustments.estimatedRates.feePercentage
                 );
+                options.currencyCode = 'USD';
                 const moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                 expect(moneyObject.available.toFixed(toFixedNum)).to.equal(expectedPrice);
             });
@@ -340,6 +346,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                     options.selectedCountryAdjustments.estimatedRates.taxPercentage, options.selectedFxRate.rate,
                     options.selectedCountryAdjustments.estimatedRates.feePercentage
                 );
+                options.currencyCode = 'USD';
                 const moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                 expect(moneyObject.available.toFixed(toFixedNum)).to.equal(expectedPrice);
             });
@@ -376,6 +383,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCalculationHelper.js',
                     options.selectedFxRate.rate,
                     options.selectedCountryAdjustments.estimatedRates.feePercentage
                 );
+                options.currencyCode = 'USD';
                 const moneyObject = eswCoreHelper.getMoneyObject(price, false, true, true, options);
                 expect(moneyObject.available.toFixed(toFixedNum)).to.equal(expectedPrice);
             });

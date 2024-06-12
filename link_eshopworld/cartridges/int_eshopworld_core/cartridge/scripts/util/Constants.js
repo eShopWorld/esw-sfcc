@@ -23,4 +23,7 @@ exports.NOT_EXPORTED = 'NOT_EXPORTED';
 exports.EXPORT_FAILED = 'EXPORT_FAILED';
 exports.N_A = 'N_A';
 exports.PAGE_SIZES = ['10', '50', '100', '500', '1000'];
+exports.DECIMAL_LENGTH = 8;
+exports.VERSION_2 = 'v2';
+exports.VERSION_3 = 'v3';
 

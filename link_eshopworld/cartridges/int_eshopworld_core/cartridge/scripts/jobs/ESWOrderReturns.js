@@ -40,7 +40,7 @@ function getReturnLineItemsPayload(lineItemsCollection) {
             productCode: lineItem.getProductID(),
             unitPrice: {
                 amount: lineItem.getAdjustedGrossPrice().getValue(),
-                currency: eswHelper.getBaseCurrency()
+                currency: eswHelper.getBaseCurrencyPreference()
             },
             quantity: lineItem.getQuantity().getValue()
         });

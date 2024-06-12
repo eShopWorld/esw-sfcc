@@ -19,7 +19,7 @@ const eswPricingHelper = {
             let paData = eswHelper.getPricingAdvisorData();
             let roundingModels = paData.roundingModels,
                 selectedRoundingModel;
-            if (localizeObj.applyRoundingModel === true && !this.isEmpty(roundingModels)) {
+            if (localizeObj.applyRoundingModel && !this.isEmpty(roundingModels)) {
                 selectedRoundingModel = roundingModels.filter(function (rule) {
                     return rule.deliveryCountryIso === localizeObj.countryCode;
                 });
@@ -107,7 +107,7 @@ const eswPricingHelper = {
     applyESWRoundingRule: function (localizePrice, selectedRoundingRule) {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             roundedPrice = localizePrice;
-        if (!empty(selectedRoundingRule) && empty(roundedPrice)) {
+        if (!empty(selectedRoundingRule) && !empty(localizePrice)) {
             roundedPrice = eswHelper.applyRoundingModel(localizePrice, selectedRoundingRule[0]);
         }
         return roundedPrice;
@@ -119,6 +119,13 @@ const eswPricingHelper = {
     */
     getConversionPreference: function (localizeObj) {
         try {
+            if (localizeObj
+                && !empty(localizeObj)
+                && !empty(localizeObj.localizeCountryObj.countryCode)
+                && typeof localizeObj.countryCode === 'undefined') {
+                localizeObj.countryCode = localizeObj.localizeCountryObj.countryCode;
+                localizeObj.currencyCode = localizeObj.localizeCountryObj.currencyCode;
+            }
             let conversionPref = {
                 selectedFxRate: this.getESWCurrencyFXRate(localizeObj.localizeCountryObj.currencyCode, localizeObj.localizeCountryObj.countryCode),
                 selectedCountryAdjustments: this.getESWCountryAdjustments(localizeObj.localizeCountryObj.countryCode),
@@ -153,9 +160,11 @@ const eswPricingHelper = {
         conversionPrefs = conversionPrefs || this.getConversionPreference(localizeObj);
 
         if (!empty(conversionPrefs.selectedFxRate) && !this.isFixedPriceCountry(localizeObj.localizeCountryObj.countryCode)) {
-            localizePrice = (localizeObj.applyCountryAdjustments.toLowerCase() === 'true') ? this.applyESWCountryAdjustments(localizePrice, conversionPrefs.selectedCountryAdjustments) : localizePrice;
+            let applyRoundingModel = (typeof localizeObj.applyRoundingModel === 'string') ? localizeObj.applyRoundingModel.toLowerCase() === 'true' : localizeObj.applyRoundingModel;
+            let applyCountryAdjustments = (typeof localizeObj.applyCountryAdjustments === 'string') ? localizeObj.applyCountryAdjustments.toLowerCase() === 'true' : localizeObj.applyCountryAdjustments;
+            localizePrice = (applyCountryAdjustments) ? this.applyESWCountryAdjustments(localizePrice, conversionPrefs.selectedCountryAdjustments) : localizePrice;
             localizePrice = new Number((localizePrice * conversionPrefs.selectedFxRate[0].rate).toFixed(2));
-            localizePrice = (localizeObj.applyRoundingModel.toLowerCase() === 'true') ? this.applyESWRoundingRule(localizePrice, conversionPrefs.selectedRoundingRule) : localizePrice;
+            localizePrice = (applyRoundingModel) ? this.applyESWRoundingRule(localizePrice, conversionPrefs.selectedRoundingRule) : localizePrice;
         }
         return typeof localizePrice !== 'number' ? Number(localizePrice) : localizePrice;
     },

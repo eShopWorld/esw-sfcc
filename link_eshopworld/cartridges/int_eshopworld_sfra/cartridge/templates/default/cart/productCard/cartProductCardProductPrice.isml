@@ -29,9 +29,9 @@
             <!--- extra slot for spacing reasons due to large remove button --->
             <div class="col-lg-1 hidden-md-down remove-line-item-lg"></div>
         </div>
-        
+
         <!--- product restriction - product not available msg --->
-        <isif condition="${pdict.valid.error && lineItem.id == session.privacy.restrictedProductID}">
+        <isif condition="${pdict.valid && pdict.valid.error && lineItem.id == session.privacy.restrictedProductID}">
             <div class="product-not-available-msg-cart">
                 ${Resource.msg('esw.product.notavailable','esw',null)}
             </div>
@@ -42,9 +42,9 @@
             <isinclude template="checkout/productCard/productCardProductPromotions" />
         </div>
     </isif>
-    
+
     <isif condition="${lineItem.isReturnProhibited}">
     	<iscontentasset aid="esw-display-return-prohibited-message" />
     </isif>
-    
+
 </div>

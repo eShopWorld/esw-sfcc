@@ -33,6 +33,9 @@ basketMgr.productLineItems = productLineItems1;
 // eslint-disable-next-line no-useless-escape
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
+        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
+            getCountryDetailByParam: function () { return null; }
+        },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getMoneyObject: function () {

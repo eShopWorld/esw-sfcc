@@ -21,6 +21,9 @@ global.session = session;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
+        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
+            getCountryDetailByParam: function () { return null; }
+        },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getMoneyObject: function () {
@@ -105,7 +108,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                     lineItemText: 'someString',
                     promotion: { calloutMsg: 'some call out message' }
                 }])
-            }
+            };
             let deliveryDiscounts = serviceHelperV3.getDeliveryDiscounts(basket);
             expect(deliveryDiscounts).to.be.an('object');
             basket.defaultShipment = defaultShipment;

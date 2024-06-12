@@ -38,10 +38,7 @@ const CATALOG_HELPER = {
         prodModel.search();
         let searchAbleProducts = prodModel.productSearchHits;
         let productSearchHit;
-        let feedlastExecutedTimeStamp = Site.getCustomPreferenceValue('eswCatalogFeedTimeStamp');
-        if (!empty(feedlastExecutedTimeStamp)) {
-            feedlastExecutedTimeStamp = new Calendar(new Date(feedlastExecutedTimeStamp));
-        }
+        let feedlastExecutedTimeStamp = eswHelper.getEswCatalogFeedLastExec();
         let productLastModifiedTimeStamp;
         if (isApiMethod) {
             let apiProducts = [];
@@ -49,7 +46,7 @@ const CATALOG_HELPER = {
                 while (searchAbleProducts.hasNext()) {
                     productSearchHit = searchAbleProducts.next();
                     productLastModifiedTimeStamp = new Calendar(new Date(productSearchHit.product.lastModified));
-                    if (!this.isValidProduct(productSearchHit.product).isError && productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)) {
+                    if (!this.isValidProduct(productSearchHit.product).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp))) {
                         apiProducts.push(productSearchHit.product);
                     }
                 }
@@ -83,7 +80,7 @@ const CATALOG_HELPER = {
                     imageUrl: !empty(product.getImage('small')) ? product.getImage('small').getAbsURL().toString() : null,
                     unitPrice: !empty(product.getPriceModel()) && !empty(product.getPriceModel().getPricePerUnit()) ? {
                         amount: product.getPriceModel().getPricePerUnit().value,
-                        currency: eswHelper.getBaseCurrency()
+                        currency: eswHelper.getBaseCurrencyPreference()
                     } : null,
                     dangerousGoods: ('dangerousGoods' in product.custom) ? product.custom.dangerousGoods : null,
                     additionalProductCode: null,

@@ -23,16 +23,6 @@
                 }
             },
             {
-                "@type-id": "custom.ESW_RetailerCatalogAPI",
-                "timeout-in-seconds": "180000",
-                "description": "This job synch catalog between SFCC & ESW Via Rest API",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswCatalogAPI.js",
-                "function": "execute",
-                "parameters": {
-                    "parameters": []
-                }
-            },
-            {
                 "@type-id": "custom.ESW_ExecutePackageFeed",
                 "timeout-in-seconds": "180000",
                 "description": "This job syncs Retailer Package Information with ESW Package service.",

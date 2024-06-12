@@ -144,7 +144,7 @@ function execute() {
     let Constants = require('*/cartridge/scripts/util/Constants');
     if (eswCoreHelper.isEswCatalogFeatureEnabled()) {
         try {
-            if (eswCoreHelper.getCatalogUploadMethod() === 'api') {
+            if (eswCoreHelper.getCatalogUploadMethod() === Constants.API) {
                 saleableProducts = eswCatalogHelper.getFilteredProducts(true);
                 let productBatches = eswCatalogHelper.convertArrayToChunks(saleableProducts, Constants.CATALOG_API_CHUNK);
                 let payload;
@@ -220,7 +220,7 @@ function execute() {
             // Save last execution time stamp of job feed
             eswCatalogHelper.saveFeedExecutionTimeStamp();
         } catch (e) {
-            if (eswCoreHelper.isEswCatalogFeatureEnabled() && eswCoreHelper.getCatalogUploadMethod() === 'sftp') {
+            if (eswCoreHelper.isEswCatalogFeatureEnabled() && eswCoreHelper.getCatalogUploadMethod() === Constants.SFTP) {
                 if (csvWriter) {
                     csvWriter.close();
                 }

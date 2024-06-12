@@ -23,6 +23,15 @@ global.request.httpParameters = {
     'country-code': ['en-IE']
 };
 
+let MoneyObj = {
+    available: true,
+    value: '10.99',
+    getDecimalValue: function () { return '10.99'; },
+    getCurrencyCode: function () { return ''; },
+    subtract: function () { return new Money(true); },
+    toFixed: '10.99'
+};
+
 describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', function () {
     var eswServiceHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL', {
         'dw/system/Logger': Logger,
@@ -56,7 +65,7 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
                     return 15;
                 },
                 getMoneyObject: function () {
-                    return Money();
+                    return MoneyObj;
                 },
                 isEswRoundingsEnabled: function () {
                     return 'true';
@@ -185,6 +194,11 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
                 },
                 custom: {}
             }])
+        };
+        MoneyObj.value = {
+            toFixed: function (amount) {
+                return '10.99';
+            }
         };
         const localizeObj = {
             applyCountryAdjustments: true,

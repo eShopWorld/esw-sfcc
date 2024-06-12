@@ -316,4 +316,21 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
             expect(ShippingLevelDiscountTotal).to.be.an('object');
         });
     });
+    describe('getOrderLevelDiscountTotal', function () {
+        let lineItemContainer = {};
+        lineItemContainer.getAdjustedMerchandizeTotalPrice = function () {
+            return 5;
+        };
+        lineItemContainer.getAdjustedMerchandizeTotalPrice = function () {
+            return {
+                subtract: function () {
+                    return 10;
+                }
+            };
+        };
+        it('should return getOrderLevelDiscountTotal', () => {
+            const orderLevelDiscount = eswHelper.getOrderLevelDiscountTotal(lineItemContainer, false);
+            expect(orderLevelDiscount).to.be.an('object');
+        });
+    });
 });

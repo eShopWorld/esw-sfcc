@@ -388,6 +388,58 @@
                 <display-name xml:lang="x-default">IS ESW Outbound Shipment Created?</display-name>
                 <description xml:lang="x-default">ESW Create Outbound Shipment?</description>
                 <type>boolean</type>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryFeeCurrency">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Fee Currency</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryTaxFeeCurrency">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee Currency</display-name>
+                <description xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee Currency</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryTaxFee">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee</display-name>
+                <description xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryFee">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Fee</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryFeeCurrency">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Fee Currency</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryTaxFeeCurrency">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee Currency</display-name>
+                <description xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee Currency</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryTaxFee">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee</display-name>
+                <description xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryFee">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Fee</display-name>
+                <type>double</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
@@ -421,6 +473,10 @@
                 <attribute attribute-id="eswRetailerCurrencyTotalOrderDiscount"/>
                 <attribute attribute-id="eswRetailerCurrencyOrderDiscountsInfo"/>
                 <attribute attribute-id="eswRetailerCurrencyDeliveryDiscountsInfo"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryFeeCurrency"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryFee"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryTaxFeeCurrency"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryTaxFee"/>
             </attribute-group>
             <attribute-group group-id="eswV2ShopperCurrency">
                 <display-name xml:lang="x-default">ESW Shopper Currency Order Confirmation</display-name>
@@ -439,6 +495,10 @@
                 <attribute attribute-id="eswShopperCurrencyTotalOrderDiscount"/>
                 <attribute attribute-id="eswShopperCurrencyOrderDiscountsInfo"/>
                 <attribute attribute-id="eswShopperCurrencyDeliveryDiscountsInfo"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryFeeCurrency"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryFee"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryTaxFeeCurrency"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryTaxFee"/>
             </attribute-group>
             <attribute-group group-id="eswV4Package">
                 <display-name xml:lang="x-default">ESW Package Information</display-name>
@@ -488,7 +548,7 @@
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
             <attribute-definition attribute-id="eswPaymentMethodCardBrand">
-                <display-name xml:lang="x-default">ESW Payment Method Card Brand</display-name>
+                <display-name xml:lang="x-default">ESW Payment Method Type</display-name>
                 <type>string</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -641,7 +701,7 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswProductPriceFreezeCountries"/>
                 <attribute attribute-id="eswSync"/>
                 <attribute attribute-id="eswSyncMessage"/>
-				<attribute attribute-id="eswLocalizedShoppingProduct"/>
+                <attribute attribute-id="eswLocalizedShoppingProduct"/>
             </attribute-group>
         </group-definitions>
     </type-extension>
@@ -651,6 +711,60 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <display-name xml:lang="x-default">ESW Shopper Currency Item Discounts Info</display-name>
                 <description xml:lang="x-default">Discount on cart items in shopper's currency</description>
                 <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryFeeCurrency">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Item Fee Currency</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryTaxFeeCurrency">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee Currency</display-name>
+                <description xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee Currency</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryTaxFee">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee</display-name>
+                <description xml:lang="x-default">ESW Retailer Cash On Delivery Tax Fee</description>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswRetailerCashOnDeliveryFee">
+                <display-name xml:lang="x-default">ESW Retailer Cash On Delivery Item Fee</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryFeeCurrency">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Item Fee Currency</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryFee">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Item Fee</display-name>
+                <type>double</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryTaxFeeCurrency">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee Currency</display-name>
+                <description xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee Currency</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswShopperCashOnDeliveryTaxFee">
+                <display-name xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee</display-name>
+                <description xml:lang="x-default">ESW Shopper Cash On Delivery Tax Fee</description>
+                <type>double</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
@@ -917,6 +1031,10 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswRetailerCurrencyItemAdministration"/>
                 <attribute attribute-id="eswRetailerCurrencyItemOtherTaxes"/>
                 <attribute attribute-id="eswRetailerCurrencyItemDiscountsInfo"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryFeeCurrency"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryFee"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryTaxFeeCurrency"/>
+                <attribute attribute-id="eswRetailerCashOnDeliveryTaxFee"/>
             </attribute-group>
             <attribute-group group-id="eswShopperCurrencyItemsConfirmation">
                 <display-name xml:lang="x-default">ESW Shopper Currency Order Items Confirmation</display-name>
@@ -932,6 +1050,10 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswShopperCurrencyItemAdministration"/>
                 <attribute attribute-id="eswShopperCurrencyItemOtherTaxes"/>
                 <attribute attribute-id="eswShopperCurrencyItemDiscountsInfo"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryFeeCurrency"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryFee"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryTaxFeeCurrency"/>
+                <attribute attribute-id="eswShopperCashOnDeliveryTaxFee"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

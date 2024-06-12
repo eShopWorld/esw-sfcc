@@ -2,9 +2,13 @@
 /**
 * Helper script for order confirmation back into SFCC from ESW Checkout
 **/
+const Constants = require('*/cartridge/scripts/util/Constants');
 const Site = require('dw/system/Site').getCurrent();
 const CustomerMgr = require('dw/customer/CustomerMgr');
 const CustomObjectMgr = require('dw/object/CustomObjectMgr');
+
+const Money = require('dw/value/Money');
+const PaymentMgr = require('dw/order/PaymentMgr');
 
 /* Script Modules */
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
@@ -32,17 +36,18 @@ const getEswOcHelper = {
     * @param {string} deliveryOption - Delivery Options POST/EXP2
     * @param {string} deliveryCountry - Delivery Country ISO
     * @param {Object} req - Request object
+    * @param {string} currentMethodID - Current Shipping Method ID
     */
-    setApplicableShippingMethods: function (order, deliveryOption, deliveryCountry, req) {
+    setApplicableShippingMethods: function (order, deliveryOption, deliveryCountry, req, currentMethodID) {
         let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
-        let appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry, false);
+        let appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry, false, currentMethodID);
         if (appliedShipping == null) {
             if (req) {
                 eswHelper.setBaseCurrencyPriceBook(req, Site.defaultCurrency);
             } else {
                 eswHelper.setBaseCurrencyPriceBook(Site.defaultCurrency);
             }
-            appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry);
+            appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry, false, currentMethodID);
         }
     },
     /**
@@ -170,7 +175,7 @@ const getEswOcHelper = {
         let shoppercurrencyAmount = Number(obj.checkoutTotal.shopper.amount);
         let retailercurrencyAmount = Number(obj.checkoutTotal.retailer.amount);
 
-        order.custom.eswFxrateOc = (shoppercurrencyAmount / retailercurrencyAmount).toFixed(4);
+        order.custom.eswFxrateOc = (shoppercurrencyAmount / retailercurrencyAmount).toFixed(Constants.DECIMAL_LENGTH);
         order.custom.eswRetailerCurrencyTotalOrderDiscount = order.custom.eswShopperCurrencyTotalOrderDiscount / order.custom.eswFxrateOc;
         order.custom.eswShopperCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.deliveryOptionPriceInfo.price.shopper.amount);
         order.custom.eswRetailerCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.deliveryOptionPriceInfo.price.retailer.amount);
@@ -180,6 +185,20 @@ const getEswOcHelper = {
 
         let eswRetailerCurrencyDeliveryDiscountsInfo = this.getDeliveryDiscountsInfo(obj.deliveryOption, 'retailer');
         let eswShopperCurrencyDeliveryDiscountsInfo = this.getDeliveryDiscountsInfo(obj.deliveryOption, 'shopper');
+        let orderCashOnDeliveryObj = (!empty(obj.charges) && !empty(obj.charges.cashOnDelivery)) ? obj.charges.cashOnDelivery : '';
+        if (!empty(orderCashOnDeliveryObj)) {
+            order.custom.eswRetailerCashOnDeliveryFee = Number(orderCashOnDeliveryObj.retailer.amount);
+            order.custom.eswRetailerCashOnDeliveryFeeCurrency = orderCashOnDeliveryObj.retailer.currency;
+            order.custom.eswShopperCashOnDeliveryFee = Number(orderCashOnDeliveryObj.shopper.amount);
+            order.custom.eswShopperCashOnDeliveryFeeCurrency = orderCashOnDeliveryObj.shopper.currency;
+        }
+        let orderCashOnDeliveryTaxesObj = (!empty(obj.charges) && !empty(obj.charges.cashOnDeliveryTaxes)) ? obj.charges.cashOnDeliveryTaxes : '';
+        if (!empty(orderCashOnDeliveryTaxesObj)) {
+            order.custom.eswRetailerCashOnDeliveryTaxFee = Number(orderCashOnDeliveryTaxesObj.retailer.amount);
+            order.custom.eswRetailerCashOnDeliveryTaxFeeCurrency = orderCashOnDeliveryTaxesObj.retailer.currency;
+            order.custom.eswShopperCashOnDeliveryTaxFee = Number(orderCashOnDeliveryTaxesObj.shopper.amount);
+            order.custom.eswShopperCashOnDeliveryTaxFeeCurrency = orderCashOnDeliveryTaxesObj.shopper.currency;
+        }
 
         order.custom.eswRetailerCurrencyDeliveryDiscountsInfo = !empty(eswRetailerCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswRetailerCurrencyDeliveryDiscountsInfo) : '';
         order.custom.eswShopperCurrencyDeliveryDiscountsInfo = !empty(eswShopperCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswShopperCurrencyDeliveryDiscountsInfo) : '';
@@ -246,6 +265,21 @@ const getEswOcHelper = {
         let retailerLineItemDiscounts = this.getItemDiscountsInfo(cartItem[0].product.productUnitPriceInfo.discounts, 'retailer', 'ProductLevelDiscount');
         lineItem.custom.eswShopperCurrencyItemDiscountsInfo = !empty(shopperLineItemDiscounts) ? JSON.stringify(shopperLineItemDiscounts) : '';
         lineItem.custom.eswRetailerCurrencyItemDiscountsInfo = !empty(retailerLineItemDiscounts) ? JSON.stringify(retailerLineItemDiscounts) : '';
+
+        let itemCashOnDeliveryObj = (!empty(cartItem[0].charges) && !empty(cartItem[0].charges.cashOnDelivery)) ? cartItem[0].charges.cashOnDelivery : '';
+        if (!empty(itemCashOnDeliveryObj)) {
+            lineItem.custom.eswRetailerCashOnDeliveryFee = Number(itemCashOnDeliveryObj.retailer.amount);
+            lineItem.custom.eswRetailerCashOnDeliveryFeeCurrency = itemCashOnDeliveryObj.retailer.currency;
+            lineItem.custom.eswShopperCashOnDeliveryFee = Number(itemCashOnDeliveryObj.shopper.amount);
+            lineItem.custom.eswShopperCashOnDeliveryFeeCurrency = itemCashOnDeliveryObj.shopper.currency;
+        }
+        let itemCashOnDeliveryTaxesObj = (!empty(cartItem[0].charges) && !empty(cartItem[0].charges.cashOnDeliveryTaxes)) ? cartItem[0].charges.cashOnDeliveryTaxes : '';
+        if (!empty(itemCashOnDeliveryTaxesObj)) {
+            lineItem.custom.eswRetailerCashOnDeliveryTaxFee = Number(itemCashOnDeliveryTaxesObj.retailer.amount);
+            lineItem.custom.eswRetailerCashOnDeliveryTaxFeeCurrency = itemCashOnDeliveryTaxesObj.retailer.currency;
+            lineItem.custom.eswShopperCashOnDeliveryTaxFee = Number(itemCashOnDeliveryTaxesObj.shopper.amount);
+            lineItem.custom.eswShopperCashOnDeliveryTaxFeeCurrency = itemCashOnDeliveryTaxesObj.shopper.currency;
+        }
 
         return {
             ShopperDiscount: [],
@@ -338,10 +372,72 @@ const getEswOcHelper = {
     * @param {Object} order - SFCC order object
     * @param {string} eswPaymentAmount - Total shopper currency amount of order
     * @param {string} cardBrand - Delivery Country ISO
+    * @param {Object} ocPayload - Complete order confirmation payload
     */
-    updateEswPaymentAttributes: function (order, eswPaymentAmount, cardBrand) {
-        order.paymentInstruments[0].paymentTransaction.custom.eswPaymentAmount = Number(eswPaymentAmount);
-        order.paymentInstruments[0].paymentTransaction.custom.eswPaymentMethodCardBrand = cardBrand;
+    updateEswPaymentAttributes: function (order, eswPaymentAmount, cardBrand, ocPayload) {
+        let splitPaymentsArr = this.getSplitPaymentDetails(ocPayload);
+        if (!empty(splitPaymentsArr) && splitPaymentsArr.length > 0) {
+            this.updateSplitPaymentInOrder(order, splitPaymentsArr, ocPayload);
+        } else {
+            order.paymentInstruments[0].paymentTransaction.custom.eswPaymentAmount = Number(eswPaymentAmount);
+            order.paymentInstruments[0].paymentTransaction.custom.eswPaymentMethodCardBrand = cardBrand;
+        }
+    },
+    /**
+     * Update order payments with split payments
+     * @param {dw.Order} order - DW order
+     * @param {Object} splitPaymentsArr - Split Payment Details
+     * @param {Object} ocPayload - OC Payload
+     * @returns {boolean} - true/false
+     */
+    updateSplitPaymentInOrder: function (order, splitPaymentsArr, ocPayload) {
+        if (splitPaymentsArr.length === 0) return false;
+        try {
+            let shopperCurrency = null;
+            let paymentMethod = 'ESW_PAYMENT';
+            let pis = order.getPaymentInstruments().iterator();
+
+            if ('lineItems' in ocPayload) { // OC v3
+                shopperCurrency = ocPayload.checkoutTotal.shopper.currency;
+            } else {
+                shopperCurrency = ocPayload.shopperCurrencyPaymentAmount.substring(0, 3);
+            }
+
+            // Remove previously binded payment instruments
+            while (pis.hasNext()) {
+                order.removePaymentInstrument(pis.next());
+            }
+            // Attach PI availble in OC payload
+            for (let i = 0; i < splitPaymentsArr.length; i++) {
+                let currentPI = splitPaymentsArr[i];
+                let paymentInst = order.createPaymentInstrument(paymentMethod, new Money(Number(currentPI.amountPaid), shopperCurrency));
+                paymentInst.paymentTransaction.custom.eswPaymentMethodCardBrand = currentPI.methodCardBrand || currentPI.method;
+                paymentInst.paymentTransaction.setPaymentProcessor(PaymentMgr.getPaymentMethod(paymentMethod).getPaymentProcessor());
+            }
+        } catch (e) {
+            return false;
+        }
+        return true;
+    },
+    /**
+     * Returns all aplit payments from OC payload; v2 and v3
+     * @param {Object} ocPayload - OC complete payload
+     * @returns {Object} - Split Payment Details
+     */
+    getSplitPaymentDetails: function (ocPayload) {
+        let splitPayments = null;
+        if (empty(ocPayload)) {
+            return splitPayments;
+        }
+
+        if (ocPayload && !empty(ocPayload)
+            && ('lineItems' in ocPayload || 'cartItems' in ocPayload)
+            && ocPayload.paymentRecords
+            && ocPayload.paymentRecords.length > 0) {
+            splitPayments = ocPayload.paymentRecords;
+        }
+
+        return splitPayments;
     },
     /**
     * Update ESW Order level custom attibutes for OC V2
@@ -375,11 +471,25 @@ const getEswOcHelper = {
         order.custom.eswEmailMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
         order.custom.eswSMSMarketingOptIn = !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false;
         order.custom.eswDeliveryOption = obj.deliveryOption.deliveryOption;
+        // Storing CoD attributes
+        if (obj.charges && !empty(obj.charges.retailerCurrencyCashOnDelivery)) {
+            order.custom.eswRetailerCashOnDeliveryFeeCurrency = !empty(obj.charges.retailerCurrencyCashOnDelivery) ? obj.charges.retailerCurrencyCashOnDelivery.substring(0, 3) : '';
+            order.custom.eswRetailerCashOnDeliveryFee = !empty(obj.charges.retailerCurrencyCashOnDelivery) ? Number(obj.charges.retailerCurrencyCashOnDelivery.substring(3)) : '';
+            order.custom.eswShopperCashOnDeliveryFeeCurrency = !empty(obj.charges.shopperCurrencyCashOnDelivery) ? obj.charges.shopperCurrencyCashOnDelivery.substring(0, 3) : '';
+            order.custom.eswShopperCashOnDeliveryFee = !empty(obj.charges.shopperCurrencyCashOnDelivery) ? Number(obj.charges.shopperCurrencyCashOnDelivery.substring(3)) : '';
+        }
+        // storing COD Taxes
+        if (obj.charges && !empty(obj.charges.retailerCurrencyCashOnDeliveryTaxes)) {
+            order.custom.eswRetailerCashOnDeliveryTaxFeeCurrency = !empty(obj.charges.retailerCurrencyCashOnDeliveryTaxes) ? obj.charges.retailerCurrencyCashOnDeliveryTaxes.substring(0, 3) : '';
+            order.custom.eswRetailerCashOnDeliveryTaxFee = !empty(obj.charges.retailerCurrencyCashOnDeliveryTaxes) ? Number(obj.charges.retailerCurrencyCashOnDeliveryTaxes.substring(3)) : '';
+            order.custom.eswShopperCashOnDeliveryTaxFeeCurrency = !empty(obj.charges.shopperCurrencyCashOnDeliveryTaxes) ? obj.charges.shopperCurrencyCashOnDeliveryTaxes.substring(0, 3) : '';
+            order.custom.eswShopperCashOnDeliveryTaxFee = !empty(obj.charges.shopperCurrencyCashOnDeliveryTaxes) ? Number(obj.charges.shopperCurrencyCashOnDeliveryTaxes.substring(3)) : '';
+        }
 
         let shoppercurrencyAmount = Number(obj.shopperCurrencyPaymentAmount.substring(3));
         let retailercurrencyAmount = Number(obj.retailerCurrencyPaymentAmount.substring(3));
 
-        order.custom.eswFxrateOc = (shoppercurrencyAmount / retailercurrencyAmount).toFixed(4);
+        order.custom.eswFxrateOc = (shoppercurrencyAmount / retailercurrencyAmount).toFixed(Constants.DECIMAL_LENGTH);
         order.custom.eswRetailerCurrencyTotalOrderDiscount = order.custom.eswShopperCurrencyTotalOrderDiscount / order.custom.eswFxrateOc;
         if ('shopperCurrencyDeliveryPriceInfo' in obj.deliveryOption) {
             order.custom.eswShopperCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.shopperCurrencyDeliveryPriceInfo.price.substring(3));
@@ -445,6 +555,20 @@ const getEswOcHelper = {
         lineItem.custom.eswRetailerCurrencyItemTaxes = Number(cartItem[0].retailerCurrencyItemTaxes.substring(3));
         lineItem.custom.eswShopperCurrencyItemTaxes = Number(cartItem[0].shopperCurrencyItemTaxes.substring(3));
         lineItem.custom.eswReturnProhibited = cartItem[0].product.isReturnProhibited;
+        // Storing CoD attributes
+        if (!empty(cartItem[0].retailerCurrencyItemCashOnDelivery)) {
+            lineItem.custom.eswRetailerCashOnDeliveryFeeCurrency = !empty(cartItem[0].retailerCurrencyItemCashOnDelivery) ? cartItem[0].retailerCurrencyItemCashOnDelivery.substring(0, 3) : '';
+            lineItem.custom.eswRetailerCashOnDeliveryFee = !empty(cartItem[0].retailerCurrencyItemCashOnDelivery) ? Number(cartItem[0].retailerCurrencyItemCashOnDelivery.substring(3)) : '';
+            lineItem.custom.eswShopperCashOnDeliveryFeeCurrency = !empty(cartItem[0].shopperCurrencyItemCashOnDelivery) ? cartItem[0].shopperCurrencyItemCashOnDelivery.substring(0, 3) : '';
+            lineItem.custom.eswShopperCashOnDeliveryFee = !empty(cartItem[0].shopperCurrencyItemCashOnDelivery) ? Number(cartItem[0].shopperCurrencyItemCashOnDelivery.substring(3)) : '';
+        }
+        // Storing CoD Tax attributes
+        if (!empty(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes)) {
+            lineItem.custom.eswRetailerCashOnDeliveryTaxFeeCurrency = !empty(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes) ? cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes.substring(0, 3) : '';
+            lineItem.custom.eswRetailerCashOnDeliveryTaxFee = !empty(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes) ? Number(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes.substring(3)) : '';
+            lineItem.custom.eswShopperCashOnDeliveryTaxFeeCurrency = !empty(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes) ? cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes.substring(0, 3) : '';
+            lineItem.custom.eswShopperCashOnDeliveryTaxFee = !empty(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes) ? Number(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes.substring(3)) : '';
+        }
     },
     /**
     * Update ESW Order Item level custom attibutes for OC V2
