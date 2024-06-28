@@ -563,10 +563,12 @@ let cartItem = [{
 var stubArrayList = sinon.stub();
 var stubURLUtils = sinon.stub();
 var PaymentMgrMock = require('../../../../mocks/dw/order/PaymentMgr');
+var orderMock = require('../../../../mocks/dw/order/Order');
 
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.js', function () {
     var getEswOcHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/system/Logger': Logger,
+        'dw/order/Order': orderMock,
         'dw/web/Cookie': Cookie,
         'dw/system/Transaction': Transaction,
         'dw/util/ArrayList': stubArrayList,

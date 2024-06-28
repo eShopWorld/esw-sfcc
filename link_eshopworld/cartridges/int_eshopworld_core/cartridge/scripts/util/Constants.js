@@ -26,4 +26,5 @@ exports.PAGE_SIZES = ['10', '50', '100', '500', '1000'];
 exports.DECIMAL_LENGTH = 8;
 exports.VERSION_2 = 'v2';
 exports.VERSION_3 = 'v3';
+exports.NOHOLD = 'NoHold';
 

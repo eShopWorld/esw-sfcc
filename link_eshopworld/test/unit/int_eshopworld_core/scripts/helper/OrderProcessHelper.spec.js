@@ -126,6 +126,7 @@ var cancelOrderReqObj = {
 };
 var returnReqObj = {
     ReturnOrder: {
+        ReturnOrderStatus: 'return',
         AppeasementType: 'Order',
         FullAppeasement: false,
         Transaction: {
@@ -188,6 +189,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
             }
         },
         'dw/web/URLUtils': stubURLUtils,
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         'dw/system/Site': {
             getCurrent: function () {
@@ -199,6 +201,12 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
                         return 'true';
                     }
                 };
+            }
+        },
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getCatalogUploadMethod: function () { return 'api'; },
+                getEswReturnOrderStatus: function () { return ''; },
             }
         },
         'dw/order/Order': dwOrderMock,
@@ -217,7 +225,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
         describe('Happy path', function () {
             it('Should update order with return response', function () {
                 let returnResult = eswOrderProcessHelper.markOrderAsReturn(returnReqObj);
-                expect(returnResult.ResponseCode).to.equal(400);
+                expect(returnResult.ResponseCode).to.equal(200);
             });
         });
         describe('Sad Path', function () {

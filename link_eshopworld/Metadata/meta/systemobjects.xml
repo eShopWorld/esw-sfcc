@@ -443,6 +443,12 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswKonbiniPayloadJson">
+                <display-name xml:lang="x-default">Esw Konbini Payload Json</display-name>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="eswV2">
@@ -534,6 +540,10 @@
                 <display-name xml:lang="x-default">Appeasement</display-name>
                 <attribute attribute-id="appeasementJsonPayload"/>
                 <attribute attribute-id="isAppeasement"/>
+            </attribute-group>
+            <attribute-group group-id="eswKonbini">
+                <display-name xml:lang="x-default">ESW Konbini Payments</display-name>
+                <attribute attribute-id="eswKonbiniPayloadJson"/>
             </attribute-group>
         </group-definitions>
     </type-extension>
@@ -1677,6 +1687,24 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswReturnOrderStatus">
+                <display-name xml:lang="x-default">ESW Return Order Status</display-name>
+                <description xml:lang="x-default">Required for Returns V3 - Indicates the return order status for which the return will be stored in SFCC</description>
+                <type>enum-of-string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <value-definitions>
+                    <value-definition default="true">
+                        <display xml:lang="x-default">Processed</display>
+                        <value>Processed</value>
+                    </value-definition>
+                    <value-definition>
+                        <display xml:lang="x-default">Refunded</display>
+                        <value>Refunded</value>
+                    </value-definition>
+                </value-definitions>
+                <default-value>Processed</default-value>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="ESW Localized Shopping Feed Configuration">
@@ -1762,6 +1790,7 @@ Example: &#13;
             <attribute-group group-id="ESW Returns Configuration">
                 <display-name xml:lang="x-default">ESW Returns Configuration</display-name>
                 <attribute attribute-id="eswCheckoutOnlyPackagesExport"/>
+                <attribute attribute-id="eswReturnOrderStatus"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

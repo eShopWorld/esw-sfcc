@@ -9,6 +9,7 @@ const CustomObjectMgr = require('dw/object/CustomObjectMgr');
 
 const Money = require('dw/value/Money');
 const PaymentMgr = require('dw/order/PaymentMgr');
+const Order = require('dw/order/Order');
 
 /* Script Modules */
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
@@ -606,6 +607,33 @@ const getEswOcHelper = {
             eswShopperCurrencyOrderDiscountsInfo: eswShopperCurrencyOrderDiscountsInfo,
             eswRetailerCurrencyOrderDiscountsInfo: eswRetailerCurrencyOrderDiscountsInfo
         };
+    },
+    /**
+     * Process order confirmation for Konbini orders, function must be wrap in Transaction
+     * @param {Object} ocPayload - Order confirmation payload for v2 and v3
+     * @param {dw.order} dwOrder - SFCC Order Object
+     * @param {string} totalCheckoutAmount - Total shopper currency amount of order
+     * @param {string} paymentCardBrand - Payment Card Brand
+     * @returns {boolean} - true/false
+     */
+    processKonbiniOrderConfirmation: function (ocPayload, dwOrder, totalCheckoutAmount, paymentCardBrand) {
+        let isKonbiniOrder = false;
+        if (empty(ocPayload)) {
+            return false;
+        }
+
+        if ('lineItems' in ocPayload || 'cartItems' in ocPayload) { // OC response for v3 and v2
+            isKonbiniOrder = !empty(ocPayload.paymentRecords) && ocPayload.paymentRecords.length > 0 && ocPayload.paymentRecords[0].isOverCounter;
+        }
+
+        if (isKonbiniOrder) {
+            dwOrder.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+            dwOrder.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+            dwOrder.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+            dwOrder.custom.eswKonbiniPayloadJson = JSON.stringify(ocPayload);
+            this.updateEswPaymentAttributes(dwOrder, totalCheckoutAmount, paymentCardBrand, ocPayload);
+        }
+        return isKonbiniOrder;
     }
 };
 

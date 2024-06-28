@@ -8,12 +8,14 @@ var CustomerMgrMock = require('../../../../mocks/dw/customer/CustomerMgr');
 var CustomObjectMgrMock = require('../../../../mocks/dw/object/CustomObjectMgr');
 var MoneyMock = require('../../../../mocks/dw/value/Money');
 var PaymentMgrMock = require('../../../../mocks/dw/order/PaymentMgr');
+var orderMock = require('../../../../mocks/dw/order/Order');
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.js', function () {
     var orderConfirmationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/customer/CustomerMgr': CustomerMgrMock,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         'dw/order/PaymentMgr': PaymentMgrMock,
         'dw/value/Money': MoneyMock,
+        'dw/order/Order': orderMock,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getMoneyObject: function () {

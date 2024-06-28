@@ -8,6 +8,18 @@ var stubURLUtils = sinon.stub();
 
 var dwOrderMock = require('../../../../mocks/dw/order/Order');
 var CustomObjectMgrMock = require('../../../../mocks/dw/object/CustomObjectMgr');
+let reqBodyJson = {
+    "BrandOrderReference": "TEST-00300014016",
+    "Code": "0",
+    "Message": "Success",
+    "TenantCode": "GOCAS",
+    "HoldStatus": "NoHold",
+    "DelieryCountryIso": "CH",
+    "transactionReference": "C857B3CD-5EB7-426D-8741-812E5ED214C0",
+    "LastUpddatedDateTime": "2024-11-27T12:39:32.920Z",
+    "orderType": "Checkout"
+}
+
 var cancelOrderReqObj = {
     Code: 0,
     Message: null,
@@ -126,6 +138,7 @@ var cancelOrderReqObj = {
 };
 var returnReqObj = {
     ReturnOrder: {
+        ReturnOrderStatus: 'return',
         AppeasementType: 'Order',
         FullAppeasement: false,
         Transaction: {
@@ -178,6 +191,12 @@ var transaction = {
 describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js', function () {
     var eswOrderProcessHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper', {
         'dw/system/Transaction': transaction,
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getCatalogUploadMethod: function () { return 'api'; },
+                getEswReturnOrderStatus: function () { return ''; },
+            }
+        },
         'dw/web/Cookie': stubCookie,
         'dw/system/Logger': {
             debug: function (text) {
@@ -188,6 +207,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
             }
         },
         'dw/web/URLUtils': stubURLUtils,
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         'dw/system/Site': {
             getCurrent: function () {
@@ -207,7 +227,14 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
                 return {
                     custom: {
                         eswRmaJson: '',
-                        eswIsReturned: ''
+                        eswIsReturned: '',
+                        eswKonbiniPayloadJson: ''
+                    },
+                    setExportStatus: function (status) {
+                    },
+                    setPaymentStatus: function (status) {
+                    },
+                    setConfirmationStatus: function (status) {
                     }
                 };
             }
@@ -217,7 +244,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
         describe('Happy path', function () {
             it('Should update order with return response', function () {
                 let returnResult = eswOrderProcessHelper.markOrderAsReturn(returnReqObj);
-                expect(returnResult.ResponseCode).to.equal(400);
+                expect(returnResult.ResponseCode).to.equal(200);
             });
         });
         describe('Sad Path', function () {
@@ -248,6 +275,21 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
         describe('Sad Path', function () {
             it('Should throw error', function () {
                 let returnResult = eswOrderProcessHelper.cancelAnOrder(cancelOrderReqObj);
+                expect(returnResult.ResponseCode).to.equal('400');
+            });
+        });
+    });
+
+    describe('processKonbiniPayment', function () {
+        describe('Happy path', function () {
+            it('Should return status', function () {
+                let returnResult = eswOrderProcessHelper.processKonbiniPayment(reqBodyJson);
+                expect(returnResult.ResponseCode).to.equal('200');
+            });
+        });
+        describe('Sad path', function () {
+            it('should return error status', function () {
+                let returnResult = eswOrderProcessHelper.processKonbiniPayment();
                 expect(returnResult.ResponseCode).to.equal('400');
             });
         });

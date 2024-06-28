@@ -15,6 +15,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswValidateOrderinventory
         'dw/customer/CustomerMgr': CustomerMgrMock,
         'dw/value/Money': MoneyMock,
         'dw/order/PaymentMgr': PaymentMgrMock,
+        'dw/order/Order': Order,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {

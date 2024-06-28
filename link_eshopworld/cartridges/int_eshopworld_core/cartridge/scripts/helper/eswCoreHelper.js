@@ -1756,10 +1756,14 @@ const getEswHelper = {
             try {
                 if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent' || requestType === 'logistics-return-order-retailer') {
+                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
                     responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
+                } else if (obj && !empty(obj) && requestType === 'logistics-return-order-retailer') {
+                    responseJSON = eswOrderProcessHelper.markOrderAsReturnV3(obj);
                 } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
+                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.oms.orderholdstatusupdatedevent') {
+                    responseJSON = eswOrderProcessHelper.processKonbiniPayment(obj);
                 }
             } catch (error) {
                 logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
@@ -1857,6 +1861,9 @@ const getEswHelper = {
     },
     isEswCheckoutOnlyPackagesExportEnabled: function () {
         return Site.getCustomPreferenceValue('eswCheckoutOnlyPackagesExport');
+    },
+    getEswReturnOrderStatus: function () {
+        return Site.getCustomPreferenceValue('eswReturnOrderStatus');
     },
     /**
      * Set customer initial cookies

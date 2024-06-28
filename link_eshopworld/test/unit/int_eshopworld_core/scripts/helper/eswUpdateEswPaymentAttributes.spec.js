@@ -14,6 +14,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
         'dw/customer/CustomerMgr': CustomerMgrMock,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         'dw/order/PaymentMgr': PaymentMgrMock,
+        'dw/order/Order': require('../../../../mocks/dw/order/Order'),
         'dw/value/Money': MoneyMock,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {

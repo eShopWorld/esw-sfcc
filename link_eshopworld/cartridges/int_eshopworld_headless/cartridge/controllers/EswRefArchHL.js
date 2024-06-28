@@ -138,13 +138,17 @@ server.post('Notify', function (req, res, next) {
                     ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
 
                     OrderMgr.placeOrder(order);
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_READY);
                     if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId) && obj.shopperCheckoutExperience.saveAddressForNextPurchase) {
                         ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId);
                     }
-                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    // Add konbini related order information
+                    let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
+                    if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_READY);
+                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        }
                     }
                 }
             });
