@@ -13,7 +13,6 @@ const ArrayList = require('dw/util/ArrayList');
 const URLUtils = require('dw/web/URLUtils');
 const ContentMgr = require('dw/content/ContentMgr');
 
-
 const getEswHelper = {
     isEnableLandingPageRedirect: function () {
         return Site.getCustomPreferenceValue('eswEnableLandingPageRedirect');
@@ -27,6 +26,9 @@ const getEswHelper = {
     isEswCatalogApiMethod: function () {
         let Constants = require('*/cartridge/scripts/util/Constants');
         return this.isEswCatalogFeatureEnabled() && this.getCatalogUploadMethod() === Constants.API;
+    },
+    getEswCatalogFeedLastExec: function () {
+        return Site.getCustomPreferenceValue('eswCatalogFeedTimeStamp');
     },
     /**
      * Determine pa version used by the service URL
@@ -382,7 +384,7 @@ const getEswHelper = {
     isReturnProhibited: function (product, shopperCountry) {
         if (this.getReturnProhibitionEnabled()) {
             let currCountry = shopperCountry || this.getAvailableCountry();
-            let returnProhibitedCountries = ('eswProductReturnProhibitedCountries' in product.custom) ? product.custom.eswProductReturnProhibitedCountries : null;
+            let returnProhibitedCountries = (product && product.custom && 'eswProductReturnProhibitedCountries' in product.custom) ? product.custom.eswProductReturnProhibitedCountries : null;
             if (!empty(returnProhibitedCountries)) {
                 // eslint-disable-next-line no-restricted-syntax
                 for (let country in returnProhibitedCountries) {
@@ -668,6 +670,9 @@ const getEswHelper = {
                 roundingModel = !empty(session.privacy.rounding) ? JSON.parse(session.privacy.rounding) : false;
             }
             if (!roundingModel || empty(roundingModel) || price === 0) {
+                return price;
+            }
+            if (roundingModel && roundingModel.direction.equalsIgnoreCase('None')) {
                 return price;
             }
 
@@ -1159,23 +1164,26 @@ const getEswHelper = {
     /**
      * Check if shipping discount based on coupons or not
      * @param {Object} cart object
+     * @param {string} currentMethodID - current shipping method id
      * @return {boolean} - true/ false
      */
-    isDeliveryDiscountBasedOnCoupon: function (cart) {
+    isDeliveryDiscountBasedOnCoupon: function (cart, currentMethodID) {
+        let PromotionMgr = require('dw/campaign/PromotionMgr');
         let collections = require('*/cartridge/scripts/util/collections');
         let shippingPriceAdjustmentIter = cart.defaultShipment.shippingPriceAdjustments.iterator(),
             isBasedOnCoupon = false,
             couponPriceAdjustmentIter = !empty(cart.couponLineItems) ? cart.couponLineItems.iterator() : null;
         while (shippingPriceAdjustmentIter.hasNext()) {
             let shippingPriceAdjustment = shippingPriceAdjustmentIter.next();
-            if (shippingPriceAdjustment.basedOnCoupon) {
+            if (shippingPriceAdjustment.basedOnCoupon && cart.shipments[0].shippingMethodID === currentMethodID) {
                 isBasedOnCoupon = true;
             }
         }
         if (!isBasedOnCoupon && !empty(couponPriceAdjustmentIter)) {
+            PromotionMgr.applyDiscounts(cart);
             while (couponPriceAdjustmentIter.hasNext()) {
                 let couponPriceAdjustment = couponPriceAdjustmentIter.next();
-                if (!couponPriceAdjustment.priceAdjustments.empty) {
+                if (!couponPriceAdjustment.priceAdjustments.empty && couponPriceAdjustment.priceAdjustments.length < 1) {
                     isBasedOnCoupon = true;
                 }
             }
@@ -1193,6 +1201,21 @@ const getEswHelper = {
             }
         }
         return isBasedOnCoupon;
+    },
+    /** Checks if a basket has no promotions applied, and if so, removes any coupons.
+    * @param {dw.order.Basket} basket The basket to check and potentially remove coupons from
+    */
+    removeCouponsIfNoPromotions: function (basket) {
+        let shippingPriceAdjustmens = basket.getAllShippingPriceAdjustments();
+        if (shippingPriceAdjustmens.empty) {
+            let couponLineItems = basket.getCouponLineItems();
+            for (let i = 0; i < couponLineItems.length; i++) {
+                let couponLineItem = couponLineItems[i];
+                if (couponLineItem.priceAdjustments.length < 1) {
+                    basket.removeCouponLineItem(couponLineItem);
+                }
+            }
+        }
     },
     /**
      * Get custom object details using ID & Key
@@ -1687,8 +1710,9 @@ const getEswHelper = {
      * This function is used to apply overide shipping id on scapi basket
      * @param {Object} cart object
      * @param {string} countryCode scapi country param
+     * @param {string} currentMethodID - current shipping method id
      */
-    applyOverrideShipping: function (cart, countryCode) {
+    applyOverrideShipping: function (cart, countryCode, currentMethodID) {
         try {
             let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
             let shippingOverrides = this.getOverrideShipping(),
@@ -1702,13 +1726,13 @@ const getEswHelper = {
             }
             if (!empty(isOverrideCountry) && isOverrideCountry[0] != null) {
                 if (eswHelperHL.getShippingServiceType(cart, countryCode, isOverrideCountry) === 'POST') {
-                    eswHelperHL.applyShippingMethod(cart, 'POST', countryCode, true);
+                    eswHelperHL.applyShippingMethod(cart, 'POST', countryCode, true, currentMethodID);
                 } else {
-                    eswHelperHL.applyShippingMethod(cart, 'EXP2', countryCode, true);
+                    eswHelperHL.applyShippingMethod(cart, 'EXP2', countryCode, true, currentMethodID);
                 }
             } else {
                 let defaultShippingMethodID = customizationHelper.getDefaultShippingMethodID(ShippingMgr.getDefaultShippingMethod().getID(), cart);
-                eswHelperHL.applyShippingMethod(cart, defaultShippingMethodID, countryCode, false);
+                eswHelperHL.applyShippingMethod(cart, defaultShippingMethodID, countryCode, false, currentMethodID);
             }
         } catch (error) {
             logger.error('Error while updating basket shipping {0} {1}', error.message, error.stack);
@@ -1732,10 +1756,14 @@ const getEswHelper = {
             try {
                 if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent' || requestType === 'logistics-return-order-retailer') {
+                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
                     responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
+                } else if (obj && !empty(obj) && requestType === 'logistics-return-order-retailer') {
+                    responseJSON = eswOrderProcessHelper.markOrderAsReturnV3(obj);
                 } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
+                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.oms.orderholdstatusupdatedevent') {
+                    responseJSON = eswOrderProcessHelper.processKonbiniPayment(obj);
                 }
             } catch (error) {
                 logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
@@ -1833,6 +1861,9 @@ const getEswHelper = {
     },
     isEswCheckoutOnlyPackagesExportEnabled: function () {
         return Site.getCustomPreferenceValue('eswCheckoutOnlyPackagesExport');
+    },
+    getEswReturnOrderStatus: function () {
+        return Site.getCustomPreferenceValue('eswReturnOrderStatus');
     },
     /**
      * Set customer initial cookies
@@ -2078,6 +2109,90 @@ const getEswHelper = {
     },
     beautifyJsonAsString: function (jsonStr) {
         return JSON.stringify(jsonStr, null, '\t');
+    },
+    /**
+     * Check if esw for order have split payments
+     * @param {dw.order.LineItemCtnr} order - the current order
+     * @return {array} - splitPaymentInfo - payment Information
+     */
+    EswSplitPaymentDetails: function (order) {
+        let formatMoney = require('dw/util/StringUtils').formatMoney;
+        let splitPaymentInfo = [];
+        if (order.getPaymentInstruments() && order.getPaymentInstruments().length > 1) {
+            let pis = order.getPaymentInstruments().iterator();
+            while (pis.hasNext()) {
+                let pisInfo = pis.next().paymentTransaction;
+                if (pisInfo && pisInfo.custom && 'eswPaymentMethodCardBrand' in pisInfo.custom) {
+                    splitPaymentInfo.push({
+                        eswPaymentAmount: pisInfo.custom.eswPaymentMethodCardBrand !== 'GiftCertificate' && 'eswPaymentAmount' in pisInfo.custom ? formatMoney(new dw.value.Money(pisInfo.custom.eswPaymentAmount, order.custom.eswShopperCurrencyCode)) : formatMoney(new dw.value.Money(pisInfo.amount.value, order.custom.eswShopperCurrencyCode)),
+                        eswPaymentMethodCardBrand: pisInfo.custom.eswPaymentMethodCardBrand
+                    });
+                }
+            }
+        }
+        return splitPaymentInfo;
+    },
+    /**
+     * get country part from locale
+     * @param {*} locale - country locale, eg: en-IE, IE
+     * @returns {string} - country code from locale
+     */
+    getLocaleCountry: function (locale) {
+        let countryCode = locale;
+        if (locale.indexOf('-') !== -1) {
+            let localeArr = locale.split('-');
+            if (localeArr.length > 1) {
+                countryCode = localeArr[1];
+            }
+        }
+        return countryCode;
+    },
+    /**
+     * Return contry detail by local in httpParam or country id (IE, CA) string
+     * @param {*} httpParams - httpParam or country id (IE, CA) string
+     * @returns {Object} - getSelectedCountryDetail function
+     */
+    getCountryDetailByParam: function (httpParams) {
+        if (empty(httpParams)) {
+            return null;
+        }
+        let locale = httpParams;
+        try {
+            locale = httpParams.get('locale')[0];
+        } catch (e) {
+            locale = httpParams;
+        }
+        let loclaeCountryDetail;
+        try {
+            loclaeCountryDetail = this.getLocaleCountry(locale);
+        } catch (error) {
+            loclaeCountryDetail = httpParams.get('country-code')[0];
+        }
+        let countryDetail = this.getSelectedCountryDetail(loclaeCountryDetail);
+        return countryDetail;
+    },
+    /**
+     * Get localize country object for getMoneyObject function
+     * @param {Object} selectedCountryDetail - object of selected country
+     * @returns {Object} - localize object
+     */
+    getCountryLocalizeObj: function (selectedCountryDetail) {
+        let eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+        let selectedFxRate = this.getESWCurrencyFXRate(selectedCountryDetail.defaultCurrencyCode, selectedCountryDetail.countryCode);
+        let selectedCountryAdjustments = this.getESWCountryAdjustments(selectedCountryDetail.countryCode);
+        let localizeObj = {
+            currencyCode: selectedCountryDetail.defaultCurrencyCode,
+            countryCode: selectedCountryDetail.countryCode,
+            applyRoundingModel: !selectedCountryDetail.isFixedPriceModel && this.isEswRoundingsEnabled(),
+            applyCountryAdjustments: true, // !selectedCountryDetail.isFixedPriceModel
+            selectedFxRate: selectedFxRate[0],
+            selectedCountryAdjustments: selectedCountryAdjustments[0],
+            isFixedPriceModel: selectedCountryDetail.isFixedPriceModel
+        };
+        let selectedRoundingRule = eswPricingHelper.getESWRoundingModel(localizeObj);
+        localizeObj.selectedRoundingRule = selectedRoundingRule[0];
+        localizeObj.selectedCountry = localizeObj;
+        return localizeObj;
     }
 };
 

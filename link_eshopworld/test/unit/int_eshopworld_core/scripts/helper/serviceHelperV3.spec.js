@@ -17,6 +17,9 @@ var LoggerMock = require('../../../../mocks/dw/system/Logger');
 
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
+        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
+            getCountryDetailByParam: function () { return null; }
+        },
         '*/cartridge/scripts/util/collections': collections,
         'dw/system/Logger': LoggerMock,
         'dw/order/BasketMgr': basketMgrMock,

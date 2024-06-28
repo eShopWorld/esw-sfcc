@@ -5,6 +5,7 @@ chai.use(chaiHttp);
 
 var config = require('../it.config.spec');
 var integrationHelper = require('../integrationHelpers.spec');
+var checkoutHelpers = require('../checkoutHelpers.spec');
 var urlPaths = require('../paths.spec');
 
 /**
@@ -116,11 +117,8 @@ describe("controllers/EShopWorld.js", function () {
     describe("Notify", function () {
         it("Should throw if confirm order not with auth or BM existed OrderID status", async function () {
             let controllerPath = "/on/demandware.store/Sites-RefArch-Site/default/EShopWorld-Notify";
-            let resp = await chai.request(config.baseUrl).post(controllerPath).send(
-                {
-                    retailerCartId : 'fakeID',
-                    eShopWorldOrderNumber: 'fakeOrderNumber'
-                });
+            let requestObj = checkoutHelpers.getRequest();
+            let resp = await chai.request(config.baseUrl).post(controllerPath).send(requestObj);
             chai.expect(resp).to.throw;
         });
     });

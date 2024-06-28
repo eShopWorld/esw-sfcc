@@ -7,9 +7,9 @@
     <isif condition="${pdict.reportingURLs && pdict.reportingURLs.length}">
         <isinclude template="reporting/reportingUrls" />
     </isif>
-    
+
     <div class="cart-error-messaging cart-error">
-        <isif condition="${pdict.valid.error && pdict.items.length !== 0}">
+        <isif condition="${(pdict.valid && pdict.valid.error && pdict.items.length !== 0)}">
             <div class="alert alert-danger alert-dismissible valid-cart-error fade show" role="alert">
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                     <span aria-hidden="true">&times;</span>

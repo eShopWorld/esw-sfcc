@@ -217,6 +217,9 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
     var preparePreOrder = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelper', {
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
+                getEnableInventoryCheck: function () {
+                    return false;
+                },
                 getMoneyObject: function () {
                     return Money();
                 },

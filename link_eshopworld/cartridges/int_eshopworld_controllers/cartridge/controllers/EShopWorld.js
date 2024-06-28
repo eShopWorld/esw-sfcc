@@ -396,7 +396,8 @@ function notify() {
                 }
                 // If order exist with created status in SFCC then perform order confirmation
                 if (order.status.value === Order.ORDER_STATUS_CREATED) {
-                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso);
+                    let currentMethodID = order.shipments[0].shippingMethodID;
+                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, null, currentMethodID);
                     // update ESW order custom attributes
                     if ('checkoutTotal' in obj) { // OC response v3.0
                         ocHelper.updateEswOrderAttributesV3(obj, order);

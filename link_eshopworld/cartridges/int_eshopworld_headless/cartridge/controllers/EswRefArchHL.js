@@ -61,6 +61,8 @@ server.post('ValidateInventory', function (req, res, next) {
 server.post('Notify', function (req, res, next) {
     let Transaction = require('dw/system/Transaction'),
         OrderMgr = require('dw/order/OrderMgr'),
+        BasketMgr = require('dw/order/BasketMgr'),
+        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
         responseJSON = {};
 
     if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
@@ -80,9 +82,10 @@ server.post('Notify', function (req, res, next) {
             let ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
                 shopperCurrency = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.currency : obj.shopperCurrencyPaymentAmount.substring(0, 3),
                 totalCheckoutAmount = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.amount : obj.shopperCurrencyPaymentAmount.substring(3),
-                paymentCardBrand = ('paymentDetails' in obj) ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand;
+                paymentCardBrand = ('paymentDetails' in obj) ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand,
+                basket = BasketMgr.getCurrentOrNewBasket();
             // Set Override Price Books
-            ocHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency, req);
+            pricingHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency, basket, true);
 
             Transaction.wrap(function () {
                 let order = OrderMgr.getOrder(obj.retailerCartId);
@@ -93,6 +96,8 @@ server.post('Notify', function (req, res, next) {
                     responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
                     res.json(responseJSON);
                     return;
+                } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
+                    OrderMgr.undoFailOrder(order);
                 }
                 // If order already confirmed & processed
                 if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
@@ -102,7 +107,8 @@ server.post('Notify', function (req, res, next) {
                 }
                 // If order exist with created status in SFCC then perform order confirmation
                 if (order.status.value === Order.ORDER_STATUS_CREATED) {
-                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req);
+                    let currentMethodID = order.shipments[0].shippingMethodID;
+                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req, currentMethodID);
                     // update ESW order custom attributes
                     if ('checkoutTotal' in obj) { // OC response v3.0
                         ocHelper.updateEswOrderAttributesV3(obj, order);
@@ -132,13 +138,17 @@ server.post('Notify', function (req, res, next) {
                     ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
 
                     OrderMgr.placeOrder(order);
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_READY);
                     if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId) && obj.shopperCheckoutExperience.saveAddressForNextPurchase) {
                         ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId);
                     }
-                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    // Add konbini related order information
+                    let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
+                    if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_READY);
+                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        }
                     }
                 }
             });
@@ -203,45 +213,12 @@ server.get('PriceConversion', function (req, res, next) {
     next();
 });
 
-/*
- * Function to handle order cancellation request coming from ESW CSP
+/**
+ * Process web hook for ESW Post order event
  */
-server.post('CancelOrder', function (req, res, next) {
-    let CustomObjectMgr = require('dw/object/CustomObjectMgr'),
-        OrderMgr = require('dw/order/OrderMgr'),
-        Transaction = require('dw/system/Transaction'),
-        responseJSON,
-        obj;
-
-    try {
-        obj = JSON.parse(req.body);
-        // cancel order check
-        let order = OrderMgr.getOrder(obj.Request.BrandOrderReference);
-        if (order.status.value !== Order.ORDER_STATUS_CANCELLED) {
-            Transaction.wrap(function () {
-                let co = CustomObjectMgr.getCustomObject('eswCancelledOrders', obj.Request.BrandOrderReference);
-
-                if (co) {
-                    co.getCustom().cancelledOrderRequestPayload = JSON.stringify(obj);
-                } else {
-                    co = CustomObjectMgr.createCustomObject('eswCancelledOrders', obj.Request.BrandOrderReference);
-                    co.getCustom().cancelledOrderRequestPayload = JSON.stringify(obj);
-                }
-            });
-        }
-        responseJSON = {
-            OrderNumber: obj.Request.BrandOrderReference,
-            ResponseCode: '200',
-            ResponseText: 'Order processed successfuly'
-        };
-    } catch (e) {
-        logger.error('ESW Plugin Error: {0}', e.message);
-        responseJSON = {
-            OrderNumber: obj.Request.BrandOrderReference,
-            ResponseCode: '400',
-            ResponseText: 'Error: Internal error'
-        };
-    }
+server.post('ProcessWebHooks', function (req, res, next) {
+    let responseJSON = {};
+    responseJSON = eswHelper.handleWebHooks(JSON.parse(req.body), request.httpHeaders.get('esw-event-type'));
     res.json(responseJSON);
     next();
 });

@@ -7,9 +7,49 @@ var collections = require('../../../../mocks/dw.util.CollectionHelper');
 var Logger = require('../../../../mocks/dw/system/Logger');
 var CustomerMgrMock = require('../../../../mocks/dw/customer/CustomerMgr');
 var CustomObjectMgrMock = require('../../../../mocks/dw/object/CustomObjectMgr');
+var MoneyMock = require('../../../../mocks/dw/value/Money');
+var PaymentMgrMock = require('../../../../mocks/dw/order/PaymentMgr');
+
+let ocPayload = {
+    lineItems: [],
+    paymentDetails: [
+        {
+            isOverCounter: true
+        }
+    ]
+};
+
+let dwOrder = {
+    setPaymentStatus: function (status) {
+        return '';
+    },
+    setExportStatus: function (status) {
+        return '';
+    },
+    setConfirmationStatus: function (status) {
+        return '';
+    },
+    paymentInstruments: [
+        {
+            paymentTransaction: {
+                custom: {
+                    eswPaymentAmount: '',
+                    eswPaymentMethodCardBrand: ''
+                }
+            }
+        }
+    ],
+    custom: {
+        eswKonbiniPayloadJson: true
+    }
+};
+
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.js', function () {
     var orderConfirmationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/customer/CustomerMgr': CustomerMgrMock,
+        'dw/order/Order': Order,
+        'dw/value/Money': MoneyMock,
+        'dw/order/PaymentMgr': PaymentMgrMock,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
@@ -24,6 +64,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                 }
             }
         },
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/system/Logger': Logger,
         '*/cartridge/scripts/util/collections': collections,
         'dw/system/Site': {
@@ -139,6 +180,20 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                 }
             }], 'retailer', 'ProductLevelDiscount');
             chai.expect(JSON.stringify(itemDiscount)).to.equal('[{"title":"QA_product_promo_fixed_price","description":"QA_product_promo_fixed_price","discount":{"retailer":{"currency":"EUR","amount":"26.98"}},"beforeDiscount":{"retailer":{"currency":"EUR","amount":"33.90"}}}]');
+        });
+    });
+    describe('processKonbiniOrderConfirmation', function () {
+        describe('Happy path', function () {
+            it('Should return boolean', function () {
+                let returnResult = orderConfirmationHelper.processKonbiniOrderConfirmation(ocPayload, dwOrder);
+                chai.expect(returnResult).to.equal(false);
+            });
+        });
+        describe('Sad path', function () {
+            it('Should return boolean', function () {
+                let returnResult = orderConfirmationHelper.processKonbiniOrderConfirmation();
+                chai.expect(returnResult).to.equal(false);
+            });
         });
     });
 });

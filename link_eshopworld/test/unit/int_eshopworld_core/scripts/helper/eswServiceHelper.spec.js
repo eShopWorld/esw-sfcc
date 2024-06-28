@@ -21,6 +21,9 @@ global.session = session;
 
 describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', function () {
     var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
+        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
+            getCountryDetailByParam: function () { return null; }
+        },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getMoneyObject: function () {
@@ -70,14 +73,19 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
         '*/cartridge/scripts/util/collections': collections,
         'dw/order/BasketMgr': basket
     });
-    describe('Happy path', function () {
-        it('it Should calculate cart discount price info', function () {
-            let cartDiscountPriceInfo = serviceHelperV3.getCartDiscountPriceInfo(basket, 0);
-            expect(cartDiscountPriceInfo).to.be.a('null');
+    describe('getProductUnitPriceInfo', function () {
+        // Test with Valid Product ID
+        it('returns correct unit price information for a valid product ID', function () {
+            const item = { basePrice: { value: 10.99, currencyCode: 'USD' } };
+            const result = serviceHelperV3.getProductUnitPriceInfo(item);
+            expect(result).to.deep.equal({ price: { currency: undefined, amount: '10.990' }, discounts: [] });
         });
-        it('it Should calculate price discount price info', function () {
-            let ProductUnitPriceInfo = serviceHelperV3.getProductUnitPriceInfo(basket.productLineItems);
-            expect(ProductUnitPriceInfo).to.be.a('null');
+
+        // Test with Invalid Product ID
+        it('returns an error for an invalid product ID', function () {
+            const item = { basePrice: { value: 10.99, currencyCode: 'USD' } };
+            const result = serviceHelperV3.getProductUnitPriceInfo(item, {}, {}, {});
+            expect(result).to.be.null;
         });
     });
     describe('Sad Path', function () {
@@ -105,7 +113,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                     lineItemText: 'someString',
                     promotion: { calloutMsg: 'some call out message' }
                 }])
-            }
+            };
             let deliveryDiscounts = serviceHelperV3.getDeliveryDiscounts(basket);
             expect(deliveryDiscounts).to.be.an('object');
             basket.defaultShipment = defaultShipment;

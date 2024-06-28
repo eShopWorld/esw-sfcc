@@ -562,15 +562,19 @@ let cartItem = [{
 
 var stubArrayList = sinon.stub();
 var stubURLUtils = sinon.stub();
+var PaymentMgrMock = require('../../../../mocks/dw/order/PaymentMgr');
+var orderMock = require('../../../../mocks/dw/order/Order');
 
 describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.js', function () {
     var getEswOcHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/system/Logger': Logger,
+        'dw/order/Order': orderMock,
         'dw/web/Cookie': Cookie,
         'dw/system/Transaction': Transaction,
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': stubURLUtils,
         'dw/value/Money': Money,
+        'dw/order/PaymentMgr': PaymentMgrMock,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             overridePriceCore: function () {
                 return false;
@@ -586,6 +590,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                 setBaseCurrencyPriceBook: function () {}
             }
         },
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/system/Site': {
             getCurrent: function () {
                 return {
@@ -611,6 +616,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
                 return;
             }
         },
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/object/CustomObjectMgr': CustomObjectMgr,
         'dw/order/BasketMgr': basketMgr,
         '*/cartridge/scripts/helper/eswCalculationHelper': {

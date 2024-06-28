@@ -41,6 +41,10 @@ var transaction = {
 describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', function () {
     var eswOrderProcessHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper', {
         'dw/system/Transaction': transaction,
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+            }
+        },
         'dw/web/Cookie': stubCookie,
         'dw/system/Logger': {
             debug: function (text) {
@@ -50,6 +54,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
                 return text;
             }
         },
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/web/URLUtils': stubURLUtils,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         'dw/system/Site': {

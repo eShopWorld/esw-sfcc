@@ -7,10 +7,15 @@ var collections = require('../../../../mocks/dw.util.CollectionHelper');
 var Logger = require('../../../../mocks/dw/system/Logger');
 var CustomerMgrMock = require('../../../../mocks/dw/customer/CustomerMgr');
 var CustomObjectMgrMock = require('../../../../mocks/dw/object/CustomObjectMgr');
+var MoneyMock = require('../../../../mocks/dw/value/Money');
+var PaymentMgrMock = require('../../../../mocks/dw/order/PaymentMgr');
 
 describe('int_eshopworld_core/cartridge/scripts/helper/eswValidateOrderinventoryHelper.js', function () {
     var orderConfirmationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper', {
         'dw/customer/CustomerMgr': CustomerMgrMock,
+        'dw/value/Money': MoneyMock,
+        'dw/order/PaymentMgr': PaymentMgrMock,
+        'dw/order/Order': Order,
         'dw/object/CustomObjectMgr': CustomObjectMgrMock,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
@@ -25,6 +30,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswValidateOrderinventory
                 }
             }
         },
+        '*/cartridge/scripts/util/Constants': require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants'),
         'dw/system/Logger': Logger,
         '*/cartridge/scripts/util/collections': collections,
         'dw/system/Site': {

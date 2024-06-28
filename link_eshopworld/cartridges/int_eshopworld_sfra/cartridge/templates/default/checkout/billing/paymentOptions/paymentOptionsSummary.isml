@@ -1,16 +1,32 @@
 <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page"/>
-
-<isif condition="${eswHelper.isOrderDetailEnabled() && !empty(pdict.order.totals.eswPaymentMethod)}">
-    <div class="payment-details">
-        <div class="row summary-details leading-lines">
-            <div class="col-8 start-lines">
-                <p> <span>${Resource.msg('esw.paymentMethod', 'esw', null)}</span></p>
-            </div>
-            <div class="col-4 end-lines">
-                <p class="text-right pricing shipping-method-price">
-                    ${pdict.order.totals.eswPaymentMethod}
-                </p>
+<isif condition="${eswHelper.isOrderDetailEnabled()}">
+   <isif condition="${pdict.order.paymentInstruments.length < 2}">
+        <div class="payment-details">
+            <div class="row summary-details leading-lines">
+                <div class="col-8 start-lines">
+                    <p> <span>${Resource.msg('esw.paymentMethod', 'esw', null)}</span></p>
+                </div>
+                <div class="col-4 end-lines">
+                    <p class="text-right pricing shipping-method-price">
+                        ${pdict.order.totals.eswPaymentMethod}
+                    </p>
+                </div>
             </div>
         </div>
-    </div>
+    <iselse/>
+      <isloop items="${pdict.order.paymentInstruments}" var="paymentInst">
+        <div class="payment-details">
+                <div class="row summary-details leading-lines" style="margin-bottom:0">
+                    <div class="col-8 start-lines">
+                        ${paymentInst.paymentTransaction.custom.eswPaymentMethodCardBrand}
+                    </div>
+                    <div class="col-4 end-lines">
+                        <p class="text-right pricing shipping-method-price">
+                           ${pdict.order.currencySymbol}<isprint value="${paymentInst.paymentTransaction.amount.value}" style="MONEY_LONG" />
+                        </p>
+                    </div>
+                </div>
+        </div>
+        </isloop>
+</isif>
 </isif>

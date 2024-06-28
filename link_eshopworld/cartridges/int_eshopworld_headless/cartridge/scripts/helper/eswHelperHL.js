@@ -53,9 +53,10 @@ const eswHelperHL = {
      * @param {string} shippingMethodID - shipping method ID
      * @param {string} shopperCountry - shopper selected country
      * @param {boolean} isNotifyReq - request coming from order confirmation or preorder
+     * @param {string} currentMethodID - current shipping method ID
      * @returns {Object} shipping method or null
      */
-    applyShippingMethod: function (order, shippingMethodID, shopperCountry, isNotifyReq) {
+    applyShippingMethod: function (order, shippingMethodID, shopperCountry, isNotifyReq, currentMethodID) {
         let ShippingMgr = require('dw/order/ShippingMgr'),
             eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
@@ -79,14 +80,14 @@ const eswHelperHL = {
                     if (isOverrideShippingCountry[0].shippingMethod.ID.indexOf(method.ID) !== -1) {
                         shipment.setShippingMethod(method);
                         ShippingMgr.applyShippingCost(cart);
-                        dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, isNotifyReq);
+                        dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, isNotifyReq, currentMethodID);
                         eswServiceHelper.updatePaymentInstrument(cart);
                         return method;
                     }
                 }
             } else if (!isNotifyReq && method.ID.equals(shippingMethodID) && method.currencyCode === cart.getCurrencyCode()) {
                 shipment.setShippingMethod(method);
-                dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, false);
+                dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', cart, false, currentMethodID);
                 return method;
             }
         }

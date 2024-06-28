@@ -43,7 +43,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCatalogHelper.js', fun
                 getCatalogUploadMethod: function () { return Constants.API; },
                 isEswCatalogInternalValidationEnabled: function () { return true; },
                 getEswCatalogFeedProductCustomAttrFieldMapping: function () { return { material: 'material', hsCode: 'hsCode', hsCodeRegion: 'hsCodeRegion', countryOfOrigin: 'countryOfOrigin' }; },
-                strToJson: function () { return {}; }
+                strToJson: function () { return {}; },
+                getEswCatalogFeedLastExec: function () { return new Date(); }
             }
         }
     });

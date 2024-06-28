@@ -55,13 +55,6 @@
                 <parameters/>
             </step>
         </flow>
-        <flow>
-            <context site-id="RefArch"/>
-            <step step-id="executeCatalogAPI" type="custom.ESW_RetailerCatalogAPI" enforce-restart="false">
-                <description>This job step Retailer catalog with ESW Catalog using REST API</description>
-                <parameters/>
-            </step>
-        </flow>
         <rules/>
         <triggers>
             <run-once enabled="false">

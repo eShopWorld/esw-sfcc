@@ -13,6 +13,8 @@
 const app = require('*/cartridge/scripts/app');
 const guard = require('*/cartridge/scripts/guard');
 
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+
 /**
 * Returns the converted price
 */
@@ -46,8 +48,7 @@ function PriceConversion() {
  * Function to be called from ESW to check Order items inventory in SFCC side.
  */
 function validateInventory() {
-    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
-        obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
+    let obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
     let responseJSON = eswHelper.getValidateInventoryResponseJson(obj);
     Response.renderJSON(responseJSON);
 }
@@ -60,8 +61,9 @@ function notify() {
         OrderMgr = require('dw/order/OrderMgr'),
         logger = require('dw/system/Logger'),
         Order = require('dw/order/Order'),
+        BasketMgr = require('dw/order/BasketMgr'),
         Response = require('*/cartridge/scripts/util/Response'),
-        eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
+        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
         responseJSON = {};
     if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
         response.setStatus(401);
@@ -80,9 +82,10 @@ function notify() {
             let ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
                 shopperCurrency = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.currency : obj.shopperCurrencyPaymentAmount.substring(0, 3),
                 totalCheckoutAmount = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.amount : obj.shopperCurrencyPaymentAmount.substring(3),
-                paymentCardBrand = ('paymentDetails' in obj) ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand;
-            // Set Override Price Books
-            ocHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency);
+                paymentCardBrand = ('paymentDetails' in obj) ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand,
+                basket = BasketMgr.getCurrentOrNewBasket();
+                // Set Override Price Books
+            pricingHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency, basket, true);
 
             Transaction.wrap(function () {
                 let order = OrderMgr.getOrder(obj.retailerCartId);
@@ -104,7 +107,8 @@ function notify() {
                 }
                 // If order exist with created status in SFCC then perform order confirmation
                 if (order.status.value === Order.ORDER_STATUS_CREATED) {
-                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso);
+                    let currentMethodID = order.shipments[0].shippingMethodID;
+                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, null, currentMethodID);
                     // update ESW order custom attributes
                     if ('checkoutTotal' in obj) { // OC response v3.0
                         ocHelper.updateEswOrderAttributesV3(obj, order);
@@ -168,47 +172,12 @@ function notify() {
 }
 
 /**
- * Function to handle order cancellation request coming from ESW CSP
+ * Store webhook response
+ * @returns {void} - Void
  */
-function cancelOrder() {
-    let CustomObjectMgr = require('dw/object/CustomObjectMgr'),
-        Transaction = require('dw/system/Transaction'),
-        OrderMgr = require('dw/order/OrderMgr'),
-        Order = require('dw/order/Order'),
-        Response = require('*/cartridge/scripts/util/Response'),
-        logger = require('dw/system/Logger'),
-        responseJSON,
-        obj;
-
-    try {
-        obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
-        // cancel order check
-        let order = OrderMgr.getOrder(obj.Request.BrandOrderReference);
-        if (order.status.value !== Order.ORDER_STATUS_CANCELLED) {
-            Transaction.wrap(function () {
-                let co = CustomObjectMgr.getCustomObject('eswCancelledOrders', obj.Request.BrandOrderReference);
-
-                if (co) { // If custom object exist then only update payload
-                    co.getCustom().cancelledOrderRequestPayload = JSON.stringify(obj);
-                } else { // Create new custom with request payload coming from ESW CSP
-                    co = CustomObjectMgr.createCustomObject('eswCancelledOrders', obj.Request.BrandOrderReference);
-                    co.getCustom().cancelledOrderRequestPayload = JSON.stringify(obj);
-                }
-            });
-        }
-        responseJSON = {
-            OrderNumber: obj.Request.BrandOrderReference,
-            ResponseCode: '200',
-            ResponseText: 'Order processed successfuly'
-        };
-    } catch (e) {
-        logger.error('ESW Plugin Error: {0}', e.message);
-        responseJSON = {
-            OrderNumber: obj.Request.BrandOrderReference,
-            ResponseCode: '400',
-            ResponseText: 'Error: Internal error'
-        };
-    }
+function processWebHooks() {
+    let responseJSON = {};
+    responseJSON = eswHelper.handleWebHooks(JSON.parse(request.httpParameterMap.requestBodyAsString), request.httpHeaders.get('esw-event-type'));
     Response.renderJSON(responseJSON);
 }
 
@@ -224,6 +193,6 @@ exports.ValidateInventory = guard.ensure(['post', 'https'], validateInventory);
  * @see {@link module:controllers/EShopWorld~Notify} */
 exports.Notify = guard.ensure(['post', 'https'], notify);
 
-/** Handles the order cancellation request coming from ESW CSP
- * @see {@link module:controllers/EswHL~CancelOrder} */
-exports.CancelOrder = guard.ensure(['post', 'https'], cancelOrder);
+/** Process the webhook for Logistic return portal.
+ * @see module:controllers/EShopWorld~processWebHooks */
+exports.ProcessWebHooks = guard.ensure(['post'], processWebHooks);

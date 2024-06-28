@@ -47,6 +47,8 @@ const getEswCalculationHelper = {
                 selectedCurrencyCode = selectedCountryInfo.currencyCode;
                 selectedRoundingRule = selectedCountryInfo.selectedRoundingRule;
                 isJob = typeof selectedCountryInfo.isJob !== 'undefined' && selectedCountryInfo.isJob ? selectedCountryInfo.isJob : false;
+                baseCurrency = !empty(country) ? eswHelper.getBaseCurrencyPreference(country) : baseCurrency;
+                selectedCountry = typeof selectedCountry === 'object' && 'countryCode' in selectedCountry ? selectedCountry.countryCode : selectedCountry;
             }
 
             // Checking if selected country is set as a fixed price country
@@ -124,7 +126,7 @@ const getEswCalculationHelper = {
                     }
                 }
                 cartBasePrice += cart.basePrice.value;
-                if (empty(localizeObj) || empty(conversionPrefs)) {
+                if (empty(localizeObj) && empty(conversionPrefs) && !empty(request.httpCookies['esw.currency'])) {
                     total = eswHelper.getMoneyObject(cartBasePrice, false, false).value * cart.quantity.value;
                     currencyCode = request.httpCookies['esw.currency'].value;
                 } else {
