@@ -2,10 +2,15 @@
 
 const chai = require('chai');
 const proxyquire = require('proxyquire').noCallThru();
-const SiteMock = require('../../../../mocks/dw/system/Site');
 const LoggerMock = require('../../../../mocks/dw/system/Logger');
 const ArrayList = require('../../../../mocks/dw.util.Collection');
 const StringUtilsMock = require('../../../../mocks/dw/util/StringUtils');
+const URLUtilsMock = require('../../../../mocks/dw/web/URLUtils');
+const collections = require('../../../../mocks/dw.util.CollectionHelper');
+const Transaction = require('../../../../mocks/dw/system/Transaction');
+const CustomObjectMgr = require('../../../../mocks/dw/object/CustomObjectMgr');
+const SystemMock = require('../../../../mocks/dw/system/System');
+SystemMock.getCompatibilityMode = function () { return ''; };
 
 const ObjectAttributeDefinition = require('../../../../mocks/dw/object/ObjectAttributeDefinition');
 ObjectAttributeDefinition.getID = function () { return 'aFakeId'; };
@@ -15,6 +20,11 @@ ObjectAttributeDefinition.isMandatory = function () { return true; };
 ObjectAttributeDefinition.getValues = function () { };
 ObjectAttributeDefinition.getObjectTypeDefinition = function () { return new ArrayList([]); };
 ObjectAttributeDefinition.valueTypeCode = 8;
+
+CustomObjectMgr.createCustomObject = function () { return {
+    getCustom: function () { return {configReport: ''} }
+}};
+
 
 const ObjectAttributeGroupMock = require('../../../../mocks/dw/object/ObjectAttributeGroup');
 ObjectAttributeGroupMock.getID = function () { return 'aFakeId'; };
@@ -39,13 +49,38 @@ let attributeDefinition = {
     getValues: function () { return 'false'; }
 };
 
+let resource = {
+    msg: function (param1) {
+        return param1;
+    }
+};
+
+let CustomSiteMock = {};
+
 
 describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helpers/eswBmGeneralHelper.js', function () {
     let eswBmGeneralHelpers = proxyquire('../../../../../cartridges/bm_eshopworld_core/cartridge/scripts/helpers/eswBmGeneralHelper.js', {
-        'dw/system/Site': SiteMock,
+        'dw/system/Site': CustomSiteMock,
         getFieldType: function () { return { type: 'Boolean', template: 'form-fields/boolean-field' }; },
         'dw/system/Logger': LoggerMock,
         'dw/util/StringUtils': StringUtilsMock,
+        'dw/system/System': SystemMock,
+        'dw/web/URLUtils': URLUtilsMock,
+        'dw/web/Resource': resource,
+        '*/cartridge/scripts/util/collections': collections,
+        '*/cartridge/scripts/services/EswCoreService': {
+            getEswServices: function () {
+                return {
+                    getOAuthService: function () {
+                        return {
+                            call: function () {
+                                return {};
+                            }
+                        };
+                    }
+                };
+            }
+        },
         mapGroup: function () {
             return {
                 id: 'aFakeId',
@@ -55,9 +90,26 @@ describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helper
                 attributes: []
             };
         },
+        'dw/system/Transaction': Transaction,
+        'dw/object/CustomObjectMgr': CustomObjectMgr,
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
-                getCatalogUploadMethod: function () { return 'api'; }
+                getCatalogUploadMethod: function () { return 'api'; },
+                getCheckoutServiceName: function () { return 'testService'; },
+                getCustomObjectDetails: function () { return {}; },
+                queryAllCustomObjects: function () {
+                    return [
+                        { custom: 'GB' }
+                    ];
+                },
+                getPricingAdvisorData: function () {
+                    return {
+
+                    };
+                },
+                formatTimeStamp: function () {
+                    return 'YYYY-MM-DD';
+                }
             }
         },
         '*/cartridge/scripts/helper/eswBmHelper': {
@@ -174,8 +226,81 @@ describe('link_eshopworld/cartridges/bm_eshopworld_core/cartridge/scripts/helper
 
     describe('Return loadGroups Attribute', function () {
         it('Should return loadGroups', function () {
+            CustomSiteMock.getCurrent = function () {
+                return {
+                    getPreferences: function () { return ''; },
+                    getAllowedLocales: function () { 
+                        return {
+                            toArray: function () { return []; }
+                        };
+                    },
+                    getAllowedCurrencies: function () { 
+                        return {
+                            toArray: function () { return []; }
+                        };
+                    },
+                    getID: function () {
+                        return 'testID';
+                    }
+                };
+            };
             let loadGroupsAttr = eswBmGeneralHelpers.loadGroups({}, 'testURL', {}, 8);
             chai.expect(loadGroupsAttr).to.be.an('object');
+        });
+    });
+
+    describe('Return Monitoring report', function () {
+        it('Should return Monitoring report', function () {
+            let monitoringReport = eswBmGeneralHelpers.updateIntegrationMonitoring([
+                [
+                    {
+                        "SiteConfigs": {
+                            "site": null,
+                            "eswCartridgeVersion": null
+                        }
+                    },
+                    {
+                        "allowedLocales": null,
+                        "allowedCurrencies": null
+                    },
+                    {
+                        "ESWConfigs": {
+                            "storefront": {
+                                "customPrefrences": {
+                                    "ESWGeneralConfiguration": [
+                                        {
+                                            "displayName": null,
+                                            "value": null
+                                        }
+                                    ],
+                                    "ESWRetailerDisplayConfiguration": [
+                                        {
+                                            "displayName": null,
+                                            "value": null
+                                        },
+                                        {
+                                            "displayName": null,
+                                            "value": null
+                                        },
+                                        {
+                                            "displayName": null,
+                                            "value": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ]
+            ]);
+            chai.expect(monitoringReport).to.be.an('String');
+        });
+    });
+
+    describe('Return updated Integration Monitoring Report', function () {
+        it('Should Return updated Integration Monitoring Report', function () {
+            let monitoringReport = eswBmGeneralHelpers.loadReport('fakeCsrf');
+            chai.expect(monitoringReport).to.be.an('Array');
         });
     });
 

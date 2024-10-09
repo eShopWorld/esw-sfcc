@@ -20,6 +20,18 @@ let reqBodyJson = {
     "orderType": "Checkout"
 }
 
+let badReqBodyJson = {
+    "BrandOrderReference": "",
+    "Code": "0",
+    "Message": "Success",
+    "TenantCode": "GOCAS",
+    "HoldStatus": "NoHold",
+    "DelieryCountryIso": "CH",
+    "transactionReference": "C857B3CD-5EB7-426D-8741-812E5ED214C0",
+    "LastUpddatedDateTime": "2024-11-27T12:39:32.920Z",
+    "orderType": "Checkout"
+}
+
 var cancelOrderReqObj = {
     Code: 0,
     Message: null,
@@ -286,11 +298,32 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswOrderProcessHelper.js'
                 let returnResult = eswOrderProcessHelper.processKonbiniPayment(reqBodyJson);
                 expect(returnResult.ResponseCode).to.equal('200');
             });
+            it('Should return the correct response structure', function () {
+                let returnResult = eswOrderProcessHelper.processKonbiniPayment(reqBodyJson);
+                expect(returnResult).to.have.property('ResponseCode').that.equals('200');
+                expect(returnResult).to.have.property('ResponseText');
+            });
         });
         describe('Sad path', function () {
             it('should return error status', function () {
                 let returnResult = eswOrderProcessHelper.processKonbiniPayment();
                 expect(returnResult.ResponseCode).to.equal('400');
+            });
+            if('should return error status if order not found', function () {
+                let returnResult = eswOrderProcessHelper.processKonbiniPayment(badReqBodyJson);
+                expect(returnResult.ResponseCode).to.equal('400');
+            });
+        });
+        describe('Edge cases', function () {
+            it('Should handle minimal input', function () {
+                reqBodyJson = { /* minimal input request body */ };
+                let returnResult = eswOrderProcessHelper.processKonbiniPayment(reqBodyJson);
+                expect(returnResult.ResponseCode).to.equal('200');  // Adjust expected value based on minimal input
+            });
+            it('Should handle maximum input', function () {
+                reqBodyJson = { /* maximum input request body */ };
+                let returnResult = eswOrderProcessHelper.processKonbiniPayment(reqBodyJson);
+                expect(returnResult.ResponseCode).to.equal('200');  // Adjust expected value based on maximum input
             });
         });
     });

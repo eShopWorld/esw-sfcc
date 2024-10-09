@@ -33,10 +33,7 @@ function handlePreOrderRequestV2() {
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
     eswHelper.validatePreOrder(requestObj, true);
-    let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
-    if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
-        session.privacy.confirmedOrderID = requestObj.retailerCartId;
-    }
+    session.privacy.confirmedOrderID = requestObj.retailerCartId;
     let result = preorderServiceObj.call(JSON.stringify(requestObj));
     return result;
 }

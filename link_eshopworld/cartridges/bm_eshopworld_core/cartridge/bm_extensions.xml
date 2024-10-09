@@ -30,6 +30,21 @@
     </parameters>
     <icon>icons/esw-icon.gif</icon>
   </menuaction>
+  <menuaction id="esw_integration_id01" menupath="esw_id01" position="9999" site="true">
+    <name xml:lang="x-default">Integration Monitoring</name>
+    <short_description xml:lang="x-default">Integration Monitoring</short_description>
+    <description xml:lang="x-default">Integration Monitoring Reprts</description>
+    <exec pipeline="EShopWorldBM" node="LoadReports"/>
+    <sub-pipelines>
+      <pipeline name="EShopWorldBM-LoadReports" />
+    </sub-pipelines>
+    <parameters>
+      <parameter name="menuname" value="LoadReports"/>
+      <parameter name="menupath" value="esw_id01"/>
+      <parameter name="mainmenuname" value="ESW"/>
+    </parameters>
+    <icon>icons/esw-icon.gif</icon>
+  </menuaction>
   <menuaction id="esw_returns_menu" menupath="esw_id01" position="801" site="true">
         <name xml:lang="x-default">Returns</name>
         <short_description xml:lang="x-default">ESW returns related operations</short_description>

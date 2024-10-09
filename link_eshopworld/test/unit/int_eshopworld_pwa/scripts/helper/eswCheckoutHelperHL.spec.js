@@ -45,6 +45,12 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswCheckoutHelperHL.js', f
                 getMoneyObject: function () {
                     return Money();
                 },
+                getCountryDetailByParam: function () {
+                    return {countryCode: 'CA'};
+                },
+                getCountryLocalizeObj: function () {
+                    return {};
+                },
                 getCheckoutServiceName: function () {
                     return 'testService';
                 },

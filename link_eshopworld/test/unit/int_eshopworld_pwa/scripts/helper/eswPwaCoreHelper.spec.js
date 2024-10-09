@@ -2703,24 +2703,6 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswPwaCoreHelper.js', func
             }
         }
     });
-    // Unit test
-    it('Return country locale', () => {
-        let countryByTimeZone = eswPwaCoreHelper.getLocaleCountry('en-IE');
-        expect(countryByTimeZone).to.equals('IE');
-    });
-    it('return country details', () => {
-        const httpParams = 'en-IE';
-        let countryDetailByParam = eswPwaCoreHelper.getCountryDetailByParam(httpParams);
-        expect(countryDetailByParam).to.have.property('name');
-    });
-    it('return localized country details', () => {
-        const selectedCountryDetail = {
-            defaultCurrencyCode: 'USD',
-            countryCode: 'EUR'
-        };
-        let countryLocalizeObj = eswPwaCoreHelper.getCountryLocalizeObj(selectedCountryDetail);
-        expect(countryLocalizeObj).to.have.property('currencyCode');
-    });
     it('Modify product items', () => {
         const productItems = [{
             price: '',

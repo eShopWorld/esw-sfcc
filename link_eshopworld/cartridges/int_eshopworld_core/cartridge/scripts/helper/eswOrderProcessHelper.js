@@ -11,16 +11,23 @@ const eswOrderProcessHelper = {
     /**
      * Mark an order as return and add return response
      * @param {Object} reqBodyJson - request object
+     * @param {string} requestType - the type of request
      * @return {Object} - JSON response
      */
-    markOrderAsReturn: function (reqBodyJson) {
+    markOrderAsReturn: function (reqBodyJson, requestType) {
         try {
             let reqObj = reqBodyJson;
             let order = OrderMgr.getOrder(reqObj.ReturnOrder.BrandOrderReference);
             let rmaJSON = [];
             Transaction.wrap(function () {
+                let isStoreReturn = false;
+                if (requestType === 'logistics-return-order-retailer') {
+                    isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === eswCoreHelper.getEswReturnOrderStatus();
+                } else {
+                    isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === Constants.PROCESSED;
+                }
                 // eslint-disable-next-line no-param-reassign
-                if (reqObj.ReturnOrder.ReturnOrderStatus === Constants.PROCESSED) {
+                if (isStoreReturn) {
                     if (!empty(order.custom.eswRmaJson)) {
                         rmaJSON = JSON.parse(order.custom.eswRmaJson);
                     }
@@ -156,7 +163,7 @@ const eswOrderProcessHelper = {
      */
     processKonbiniPayment: function (reqBodyJson) {
         try {
-            let eswKonbiniPayloadJson = [];
+            let eswOverTheCounterPayloadJson = [];
             let order = OrderMgr.getOrder(reqBodyJson.BrandOrderReference);
 
             Transaction.wrap(function () {
@@ -165,12 +172,12 @@ const eswOrderProcessHelper = {
                     order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
                     order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
 
-                    if ('eswKonbiniPayloadJson' in order.custom && !empty(order.custom.eswKonbiniPayloadJson)) {
-                        eswKonbiniPayloadJson.push(JSON.parse(order.custom.eswKonbiniPayloadJson));
+                    if ('eswOverTheCounterPayloadJson' in order.custom && !empty(order.custom.eswOverTheCounterPayloadJson)) {
+                        eswOverTheCounterPayloadJson.push(JSON.parse(order.custom.eswOverTheCounterPayloadJson));
                     }
 
-                    eswKonbiniPayloadJson.push(reqBodyJson);
-                    order.custom.eswKonbiniPayloadJson = JSON.stringify(eswKonbiniPayloadJson);
+                    eswOverTheCounterPayloadJson.push(reqBodyJson);
+                    order.custom.eswOverTheCounterPayloadJson = JSON.stringify(eswOverTheCounterPayloadJson);
                 }
             });
         } catch (e) {

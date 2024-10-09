@@ -1,10 +1,11 @@
+<isset name="sfCountryUrlParam" value="${eswHelper.getSfCountryUrlParam(request.httpParameterMap)}" scope="page" />
 <footer id="footercontent">
     <div class="container">
         <div class="footer-container row">
             <div class="footer-item col-sm-3 store">
                 <iscontentasset aid="footer-locate-store" />
                 <isif condition="${eswHelper.getEShopWorldModuleEnabled()}">
-                	<isinclude url="${URLUtils.url('EShopWorld-GetEswFooter',dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam'), pdict.CurrentHttpParameterMap.get(dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam')))}"/>
+                	<isinclude url="${URLUtils.url('EShopWorld-GetEswFooter',sfCountryUrlParam.countryUrlParamKey, sfCountryUrlParam.countryUrlParamVal)}"/>
                 </isif>
             </div>
             <div class="footer-item col-sm-3 collapsible-xs">

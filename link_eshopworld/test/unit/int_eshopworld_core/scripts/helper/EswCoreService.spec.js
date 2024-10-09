@@ -77,5 +77,18 @@ describe('int_eshopworld_core/cartridge/scripts/services/EswCoreService.js', fun
             let serviceRes = EswCoreService.getCatalogService();
             expect(serviceRes).not.to.be.false;
         });
+        it('Should  not return false for getCatalogService', function () {
+            let service = {
+                URL: 'http://localhost:',
+                addHeader: function (header) {
+                    return '';
+                },
+                setRequestMethod: function (header) {
+                    return '';
+                }
+            };
+            let serviceRes = EswCoreService.createRequest(service);
+            expect(serviceRes).to.be.undefined;
+        });
     });
 });

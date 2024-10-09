@@ -250,7 +250,8 @@ const getEswHelper = {
             fxRates: '',
             countryAdjustment: '',
             roundingModels: '',
-            eswPricingSynchronizationId: ''
+            eswPricingSynchronizationId: '',
+            eswPriceFeedLastUpdated: ''
         };
         let paCustomObj = this.getCustomObjectDetails('ESW_PA_DATA', 'ESW_PA_DATA');
         if (paCustomObj) {
@@ -258,6 +259,7 @@ const getEswHelper = {
             paDataObj.countryAdjustment = JSON.parse(paCustomObj.getCustom().countryAdjustmentJson);
             paDataObj.roundingModels = JSON.parse(paCustomObj.getCustom().eswRoundingJson);
             paDataObj.eswPricingSynchronizationId = paCustomObj.getCustom().eswPricingSynchronizationId;
+            paDataObj.eswPriceFeedLastUpdated = paCustomObj.getCustom().eswPriceFeedLastUpdated;
         }
         return paDataObj;
     },
@@ -299,6 +301,9 @@ const getEswHelper = {
     },
     isFrontendConversionEnabled: function () {
         return Site.getCustomPreferenceValue('eswEnableFrontendPricesConversion');
+    },
+    isSkipFlaggedLocalPriceEnabled: function () {
+        return Site.getCustomPreferenceValue('eswSkipFlaggedLocalPrice');
     },
     getRussianStorageDataUrl: function () {
         return !empty(Site.getCustomPreferenceValue('eswRussianDataStorageUrl')) ? Site.getCustomPreferenceValue('eswRussianDataStorageUrl') : '';
@@ -1177,6 +1182,28 @@ const getEswHelper = {
             let shippingPriceAdjustment = shippingPriceAdjustmentIter.next();
             if (shippingPriceAdjustment.basedOnCoupon && cart.shipments[0].shippingMethodID === currentMethodID) {
                 isBasedOnCoupon = true;
+            } else if (!shippingPriceAdjustment.basedOnCoupon && shippingPriceAdjustment.basedOnCampaign && shippingPriceAdjustment.campaign.customerGroups.length > 0) {
+                isBasedOnCoupon = true;
+            }
+        }
+        if (!isBasedOnCoupon) {
+            collections.forEach(cart.getPriceAdjustments(), function (orderPriceAdjustment) {
+                if (orderPriceAdjustment.basedOnCoupon && orderPriceAdjustment.basedOnCampaign && (orderPriceAdjustment.promotion.enabled === true || orderPriceAdjustment.campaign.enabled === true)) {
+                    isBasedOnCoupon = true;
+                } else if (!orderPriceAdjustment.basedOnCoupon && orderPriceAdjustment.basedOnCampaign && orderPriceAdjustment.campaign.customerGroups.length > 0) {
+                    isBasedOnCoupon = true;
+                }
+            });
+            if (!isBasedOnCoupon) {
+                collections.forEach(cart.getAllProductLineItems(), function (productLineItem) {
+                    collections.forEach(productLineItem.getPriceAdjustments(), function (priceAdjustment) {
+                        if (priceAdjustment.basedOnCoupon && priceAdjustment.basedOnCampaign && (priceAdjustment.promotion.enabled === true || priceAdjustment.campaign.enabled === true)) {
+                            isBasedOnCoupon = true;
+                        } else if (!priceAdjustment.basedOnCoupon && priceAdjustment.basedOnCampaign && priceAdjustment.campaign.customerGroups.length > 0) {
+                            isBasedOnCoupon = true;
+                        }
+                    });
+                });
             }
         }
         if (!isBasedOnCoupon && !empty(couponPriceAdjustmentIter)) {
@@ -1186,18 +1213,6 @@ const getEswHelper = {
                 if (!couponPriceAdjustment.priceAdjustments.empty && couponPriceAdjustment.priceAdjustments.length < 1) {
                     isBasedOnCoupon = true;
                 }
-            }
-        }
-        if (!isBasedOnCoupon) {
-            collections.forEach(cart.getPriceAdjustments(), function (orderPriceAdjustment) {
-                isBasedOnCoupon = orderPriceAdjustment.basedOnCampaign && (orderPriceAdjustment.promotion.enabled === false || orderPriceAdjustment.campaign.enabled === false);
-            });
-            if (!isBasedOnCoupon) {
-                collections.forEach(cart.getAllProductLineItems(), function (productLineItem) {
-                    collections.forEach(productLineItem.getPriceAdjustments(), function (priceAdjustment) {
-                        isBasedOnCoupon = priceAdjustment.basedOnCampaign && (priceAdjustment.promotion.enabled === false || priceAdjustment.campaign.enabled === false);
-                    });
-                });
             }
         }
         return isBasedOnCoupon;
@@ -1211,7 +1226,7 @@ const getEswHelper = {
             let couponLineItems = basket.getCouponLineItems();
             for (let i = 0; i < couponLineItems.length; i++) {
                 let couponLineItem = couponLineItems[i];
-                if (couponLineItem.priceAdjustments.length < 1) {
+                if (couponLineItem.priceAdjustments.length < 1 && couponLineItem.promotion && couponLineItem.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_SHIPPING) {
                     basket.removeCouponLineItem(couponLineItem);
                 }
             }
@@ -1467,7 +1482,11 @@ const getEswHelper = {
     isAjaxCall: function () {
         return Object.hasOwnProperty.call(request.httpHeaders, 'x-requested-with');
     },
-
+    isOrderPlaced: function (orderID) {
+        let OrderMgr = require('dw/order/OrderMgr');
+        let order = OrderMgr.getOrder(orderID);
+        return order.status.value === 3 || order.status.value === 4;
+    },
     /**
      * Function to rebuild basket from back to ESW checkout
      * @param {string|null} orderId - order id
@@ -1479,10 +1498,35 @@ const getEswHelper = {
         let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
         let BasketMgr = require('dw/order/BasketMgr');
         let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+        let orderID = orderId || session.privacy.confirmedOrderID;
         try {
             let currentBasket = BasketMgr.getCurrentBasket();
             let eswHelper = this;
             if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
+                if (this.isOrderPlaced(orderID)) {
+                    if (!empty(currentBasket)) {
+                        Transaction.wrap(function () {
+                            let coupons = currentBasket.getCouponLineItems();
+                            let products = currentBasket.getAllProductLineItems();
+                            if (!empty(coupons)) {
+                                couponsItr = coupons.iterator();
+                                while (couponsItr.hasNext()) {
+                                    let coupon = couponsItr.next();
+                                    currentBasket.removeCouponLineItem(coupon);
+                                }
+                            }
+                            if (!empty(products)) {
+                                productsItr = products.iterator();
+                                while (productsItr.hasNext()) {
+                                    let product = productsItr.next();
+                                    currentBasket.removeProductLineItem(product);
+                                }
+                            }
+                        });
+                    }
+                    delete session.privacy.confirmedOrderID;
+                    return true;
+                }
                 if (!currentBasket) {
                     eswHelper.rebuildCart(orderId);
                     currentBasket = BasketMgr.getCurrentBasket();
@@ -1756,8 +1800,8 @@ const getEswHelper = {
             try {
                 if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.logistics.returnorderevent') {
-                    responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj);
+                } else if (obj && !empty(obj) && (requestType === 'eshopworld.platform.events.logistics.returnorderevent' || requestType === 'logistics-return-order-retailer')) {
+                    responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj, requestType);
                 } else if (obj && !empty(obj) && requestType === 'logistics-return-order-retailer') {
                     responseJSON = eswOrderProcessHelper.markOrderAsReturnV3(obj);
                 } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
@@ -1887,7 +1931,6 @@ const getEswHelper = {
         }
         this.createCookie('esw.InternationalUser', true, '/');
         this.createCookie('esw.sessionid', customer.ID, '/');
-        this.setCustomerCookies();
     },
     /**
      * Sets OAuth Token
@@ -2109,6 +2152,53 @@ const getEswHelper = {
     },
     beautifyJsonAsString: function (jsonStr) {
         return JSON.stringify(jsonStr, null, '\t');
+    },
+    /**
+     * Return country url param and its value from the URL
+     * @param {Map} httpParamMap - dw httpParamMap object
+     * @returns {Object} - param map and value
+     */
+    getSfCountryUrlParam: function (httpParamMap) {
+        let countryUrlParamKey = Site.getCustomPreferenceValue('eswCountryUrlParam');
+        let countryUrlParamVal = !empty(httpParamMap.get(countryUrlParamKey)) ? httpParamMap.get(countryUrlParamKey).value : null;
+        let qStrArr = '';
+        if (empty(countryUrlParamVal)) {
+            try {
+                let qStr = JSON.parse(JSON.parse(httpParamMap.get('params').stringValue).custom).queryString;
+                let matchingQstr = new RegExp(countryUrlParamKey + '=([^&]*)');
+                qStrArr = qStr.match(matchingQstr);
+                countryUrlParamVal = qStrArr ? qStrArr[1] : null;
+            } catch (e) {
+                return {
+                    countryUrlParamKey: countryUrlParamKey,
+                    countryUrlParamVal: countryUrlParamVal
+                };
+            }
+        }
+        return {
+            countryUrlParamKey: countryUrlParamKey,
+            countryUrlParamVal: countryUrlParamVal
+        };
+    },
+    /**
+     * This params can be built using this.getSfCountryUrlParam function
+     * @param {Map} pageParamsMap - params Map from as in page controller
+     * @returns {Object} - country info object
+     */
+    getSgCountryUrlParams: function (pageParamsMap) {
+        let countryParams = {
+            countryUrlParamKey: null,
+            countryUrlParamVal: null
+        };
+        try {
+            countryParams = JSON.parse(JSON.parse(pageParamsMap.get('params')).custom);
+            return {
+                countryUrlParamKey: countryParams.eswCountryUrlParamKey,
+                countryUrlParamVal: countryParams.eswCountryUrlParamVal
+            };
+        } catch (e) {
+            return countryParams;
+        }
     },
     /**
      * Check if esw for order have split payments

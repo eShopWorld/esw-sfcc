@@ -198,8 +198,25 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
     describe("Sad Path", function () {
         it("it Should confirm if delivery based coupon applied", function () {
             cart.defaultShipment.shippingPriceAdjustments = new ArrayList([{
-                basedOnCoupon: false
+                basedOnCoupon: false,
+                basedOnCampaign: false,
+                campaign: {
+                    customerGroups: {
+                        length: 0
+                    }
+                }
             }]);
+            cart.getPriceAdjustments = function () {
+                return new ArrayList([{
+                    basedOnCoupon: false,
+                    basedOnCampaign: false,
+                    campaign: {
+                        customerGroups: {
+                            length: 0
+                        }
+                    }
+                }]);
+            };
             let getOrderDiscount = eswCalculationHelper.isDeliveryDiscountBasedOnCoupon(cart);
             expect(getOrderDiscount).to.equal(false);
         });

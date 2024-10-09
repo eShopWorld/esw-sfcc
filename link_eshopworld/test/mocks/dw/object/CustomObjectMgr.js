@@ -47,6 +47,8 @@ CustomObjectMgr.queryCustomObjects = function(type){
 		customObject.custom.logStatus = true;
 		customObject.count = 0;
 		return customObject;
+	} else {
+		return {}
 	}
 };
 CustomObjectMgr.prototype.customObject=null;

@@ -36,24 +36,41 @@ const CATALOG_HELPER = {
         prodModel.setRecursiveCategorySearch(true);
         prodModel.setOrderableProductsOnly(true);
         prodModel.search();
-        let searchAbleProducts = prodModel.productSearchHits;
-        let productSearchHit;
+        let productSearchHits = prodModel.productSearchHits;
+        let filteredProducts = [];
         let feedlastExecutedTimeStamp = eswHelper.getEswCatalogFeedLastExec();
-        let productLastModifiedTimeStamp;
-        if (isApiMethod) {
-            let apiProducts = [];
-            if (searchAbleProducts) {
-                while (searchAbleProducts.hasNext()) {
-                    productSearchHit = searchAbleProducts.next();
-                    productLastModifiedTimeStamp = new Calendar(new Date(productSearchHit.product.lastModified));
-                    if (!this.isValidProduct(productSearchHit.product).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp))) {
-                        apiProducts.push(productSearchHit.product);
+        if (productSearchHits) {
+            while (productSearchHits.hasNext()) {
+                let productSearchHit = productSearchHits.next();
+                if (productSearchHit.hitType === 'master') {
+                    let masterProduct = productSearchHit.product;
+                    let productLastModifiedTimeStamp = new Calendar(new Date(masterProduct.lastModified));
+                    if (!isApiMethod || (!this.isValidProduct(masterProduct).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)))) {
+                        filteredProducts.push(masterProduct);
+                    }
+                    let variants = masterProduct.getVariants();
+                    if (!empty(variants)) {
+                        variants = variants.iterator();
+                        while (variants.hasNext()) {
+                            let variant = variants.next();
+                            if (variant.availabilityModel.isOrderable()) {
+                                productLastModifiedTimeStamp = new Calendar(new Date(variant.lastModified));
+                                if (!isApiMethod || (!this.isValidProduct(variant).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)))) {
+                                    filteredProducts.push(variant);
+                                }
+                            }
+                        }
+                    }
+                } else if (productSearchHit.hitType === 'bundle' || productSearchHit.hitType === 'set' || (productSearchHit.hitType === 'product' && !productSearchHit.product.isVariant())) {
+                    let productHit = productSearchHit.product;
+                    let productLastModifiedTimeStamp = new Calendar(new Date(productHit.lastModified));
+                    if (!isApiMethod || (!this.isValidProduct(productHit).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)))) {
+                        filteredProducts.push(productHit);
                     }
                 }
             }
-            return apiProducts;
         }
-        return searchAbleProducts;
+        return filteredProducts;
     },
     generateProductBatchPayload: function (productBatch) {
         let URLUtils = require('dw/web/URLUtils');
@@ -136,8 +153,7 @@ const CATALOG_HELPER = {
         }
     },
     isValidCountryOfOrigin: function (countryCode) {
-        let allowedCountryOfOrigin = 'AD,AE,AF,AG,AI,AL,AM,AN,AO,AQ,AR,AS,AT,AU,AW,AX,AZ,BA,BB,BD,BE,BF,BG,BH,BI,BJ,BL,BM,BN,BO,BQ,BR,BS,BT,BV,BW,BY,BZ,CA,CC,CD,CF,CG,CH,CI,CK,CL,CM,CN,CO,CR,CS,CU,CV,CW,CX,CY,CZ,DE,DJ,DK,DM,DO,DZ,EC,EE,EG,EH,ER,ES,ET,FI,FJ,FK,FM,FO,FR,GA,GB,GD,GE,GF,GG,GH,GI,GL,GM,GN,GP,GQ,GR,GS,GT,GU,GW,GY,HK,HM,HN,HR,HT,HU,ID,IE,IL,IM,IN,IO,IQ,IR,IS,IT,JE,JM,JO,JP,KE,KG,KH,KI,KM,KN,KP,KR,KW,KY,KZ,LA,LB,LC,LI,LK,LR,LS,LT,LU,LV,LY,MA,MC,MD,ME,MF,MG,MH,MK,ML,MM,MN,MO,MP,MQ,MR,MS,MT,MU,MV,MW,MX,MY,MZ,NA,NC,NE,NF,NG,NI,NL,NO,NP,NR,NU,NZ,OM,PA,PE,PF,PG,PH,PK,PL,PM,PN,PR,PS,PT,PW,PY,QA,RE,RO,RS,RU,RW,SA,SB,SC,SD,SE,SG,SH,SI,SJ,SK,SL,SM,SN,SO,SR,SS,ST,SV,SX,SY,SZ,TC,TD,TF,TG,TH,TJ,TK,TL,TM,TN,TO,TR,TT,TV,TW,TZ,UA,UG,UM,US,UY,UZ,VA,VC,VE,VG,VI,VN,VU,WF,WS,XK,YE,YT,ZA,ZM,ZW,TP';
-        return allowedCountryOfOrigin.split(',').indexOf(countryCode) !== -1;
+        return !empty(countryCode);
     },
     /**
      * Check if given hsCode is valid
@@ -145,8 +161,7 @@ const CATALOG_HELPER = {
      * @returns {boolean} - true or false
      */
     isValidHsCodeRegion: function (hsCode) {
-        let allowedHsCodes = 'AD,AE,AF,AG,AI,AL,AM,AN,AO,AQ,AR,AS,AT,AU,AW,AX,AZ,BA,BB,BD,BE,BF,BG,BH,BI,BJ,BL,BM,BN,BO,BQ,BR,BS,BT,BV,BW,BY,BZ,CA,CC,CD,CF,CG,CH,CI,CK,CL,CM,CN,CO,CR,CS,CU,CV,CW,CX,CY,CZ,DE,DJ,DK,DM,DO,DZ,EC,EE,EG,EH,ER,ES,ET,FI,FJ,FK,FM,FO,FR,GA,GB,GD,GE,GF,GG,GH,GI,GL,GM,GN,GP,GQ,GR,GS,GT,GU,GW,GY,HK,HM,HN,HR,HT,HU,ID,IE,IL,IM,IN,IO,IQ,IR,IS,IT,JE,JM,JO,JP,KE,KG,KH,KI,KM,KN,KP,KR,KW,KY,KZ,LA,LB,LC,LI,LK,LR,LS,LT,LU,LV,LY,MA,MC,MD,ME,MF,MG,MH,MK,ML,MM,MN,MO,MP,MQ,MR,MS,MT,MU,MV,MW,MX,MY,MZ,NA,NC,NE,NF,NG,NI,NL,NO,NP,NR,NU,NZ,OM,PA,PE,PF,PG,PH,PK,PL,PM,PN,PR,PS,PT,PW,PY,QA,RE,RO,RS,RU,RW,SA,SB,SC,SD,SE,SG,SH,SI,SJ,SK,SL,SM,SN,SO,SR,SS,ST,SV,SX,SY,SZ,TC,TD,TF,TG,TH,TJ,TK,TL,TM,TN,TO,TR,TT,TV,TW,TZ,UA,UG,UM,US,UY,UZ,VA,VC,VE,VG,VI,VN,VU,WF,WS,XK,YE,YT,ZA,ZM,ZW,TP';
-        return allowedHsCodes.split(',').indexOf(hsCode) !== -1;
+        return !empty(hsCode);
     },
     /**
      * Validate product internally

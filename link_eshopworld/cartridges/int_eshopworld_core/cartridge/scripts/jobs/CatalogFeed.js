@@ -86,8 +86,8 @@ const CatalogUtils = {
     writeRecords: function (csvWriter, product) {
         let URLUtils = require('dw/web/URLUtils'),
             fieldMapping = this.getProductCustomFieldMapping(),
-            productImg = product.getImage('small', 0).httpURL.toString(),
-            productShortDescription = this.formatString(product.shortDescription.toString()),
+            productImg = !empty(product.getImage('small', 0)) ? product.getImage('small', 0).httpURL.toString() : '',
+            productShortDescription = !empty(product.shortDescription) ? this.formatString(product.shortDescription.toString()) : '',
             size = '',
             masterProductID = '';
 
@@ -161,12 +161,10 @@ function execute() {
                 // Write CSV File Headers
                 CatalogUtils.writeHeaders(csvWriter);
                 saleableProducts = eswCatalogHelper.getFilteredProducts();
-                let products;
                 let fileHasRecords = false;
                 let feedlastExecutedTimeStamp = eswCoreHelper.getFeedCustomPrefVal('TimeStamp', eswCatalogPref);
-                while (saleableProducts.hasNext()) {
-                    products = saleableProducts.next().getRepresentedProducts().toArray();
-                    products.forEach(function (product) { // eslint-disable-line no-loop-func
+                for (let i = 0; i < saleableProducts.length; i++) {
+                    saleableProducts.forEach(function (product) { // eslint-disable-line no-loop-func
                         // Send all products in catalog if job is executing first time
                         if (empty(feedlastExecutedTimeStamp)) {
                             // Write CSV File Records

@@ -1,5 +1,7 @@
 'use strict';
 
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+
 let localizePriceHelpers = {
     /**
      * Get ESW Country Adjustments for localize country
@@ -7,7 +9,6 @@ let localizePriceHelpers = {
      * @returns {array} returns selected country adjustment
      */
     getESWCountryAdjustments: function (deliveryCountryIso) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let countryAdjustment = eswHelper.getPricingAdvisorData().countryAdjustment,
             selectedCountryAdjustment = [];
         if (!empty(countryAdjustment)) {
@@ -24,7 +25,6 @@ let localizePriceHelpers = {
      * @returns {array} returns selected fx rate
      */
     getESWCurrencyFXRate: function (shopperCurrencyIso, localizeCountry) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let fxRates = eswHelper.getPricingAdvisorData().fxRates,
             baseCurrency = eswHelper.getBaseCurrencyPreference(localizeCountry),
             selectedFxRate = [];
@@ -41,7 +41,6 @@ let localizePriceHelpers = {
      * @returns {array} returns selected rounding rule
      */
     getESWRoundingModel: function (localizeObj) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let roundingModels = eswHelper.getPricingAdvisorData().roundingModels,
             selectedRoundingModel,
             selectedRoundingRule = [];
@@ -116,27 +115,39 @@ let localizePriceHelpers = {
      * @param {array} selectedFxRate - select FX rate of local country
      * @param {array} selectedCountryAdjustments - selected country adjusment
      * @param {array} selectedRoundingRule - selected rounding model
+     * @param {priceBook} priceBook - tenant generating pricebook object
      * @returns {number} returns calculated localized price
      */
-    localizePricingConversion: function (product, basePriceBook, localizeObj, selectedFxRate, selectedCountryAdjustments, selectedRoundingRule) {
+    localizePricingConversion: function (product, basePriceBook, localizeObj, selectedFxRate, selectedCountryAdjustments, selectedRoundingRule, priceBook) {
+        let priceFreezeCountries = ('eswProductPriceFreezeCountries' in product.custom) ? product.custom.eswProductPriceFreezeCountries : null;
         let eswCalculationHelper = require('*/cartridge/scripts/helper/eswCalculationHelper').getEswCalculationHelper;
         let productPriceModel = product.getPriceModel(),
             localizePrice = null;
-        if (!productPriceModel.priceInfo || this.noPriceCalculationAllowed(product, localizeObj.localizeCountryObj.countryCode)) {
-            return localizePrice;
-        }
         let baseProductPrice = productPriceModel.getPriceBookPrice(basePriceBook.getID());
-        if ((baseProductPrice.valueOrNull !== null)) {
-            if (!empty(selectedFxRate)) {
-                localizePrice = eswCalculationHelper.getMoneyObject(baseProductPrice, false, false, localizeObj.applyRoundingModel.toLowerCase() !== 'true', {
-                    selectedCountry: selectedCountryAdjustments[0].deliveryCountryIso,
-                    selectedFxRate: selectedFxRate[0],
-                    selectedCountryAdjustments: selectedCountryAdjustments[0],
-                    selectedRoundingRule: selectedRoundingRule[0],
-                    currencyCode: selectedFxRate[0].toShopperCurrencyIso,
-                    isJob: true
-                });
+        if ((priceFreezeCountries == null && !eswHelper.isSkipFlaggedLocalPriceEnabled()) ||
+            (priceFreezeCountries == null && eswHelper.isSkipFlaggedLocalPriceEnabled())) {
+            if ((baseProductPrice.valueOrNull !== null)) {
+                if (!empty(selectedFxRate)) {
+                    localizePrice = eswCalculationHelper.getMoneyObject(baseProductPrice, false, false, localizeObj.applyRoundingModel.toLowerCase() !== 'true', {
+                        selectedCountry: selectedCountryAdjustments[0].deliveryCountryIso,
+                        selectedFxRate: selectedFxRate[0],
+                        selectedCountryAdjustments: selectedCountryAdjustments[0],
+                        selectedRoundingRule: selectedRoundingRule[0],
+                        currencyCode: selectedFxRate[0].toShopperCurrencyIso,
+                        isJob: true
+                    });
+                }
             }
+        } else if (this.noPriceCalculationAllowed(product, localizeObj.localizeCountryObj.countryCode)
+            && eswHelper.isSkipFlaggedLocalPriceEnabled()) {
+            return !empty(baseProductPrice) && baseProductPrice.valueOrNull !== null ? baseProductPrice : localizePrice;
+        } else if ((this.noPriceCalculationAllowed(product, localizeObj.localizeCountryObj.countryCode)
+            && !eswHelper.isSkipFlaggedLocalPriceEnabled())
+        ) {
+            if (!empty(priceBook) && priceBook.id) {
+                let currentCountryProductPrice = productPriceModel.getPriceBookPrice(priceBook.id);
+                return !empty(currentCountryProductPrice) && currentCountryProductPrice.valueOrNull !== null ? currentCountryProductPrice : localizePrice;
+            } else { return localizePrice; }
         }
         return localizePrice;
     },
@@ -213,14 +224,14 @@ let localizePriceHelpers = {
             while (salableProducts.hasNext()) {
                 products = salableProducts.next().getRepresentedProducts().toArray();
                 products.forEach(function (product) { // eslint-disable-line no-loop-func
-                    let localizedPrice = thisObj.localizePricingConversion(product, basePriceBook, localizeObj, selectedFxRate, selectedCountryAdjustments, selectedRoundingRule);
+                    let localizedPrice = thisObj.localizePricingConversion(product, basePriceBook, localizeObj, selectedFxRate, selectedCountryAdjustments, selectedRoundingRule, priceBook);
                     if (!empty(localizedPrice)) {
                         priceBookStreamWriter.writeStartElement('price-table');
                         priceBookStreamWriter.writeAttribute('product-id', product.getID());
                         priceBookStreamWriter.writeCharacters('\n');
                         priceBookStreamWriter.writeStartElement('amount');
                         priceBookStreamWriter.writeAttribute('quantity', '1');
-                        priceBookStreamWriter.writeCharacters(localizedPrice);
+                        priceBookStreamWriter.writeCharacters((localizedPrice.value && !empty(localizedPrice.value)) ? localizedPrice.value : localizedPrice);
                         priceBookStreamWriter.writeEndElement();
                         priceBookStreamWriter.writeCharacters('\n');
                         priceBookStreamWriter.writeEndElement();
