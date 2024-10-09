@@ -25,6 +25,10 @@ describe('int_eshopworld_pwa/cartridge/scripts/ocapi/shop/promotionModifyRespons
         },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
+                getCountryDetailByParam: function () {
+                    return {};
+                },
+                getCountryLocalizeObj: function () {return {}},
                 getEShopWorldModuleEnabled: function () { return true; },
                 eswPdpPriceConversions: function () { return {}; },
             }

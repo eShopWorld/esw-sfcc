@@ -71,6 +71,12 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL.js', func
         '*/cartridge/scripts/helper/eswCheckoutHelperHL': '',
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
+                getCountryDetailByParam: function () {
+                    return {countryCode: 'CA'};
+                },
+                getCountryLocalizeObj: function () {
+                    return {};
+                },
                 checkIsEswAllowedCountry: function () {
                     return true;
                 },

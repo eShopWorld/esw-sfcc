@@ -3,10 +3,8 @@
 
 
 const server = require('server');
-const ProductSearchModel = require('dw/catalog/ProductSearchModel');
 const ArrayList = require('dw/util/ArrayList');
 const PagingModel = require('dw/web/PagingModel');
-const CatalogMgr = require('dw/catalog/CatalogMgr');
 const Site = require('dw/system/Site');
 const URLUtils = require('dw/web/URLUtils');
 const Transaction = require('dw/system/Transaction');
@@ -28,16 +26,17 @@ server.get('Start', function (req, res, next) {
     if (!eswHelper.isEswCatalogApiMethod()) {
         res.redirect(URLUtils.url('EShopWorldBM-CatalogConfig'));
     } else {
-        let prodModel = new ProductSearchModel();
         let syncProducts;
-        prodModel.setCategoryID(CatalogMgr.siteCatalog.root.ID);
-        prodModel.setRecursiveCategorySearch(true);
-        prodModel.setOrderableProductsOnly(true);
-        prodModel.search();
         let parameterMap = request.httpParameterMap;
         let pageSize = parameterMap.sz.intValue || 10;
         let start = parameterMap.start.intValue || 0;
-        let paging = new PagingModel(prodModel.getProductSearchHits(), prodModel.count);
+
+        let prodModel = dw.catalog.ProductMgr.queryAllSiteProducts();
+        let prodCount = prodModel.getCount();
+        let prodSearchHit = prodModel.asList(0, prodCount).iterator();
+        prodModel.close();
+
+        let paging = new PagingModel(prodSearchHit, prodCount);
         paging.setPageSize(pageSize);
         paging.setStart(start);
         if (!empty(request.httpParameterMap.syncProducts.value)) {
@@ -63,21 +62,21 @@ server.get('Search', function (req, res, next) {
         let isMultiIdSearch = false;
         let nlSeparatorOnly = false;
 
-        let prodModel = new ProductSearchModel();
-        prodModel.setCategoryID(CatalogMgr.siteCatalog.root.ID);
-        prodModel.setRecursiveCategorySearch(true);
-        prodModel.setOrderableProductsOnly(true);
-        prodModel.search();
-        let productSearchHits = prodModel.getProductSearchHits();
+        let prodModel = dw.catalog.ProductMgr.queryAllSiteProducts();
+        let prodSearchHit = prodModel.asList(0, prodModel.getCount()).iterator();
+        prodModel.close();
+
+        let productSearchHits = prodSearchHit;
+
         let productsInSearch = new ArrayList([]);
         while (productSearchHits.hasNext()) {
             let currentProductInSearchHit = productSearchHits.next();
             // Simple Search
             if (req.querystring.submittedFrom === Constants.SIMPLE_FORM) {
-                searchQuery = req.querystring.q.toLowerCase().trim() || null;
-                if (!empty(searchQuery)
-                    && (currentProductInSearchHit.product.name.toLowerCase().indexOf(searchQuery) !== -1
-                        || currentProductInSearchHit.product.ID.toLowerCase().indexOf(searchQuery) !== -1)) {
+                searchQuery = req.querystring.q ? req.querystring.q.toLowerCase().trim() : null;
+                if (!empty(searchQuery) &&
+                    ((!empty(currentProductInSearchHit.name) && currentProductInSearchHit.name.toLowerCase().indexOf(searchQuery) !== -1) ||
+                    currentProductInSearchHit.ID.toLowerCase().indexOf(searchQuery) !== -1)) {
                     productsInSearch.add(currentProductInSearchHit);
                 }
                 // Handling empty form submit
@@ -89,12 +88,12 @@ server.get('Search', function (req, res, next) {
             if (req.querystring.submittedFrom === Constants.ADVANCE_FORM) {
                 filterValue = req.querystring.filterAttribute;
                 if (filterValue === 'synced') {
-                    if (eswSyncHelpers.getSyncStatusInfo(currentProductInSearchHit.getProduct()) === 'synced') {
+                    if (eswSyncHelpers.getSyncStatusInfo(currentProductInSearchHit) === 'synced') {
                         productsInSearch.add(currentProductInSearchHit);
                     }
                 }
                 if (filterValue === 'unsynced') {
-                    if (currentProductInSearchHit.product.custom.eswSync !== true || eswSyncHelpers.getSyncStatusInfo(currentProductInSearchHit.getProduct()) === 'apiError') {
+                    if (currentProductInSearchHit.custom.eswSync !== true || eswSyncHelpers.getSyncStatusInfo(currentProductInSearchHit) === 'apiError') {
                         productsInSearch.add(currentProductInSearchHit);
                     }
                 }
@@ -113,7 +112,7 @@ server.get('Search', function (req, res, next) {
                         searchRegex = /[\n]/g;
                     }
                     let productIds = req.querystring.WFSimpleSearch_IDList.toLowerCase().replace(searchRegex, ',');
-                    if (productIds.indexOf(currentProductInSearchHit.product.ID.toLowerCase()) !== -1) {
+                    if (productIds.indexOf(currentProductInSearchHit.ID.toLowerCase()) !== -1) {
                         productsInSearch.add(currentProductInSearchHit);
                     }
                 }
@@ -249,6 +248,26 @@ server.post('SavePostedConfig', function (req, res, next) {
     return next();
 });
 
+server.get('LoadReports', function (req, res, next) {
+    let csrf = request.httpParameterMap.csrf_token.stringValue;
+    let configReport = [];
+    let lastModifed;
+    configReport = bmHelper.loadReport(csrf);
+    if (configReport && Array.isArray(configReport)) {
+        // Check if configReport has at least four elements
+        if (configReport.length > 2) {
+            lastModifed = !empty(configReport) ? configReport[2] : '';
+            // Remove the last modified attribute
+            configReport.pop();
+        }
+    }
+    res.render('/report/esw-Integration-report', {
+        currentController: 'LoadReports',
+        configReport: eswHelper.beautifyJsonAsString(configReport),
+        lastModified: lastModifed
+    });
+    next();
+});
 server.get('ReturnsConfig', function (req, res, next) {
     let csrf = request.httpParameterMap.csrf_token.stringValue;
     let sitePrefFields = bmHelper.loadGroups(

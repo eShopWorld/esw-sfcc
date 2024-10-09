@@ -58,6 +58,12 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
         },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
+                getCountryDetailByParam: function () {
+                    return {countryCode: 'CA'};
+                },
+                getCountryLocalizeObj: function () {
+                    return {};
+                },
                 isUseDeliveryContactDetailsForPaymentContactDetailsPrefEnabled: function () {
                     return true;
                 },

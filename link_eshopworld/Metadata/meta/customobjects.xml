@@ -230,4 +230,31 @@
             </attribute-group>
         </group-definitions>
     </custom-type>
+
+    <custom-type type-id="ESW_INTEGRATION_MONITORING">
+        <display-name xml:lang="x-default">ESW Integration Monitoring</display-name>
+        <description xml:lang="x-default">This custom object type holds ESW integration monitoring data</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>site</storage-scope>
+        <key-definition attribute-id="Report">
+             <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+        <attribute-definition attribute-id="configReport">
+            <display-name xml:lang="x-default">ESW Integration Monitoring JSON Report</display-name>
+            <description xml:lang="x-default">JSON report will be stored here for internal use</description>
+            <type>text</type>
+            <localizable-flag>false</localizable-flag>
+            <mandatory-flag>false</mandatory-flag>
+            <externally-managed-flag>false</externally-managed-flag>
+        </attribute-definition>
+    </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="Integration_Monitoring_Report">
+                <display-name xml:lang="x-default">ESW Integration Monitoring Report</display-name>
+                <attribute attribute-id="configReport"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
 </metadata>

@@ -153,4 +153,27 @@ describe("controllers/EShopWorld.js", function () {
             });
         });
     });
+
+    describe("GetEswLandingPage", function () {
+        it("Should return GetEswLandingPage configs", async function () {
+            let controllerPath = "/on/demandware.store/Sites-RefArch-Site/default/EShopWorld-GetEswLandingPage";
+            let resp = await chai.request(config.baseUrl).post(controllerPath).send();
+            chai.expect(resp.text).to.include("maincontent");
+        });
+    });
+    describe("PreOrderRequest", function () {
+        it("Should throw if basket not found", async function () {
+            let controllerPath = "/on/demandware.store/Sites-RefArch-Site/default/EShopWorld-PreOrderRequest";
+            let resp = await chai.request(config.baseUrl).post(controllerPath).send();
+            chai.expect(resp).to.throw;
+        });
+    });
+
+    describe("Cache", function () {
+        it("Should Render Product Tiles with Dynamic Prices and to avoid cache issue", async function () {
+            let controllerPath = "/on/demandware.store/Sites-RefArch-Site/default/EShopWorld-Cache";
+            let resp = await chai.request(config.baseUrl).post(controllerPath).send();
+            chai.expect(resp.text).to.include("navbar-header");
+        });
+    });
 });

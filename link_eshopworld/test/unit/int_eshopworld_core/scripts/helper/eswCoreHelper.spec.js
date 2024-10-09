@@ -2,6 +2,8 @@ var chai = require('chai');
 var proxyquire = require('proxyquire').noCallThru();
 var expect = chai.expect;
 var sinon = require('sinon');
+var ArrayList = require('../../../../mocks/dw.util.CollectionHelper');
+const URLUtilsMock = require('../../../../mocks/dw/web/URLUtils');
 
 
 var Money = require('../../../../mocks/dw.value.Money');
@@ -13,6 +15,8 @@ var CustomObjectMgr = require('../../../../mocks/dw/object/CustomObjectMgr');
 var PriceBookMgrMock = require('../../../../mocks/dw/catalog/PriceBookMgr');
 const Basket = require('../../../../mocks/dw/order/Basket');
 
+const RequestMock = require('../../../../mocks/dw/system/Request');
+
 const localizeObj = {
     applyCountryAdjustments: true,
     localizeCountryObj: {
@@ -21,7 +25,6 @@ const localizeObj = {
     },
     applyRoundingModel: 'false'
 };
-
 global.empty = empty(global);
 
 global.empty = empty(global);
@@ -52,17 +55,17 @@ lineItemContainer.shippingTotalPrice = {
     }
 };
 lineItemContainer.adjustedShippingTotalPrice = 10;
-lineItemContainer.getAdjustedMerchandizeTotalPrice = function(val) {
+lineItemContainer.getAdjustedMerchandizeTotalPrice = function (val) {
     if (!val) {
         return {
             subtract: function () {
                 return 10;
             }
-        }
+        };
     } else {
         return 10;
     }
-}
+};
 
 global.session = session;
 global.response = globalResponse;
@@ -70,26 +73,46 @@ var LocalServiceRegMock = require('../../../../mocks/dw/svc/LocalServiceRegistry
 const Constants = require('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/util/Constants');
 describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', function () {
     var eswHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', {
-        '*/cartridge/scripts/util/collections': '',
+        '*/cartridge/scripts/util/collections': ArrayList,
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
         'dw/value/Money': Money,
         'dw/system/Logger': Logger,
         'dw/util/ArrayList': stubArrayList,
         'dw/web/URLUtils': stubURLUtils,
-        'dw/system/Site': siteMock,
+        checkRedirect: function () {},
+        'dw/system/Site': {
+            getCurrent: function () {
+                return {
+                    getCustomPreferenceValue: function (value) {
+                        if (value == 'eswBaseCurrency') {
+                            return 'some value';
+                        } else {
+                            return undefined;
+                        }
+                    }
+                };
+            }
+        },
         'dw/util/StringUtils': StringUtils,
         'dw/svc/LocalServiceRegistry': LocalServiceRegMock,
         '*/cartridge/scripts/util/Constants': Constants,
         'dw/object/CustomObjectMgr': CustomObjectMgr,
         'dw/content/ContentMgr': {},
         'dw/catalog/PriceBookMgr': PriceBookMgrMock,
+        'dw/web/URLAction': function () {
+            return 'some url';
+        },
+        'dw/web/URLParameter': '',
         '*/cartridge/scripts/helper/eswOrderProcessHelper': {
             cancelAnOrder: function () {
                 return {
                     success: 'orderProcess'
                 };
             }
+        },
+        getBaseCurrencyPreference: function () {
+            return 'EUR';
         },
         isEswCatalogFeatureEnabled: function () { return true; },
         '*/cartridge/scripts/helper/eswCalculationHelper': {
@@ -100,6 +123,11 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
                 getMoneyObject: function () {
                     return Money;
                 }
+            }
+        },
+        '*/cartridge/scripts/helper/eswPricingHelper': {
+            eswPricingHelper: {
+
             }
         },
         getCatalogUploadMethod: function () { return 'API'; }
@@ -312,8 +340,93 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
     });
     describe('ShippingLevelDiscountTotal', function () {
         it('should return response', () => {
+            const shippingLevelDiscountTotal = eswHelper.getShippingLevelDiscountTotal(lineItemContainer);
+            expect(shippingLevelDiscountTotal).to.be.an('object');
+        });
+    });
+    describe('getDiscounts', function () {
+        it('should return Discounts', () => {
+            const discounts = eswHelper.getDiscounts(lineItemContainer);
+            expect(discounts).to.be.an('Array');
+        });
+    });
+    describe('beautifyJsonAsString', function () {
+        it('should return beautifyJsonAsString', () => {
+            const beautifyJsonAsString = eswHelper.beautifyJsonAsString({ test_object: 'test object' });
+            expect(beautifyJsonAsString).to.be.an('string');
+        });
+    });
+    describe('isEswCheckoutOnlyPackagesExportEnabled', function () {
+        it('should return EswCheckoutOnlyPackagesExportEnabled', () => {
+            const isEswCheckoutOnlyPackagesExportEnabled = eswHelper.isEswCheckoutOnlyPackagesExportEnabled();
+            expect(isEswCheckoutOnlyPackagesExportEnabled).to.be.an('undefined');
+        });
+    });
+    describe('getCustomObjectDetails', function () {
+        it('should return CustomObjectDetails', () => {
+            const customObjectDetails = eswHelper.getCustomObjectDetails('test', 'testId');
+            expect(customObjectDetails).to.be.an('object');
+        });
+    });
+    describe('queryAllCustomObjects', function () {
+        it('should return queryAllCustomObjects', () => {
+            const customObjectDetails = eswHelper.queryAllCustomObjects('testObjId', {}, 'sortingRule');
+            expect(customObjectDetails).to.be.an('object');
+        });
+    });
+    describe('shortenName object', function () {
+        it('should return shortenName', () => {
+            const shortenName = eswHelper.shortenName('testObjId');
+            expect(shortenName).to.be.an('string');
+        });
+    });
+    describe('checkRedirect', function () {
+        it.skip('should return checkRedirect if available', () => {
+            global.request.getLocale = function () {
+                return '';
+            };
+            global.session.clickStream = {
+                last: {
+                    pipelineName: ''
+                }
+            };
+            const checkRedirect = eswHelper.checkRedirect('testObjId');
+            expect(checkRedirect).to.be.an('string');
+        });
+        it('should return response', function () {
             const ShippingLevelDiscountTotal = eswHelper.getShippingLevelDiscountTotal(lineItemContainer);
             expect(ShippingLevelDiscountTotal).to.be.an('object');
+        });
+    });
+    describe('getSfCountryUrlParam', function () {
+        it('should return the correct country URL parameter', function () {
+            let RequestObj = new RequestMock('&country=US');
+            // Call the function with the mock HTTP parameter map
+            const result = eswHelper.getSfCountryUrlParam(RequestObj.getHttpParameters());
+
+            // Check that the result is correct
+            expect(result).to.deep.equal({ countryUrlParamKey: undefined, countryUrlParamVal: '' });
+        });
+    });
+    describe('getSgCountryUrlParams', () => {
+        it('should return the correct country URL parameter', () => {
+            // Set up a mock HTTP parameter map
+            let RequestObj = new RequestMock('&country=US');
+
+            // Call the function with the mock HTTP parameter map
+            const result = eswHelper.getSgCountryUrlParams(RequestObj.getHttpParameters());
+
+            // Check that the result is correct
+            expect(result).to.deep.equal({ countryUrlParamKey: null, countryUrlParamVal: null });
+        });
+    });
+    describe('EswSplitPaymentDetails', function () {
+        lineItemContainer.getPaymentInstruments = function () {
+            return [];
+        };
+        it('should return EswSplitPaymentDetails', () => {
+            const ShippingLevelDiscountTotal = eswHelper.EswSplitPaymentDetails(lineItemContainer);
+            expect(ShippingLevelDiscountTotal).to.be.an('array');
         });
     });
     describe('getOrderLevelDiscountTotal', function () {
@@ -331,6 +444,16 @@ describe('/link_eshopworld/cartridges/int_eshopworld_core/cartridge/scripts/help
         it('should return getOrderLevelDiscountTotal', () => {
             const orderLevelDiscount = eswHelper.getOrderLevelDiscountTotal(lineItemContainer, false);
             expect(orderLevelDiscount).to.be.an('object');
+        });
+        // Unit test
+        it('Return country locale', () => {
+            let countryByTimeZone = eswHelper.getLocaleCountry('en-IE');
+            expect(countryByTimeZone).to.equals('IE');
+        });
+        it('return country details', () => {
+            const httpParams = 'en-IE';
+            let countryDetailByParam = eswHelper.getCountryDetailByParam(httpParams);
+            expect(countryDetailByParam).to.have.property('countryCode');
         });
     });
 });

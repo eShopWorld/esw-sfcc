@@ -22,12 +22,17 @@ describe('int_eshopworld_pwa/cartridge/scripts/ocapi/shop/basketItemsModifyRespo
         },
         'dw/system/Transaction': Transaction,
         '*/cartridge/scripts/helper/eswPwaCoreHelper': {
-            getCountryDetailByParam: function () {
-                return {};
+            getEswHelper: {
+                getCountryDetailByParam: function () {
+                    return {};
+                }
             }
         },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
+                getCountryDetailByParam: function () {
+                    return {};
+                },
                 getCatalogUploadMethod: function () { return 'api'; },
                 getEShopWorldModuleEnabled: function () { return true; }
             }

@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<library xmlns="http://www.demandware.com/xml/impex/library/2006-10-31" library-id="SiteGenesisSharedLibrary">
+  <content content-id="esw-sample-page">
+    <display-name xml:lang="x-default">Fixed Layout Sample Page</display-name>
+    <display-name xml:lang="en-US">Finished Sample Page</display-name>
+    <type>page.fixedlayout</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <visibility-mode xml:lang="x-default">visible</visibility-mode>
+    <data xml:lang="x-default">{ }</data>
+    <online-flag>true</online-flag>
+    <online-flag site-id="SiteGenesis">true</online-flag>
+    <searchable-flag>true</searchable-flag>
+    <searchable-flag site-id="SiteGenesis">true</searchable-flag>
+    <page-attributes/>
+    <folder-links>
+      <classification-link folder-id="root"/>
+    </folder-links>
+    <content-links>
+      <content-link content-id="headlinebanner_newarrivals-womens" type="page.fixedlayout.region1">
+        <position>1.0</position>
+      </content-link>
+      <content-link content-id="producttile_25696677M" type="page.fixedlayout.region2">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="producttile_25502881M" type="page.fixedlayout.region3">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="producttile_25695242M" type="page.fixedlayout.region4">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="categorytile_womens-clothing-dresses_1" type="page.fixedlayout.region5">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="categorytile_womens-clothing-feeling-red" type="page.fixedlayout.region6">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="categorytile_womens-clothing-dresses_2" type="page.fixedlayout.region7">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="categorytile_mens-clothing-suits" type="page.fixedlayout.region8">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="categorytile_womens-accessories" type="page.fixedlayout.region9">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="categorytile_mens-accessories" type="page.fixedlayout.region10">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="headlinebanner_womens-accessories" type="page.fixedlayout.region11">
+        <position>0.0</position>
+      </content-link>
+      <content-link content-id="c06d0dd2d84289e7551bcd3dfb" type="page.fixedlayout.region1">
+        <position>0.0</position>
+      </content-link>
+    </content-links>
+    <sitemap-included-flag>false</sitemap-included-flag>
+    <sitemap-included-flag site-id="SiteGenesis">false</sitemap-included-flag>
+  </content>
+  <content content-id="c06d0dd2d84289e7551bcd3dfb">
+    <type>component.esw_components.eswHtmlComponent</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+  "eswHtmlContent" : "&lt;style&gt;\n#fixed-layout-sample-page &gt; .region:first-child:before{\npadding-top: 24px !important;\n}\n#fixed-layout-sample-page &gt; .region:first-child{\nbackground-color: #64772d;\ncolor: #fff;\n}\n.header-promotion{margin-top: 6px;}\n&lt;/style&gt;\n&lt;div class=\"header-promotion text-center\"&gt;&lt;strong&gt;FREE 2-Day SHIPPING&lt;/strong&gt; FOR ORDERS OVER $300&lt;/div&gt;"
+}</data>
+    <online-flag>true</online-flag>
+    <online-flag site-id="SiteGenesis">true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="categorytile_mens-accessories">
+    <display-name xml:lang="x-default">Category Tile mens-accessories</display-name>
+    <type>component.assets.categorytile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/MenAccessCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 3744,
+              "width" : 5616
+            }
+          },
+          "text_headline" : "Fit into Summer",
+          "text_alignment" : "Center",
+          "category" : "mens-accessories"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/MenAccessCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 3744,
+              "width" : 5616
+            }
+          },
+          "text_headline" : "Fit into Summer",
+          "text_alignment" : "Center",
+          "category" : "mens-accessories"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="categorytile_mens-clothing-suits">
+    <display-name xml:lang="x-default">Category Tile mens-clothing-suits</display-name>
+    <type>component.assets.categorytile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/MenSuitCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 824,
+              "width" : 550
+            }
+          },
+          "text_headline" : "Men's Suits",
+          "text_alignment" : "Center",
+          "category" : "mens-clothing-suits"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/MenSuitCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 824,
+              "width" : 550
+            }
+          },
+          "text_headline" : "Men's Suits",
+          "text_alignment" : "Center",
+          "category" : "mens-clothing-suits"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="categorytile_womens-accessories">
+    <display-name xml:lang="x-default">Category Tile womens-accessories</display-name>
+    <type>component.assets.categorytile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnAccessCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 342,
+              "width" : 370
+            }
+          },
+          "text_headline" : "New Arrivals",
+          "text_subline" : "Shop Accessories",
+          "text_alignment" : "Center",
+          "category" : "womens-accessories"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnAccessCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 342,
+              "width" : 370
+            }
+          },
+          "text_headline" : "New Arrivals",
+          "text_subline" : "Shop Accessories",
+          "text_alignment" : "Center",
+          "category" : "womens-accessories"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="categorytile_womens-clothing-dresses_1">
+    <display-name xml:lang="x-default">Category Tile womens-clothing-dresses 1</display-name>
+    <type>component.assets.categorytile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnDressCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 457,
+              "width" : 421
+            }
+          },
+          "text_headline" : "Women's Dresses",
+          "text_subline" : "Explore our Collection",
+          "text_alignment" : "Left",
+          "category" : "womens-clothing-dresses"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnDressCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 457,
+              "width" : 421
+            }
+          },
+          "text_headline" : "Women's Dresses",
+          "text_subline" : "Explore our Collection",
+          "text_alignment" : "Left",
+          "category" : "womens-clothing-dresses"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="categorytile_womens-clothing-dresses_2">
+    <display-name xml:lang="x-default">Category Tile womens-clothing-dresses 2</display-name>
+    <type>component.assets.categorytile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnDressCat_2.png",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 951,
+              "width" : 1530
+            }
+          },
+          "text_headline" : "Women's Dresses",
+          "text_subline" : "20% off this week only",
+          "text_alignment" : "Center",
+          "category" : "womens-clothing-dresses"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnDressCat_2.png",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 951,
+              "width" : 1530
+            }
+          },
+          "text_headline" : "Women's Dresses",
+          "text_subline" : "20% off this week only",
+          "text_alignment" : "Center",
+          "category" : "womens-clothing-dresses"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="categorytile_womens-clothing-feeling-red">
+    <display-name xml:lang="x-default">Category Tile womens-clothing-feeling-red</display-name>
+    <type>component.assets.categorytile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnRedCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 533,
+              "width" : 800
+            }
+          },
+          "text_headline" : "Shop Red",
+          "text_subline" : "20% off this week only",
+          "text_alignment" : "Left",
+          "category" : "womens-clothing-feeling-red"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/CategoryImages/WmnRedCat_1.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 533,
+              "width" : 800
+            }
+          },
+          "text_headline" : "Shop Red",
+          "text_subline" : "20% off this week only",
+          "text_alignment" : "Left",
+          "category" : "womens-clothing-feeling-red"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="headlinebanner_newarrivals-womens">
+    <display-name xml:lang="x-default">Headline Banner newarrivals-womens</display-name>
+    <type>component.assets.headlinebanner</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/HeadlineImages/Headline1_lg.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 715,
+              "width" : 2783
+            }
+          },
+          "text_subline" : "&lt;p&gt;&lt;a href=\"$url('Search-Show','cgid','newarrivals-womens')$\" target=\"_blank\" data-link-type=\"category\" data-category-id=\"newarrivals-womens\" data-category-label=\"newarrivals-womens (Womens)\" data-category-catalog=\"storefront-catalog-en\" data-category-type=\"category\"&gt;Explore the look of the summer&lt;/a&gt;&lt;/p&gt;",
+          "text_headline" : "&lt;p&gt;&lt;a href=\"$url('Search-Show','cgid','newarrivals-womens')$\" target=\"_blank\" data-link-type=\"category\" data-category-id=\"newarrivals-womens\" data-category-label=\"newarrivals-womens (Womens)\" data-category-catalog=\"storefront-catalog-en\" data-category-type=\"category\"&gt;SUMMER STYLE&lt;/a&gt;&lt;/p&gt;"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/HeadlineImages/Headline1_lg.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 715,
+              "width" : 2783
+            }
+          },
+          "text_subline" : "&lt;p&gt;&lt;a href=\"$url('Search-Show','cgid','newarrivals-womens')$\" target=\"_blank\" data-link-type=\"category\" data-category-id=\"newarrivals-womens\" data-category-label=\"newarrivals-womens (Womens)\" data-category-catalog=\"storefront-catalog-en\" data-category-type=\"category\"&gt;Explore the look of the summer&lt;/a&gt;&lt;/p&gt;",
+          "text_headline" : "&lt;p&gt;&lt;a href=\"$url('Search-Show','cgid','newarrivals-womens')$\" target=\"_blank\" data-link-type=\"category\" data-category-id=\"newarrivals-womens\" data-category-label=\"newarrivals-womens (Womens)\" data-category-catalog=\"storefront-catalog-en\" data-category-type=\"category\"&gt;SUMMER STYLE&lt;/a&gt;&lt;/p&gt;"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="headlinebanner_womens-accessories">
+    <display-name xml:lang="x-default">Headline Banner womens-accessories</display-name>
+    <type>component.assets.headlinebanner</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/HeadlineImages/Headline2_lg.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 657,
+              "width" : 2000
+            }
+          },
+          "text_headline" : "&lt;p&gt;&lt;a href=\"$url('Search-Show','cgid','womens-accessories')$\" target=\"_blank\" data-link-type=\"category\" data-category-id=\"womens-accessories\" data-category-label=\"womens-accessories (Accessories)\" data-category-catalog=\"storefront-catalog-en\" data-category-type=\"category\"&gt;SHOP THE STYLE&lt;/a&gt;&lt;/p&gt;"
+        }</data>
+    <data xml:lang="en-US">{
+          "image" : {
+            "path" : "images/Summer-Fall2018/HeadlineImages/Headline2_lg.jpg",
+            "focal_point" : {
+              "x" : 0.5,
+              "y" : 0.5
+            },
+            "meta_data" : {
+              "height" : 657,
+              "width" : 2000
+            }
+          },
+          "text_headline" : "&lt;p&gt;&lt;a href=\"$url('Search-Show','cgid','womens-accessories')$\" target=\"_blank\" data-link-type=\"category\" data-category-id=\"womens-accessories\" data-category-label=\"womens-accessories (Accessories)\" data-category-catalog=\"storefront-catalog-en\" data-category-type=\"category\"&gt;SHOP THE STYLE&lt;/a&gt;&lt;/p&gt;"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="producttile_25502881M">
+    <display-name xml:lang="x-default">Product Tile 25502881M</display-name>
+    <type>component.assets.producttile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "product" : "25502881"
+        }</data>
+    <data xml:lang="en-US">{
+          "product" : "25502881"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="producttile_25695242M">
+    <display-name xml:lang="x-default">Product Tile 25695242M</display-name>
+    <type>component.assets.producttile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "product" : "25695242"
+        }</data>
+    <data xml:lang="en-US">{
+          "product" : "25695242"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+  <content content-id="producttile_25696677M">
+    <display-name xml:lang="x-default">Product Tile 25696677M</display-name>
+    <type>component.assets.producttile</type>
+    <config>{
+  "visibility" : [ ]
+}</config>
+    <data xml:lang="x-default">{
+          "product" : "25696677"
+        }</data>
+    <data xml:lang="en-US">{
+          "product" : "25696677"
+        }</data>
+    <online-flag>true</online-flag>
+    <page-attributes/>
+  </content>
+</library>

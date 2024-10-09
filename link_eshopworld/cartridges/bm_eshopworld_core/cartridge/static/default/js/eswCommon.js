@@ -26,8 +26,8 @@ function switchToSimpleSearch() {
 }
 
 function selectAllProducts() {
-    var ele = document.querySelectorAll('.select-Product');
-    for (var i = 0; i < ele.length; i++) {
+    let ele = document.querySelectorAll('.select-Product');
+    for (let i = 0; i < ele.length; i++) {
         // eslint-disable-next-line eqeqeq
         if (ele[i].type == 'checkbox' && ele[i].disabled === false) {
             // eslint-disable-next-line no-unneeded-ternary, eqeqeq
@@ -81,7 +81,101 @@ function submitForm($productGridForm, clickEvent) {
     sendAjax(formAction, formData, 'Sync request has been generated for the products/orders.', true);
 }
 
+function isValidJSON(jsonString) {
+    try {
+        JSON.parse(jsonString);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
 $(document).ready(function () {
+    $.ajax({
+        url: $('#shippingMethods').attr('href'),
+        type: 'POST',
+        dataType: 'html',
+        data: { PageSize: 'All' },
+        success: function (data, textStatus, jqXHR) {
+            // handle the response data
+            let html = $.parseHTML(data);
+            let tableRows = $(html).find('tr');
+            let result = [];
+            // eslint-disable-next-line no-undef
+            let seenIds = new Set();
+            // Iterate over each table row
+            tableRows.each(function () {
+                let cells = $(this).find('td.table_detail');
+                // Create an object for the row
+                let row = {};
+                // Iterate over each cell in the row
+                cells.each(function (cellIndex, cell) {
+                    let cellText = $(cell).text().replace(/\n|\t/g, '').trim();
+                    if (cellText === ' ') {
+                        return; // Skip empty columns
+                    }
+                    switch (cellIndex) {
+                        case 0:
+                            row.ID = cellText;
+                            break;
+                        case 1:
+                            row.Name = cellText;
+                            break;
+                        case 4:
+                            row.Status = cellText;
+                            break;
+                        case 5:
+                            row.Currency = cellText;
+                            break;
+                        default:
+                            // Ignore other columns
+                            break;
+                    }
+                });
+                // Add the row object to the result array
+                if (Object.prototype.hasOwnProperty.call(row, 'Name') && !seenIds.has(row.ID)) {
+                    seenIds.add(row.ID); // To avoid duplicate entries
+                    result.push(row);
+                }
+            });
+            let reportJSON = JSON.parse($('.json-txt-lg').text());
+            reportJSON[1].GlobalConfigs.ShippingMethods = result;
+            $('.json-txt-lg').text(JSON.stringify(reportJSON, null, 2));
+        },
+        complete: function () {
+            $.ajax({
+                url: $('#orderPreferences').attr('href'),
+                type: 'GET',
+                dataType: 'html',
+                success: function (data, textStatus, jqXHR) {
+                    let GlobalConfig = {
+                        failedOrderRetention: $(data).find('input[name="FailedOrderRetention"]').val(),
+                        AutoFailOrders: $(data).find('input[name="FailNonPlacedOrdersAfter"]').val(),
+                        LimitStoreFrontOrderAccess: $(data).find('select[name="StorefrontOrderAccess"]').val(),
+                        FilterStorefrontOrdersByCustomerSession: $(data).find('select[name="StorefrontOrderFiltering"]').val()
+                    };
+                    let pimJSON = JSON.parse($('.json-txt-lg').text());
+                    pimJSON[1].GlobalConfigs.OrderConfigs = GlobalConfig;
+                    $('.json-txt-lg').text((JSON.stringify(pimJSON, null, 2)));
+                },
+                complete: function () {
+                    // Export file
+                    let jsonData = $('.json-txt-lg').text().trim();
+                    if (isValidJSON(jsonData)) {
+                        let encodedData = encodeURIComponent(jsonData);
+                        let lastModified = $('.input-container').data('lastmodified');
+                        let encDataType = "data:text/json;charset=utf-8," + encodedData;
+                        $('<a href="' + encDataType + '" id="downloadReport" class="button input-container" download="PIM-Report-' + lastModified + '.json">Export</a>').appendTo(".esw-report-header");
+                    }
+                    $('#downloadReport').css({
+                        position: 'sticky',
+                        float: 'right'
+                    });
+                }
+            });
+        }
+
+    });
     // Left menu
     $(".esw-menu > a").click(function () {
         $(this).next('.esw-submenu').slideToggle(function () {

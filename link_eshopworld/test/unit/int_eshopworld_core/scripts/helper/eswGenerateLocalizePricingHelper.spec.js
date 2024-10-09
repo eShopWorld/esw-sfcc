@@ -1,5 +1,6 @@
 var chai = require('chai');
 var proxyquire = require('proxyquire').noCallThru();
+const Money = require('../../../../mocks/dw.value.Money');
 
 var PriceBookMgrMock = require('../../../../mocks/dw/catalog/PriceBookMgr');
 var FileMock = require('../../../../mocks/dw/io/File');
@@ -10,6 +11,13 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswGenerateLocalizePricin
         'dw/catalog/PriceBookMgr': PriceBookMgrMock,
         'dw/io/File': FileMock,
         'dw/io/FileWriter': FileWriterMock,
+        '*/cartridge/scripts/helper/eswCalculationHelper': {
+            getEswCalculationHelper: {
+                getMoneyObject: function () {
+                    return Money();
+                }
+            }
+        },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getPricingAdvisorData: function () {
@@ -88,6 +96,45 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswGenerateLocalizePricin
                     id: 'CAD-m-sale-prices'
                 }
             ]);
+        });
+        it('should localizePricingConversion', function () {
+            let basePriceBook = {
+                getID: function () {
+                    return '';
+                }
+            };
+            let getPriceBookPrice = {
+                getPriceBookPrice: function () {
+                    return {
+                        valueOrNull: 'CAD'
+                    };
+                },
+                priceInfo: true
+            };
+            let product = {
+                custom: {
+                    eswProductPriceFreezeCountries: ''
+                },
+                getPriceModel: function () {
+                    return getPriceBookPrice;
+                }
+            };
+            let localizeObj = {
+                localizeCountryObj: {
+                    currencyCode: 'CAD',
+                    localListPriceBook: 'CAD-m-list-prices',
+                    localSalePriceBook: 'CAD-m-sale-prices'
+                },
+                applyRoundingModel: {
+                    toLowerCase: function () {
+                        return '';
+                    }
+                }
+            };
+            let selectedCountryAdjustments = [{ deliveryCountryIso: '' }];
+            let selectedFxRate = [{ deliveryCountryIso: '' }];
+            let localizePricingConversion = eswGenerateLocalizePricingHelper.localizePricingConversion(product, basePriceBook, localizeObj, selectedFxRate, selectedCountryAdjustments, []);
+            chai.expect(localizePricingConversion).to.be.null;
         });
     });
 });

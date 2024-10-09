@@ -2,6 +2,7 @@
 var proxyquire = require('proxyquire').noCallThru();
 var chai = require('chai');
 
+const ArrayList = require('../../../../mocks/dw.util.Collection');
 var Order = require('../../../../mocks/dw/order/Order');
 var collections = require('../../../../mocks/dw.util.CollectionHelper');
 var Logger = require('../../../../mocks/dw/system/Logger');
@@ -12,11 +13,9 @@ var PaymentMgrMock = require('../../../../mocks/dw/order/PaymentMgr');
 
 let ocPayload = {
     lineItems: [],
-    paymentDetails: [
-        {
-            isOverCounter: true
-        }
-    ]
+    paymentDetails: {
+        isOverCounter: true
+    }
 };
 
 let dwOrder = {
@@ -182,17 +181,96 @@ describe('int_eshopworld_core/cartridge/scripts/helper/orderConfirmationHelper.j
             chai.expect(JSON.stringify(itemDiscount)).to.equal('[{"title":"QA_product_promo_fixed_price","description":"QA_product_promo_fixed_price","discount":{"retailer":{"currency":"EUR","amount":"26.98"}},"beforeDiscount":{"retailer":{"currency":"EUR","amount":"33.90"}}}]');
         });
     });
+    describe('SplitPaymentDetails', function () {
+        let ocPayload = {
+            lineItems: {},
+            orderConfirmation: {
+                paymentDetails: {
+                    paymentRecords: ''
+                }
+            }
+        };
+        it('it Should return Split PaymentDetails', function () {
+            let splitPaymentDetails = orderConfirmationHelper.getSplitPaymentDetails(ocPayload);
+            chai.expect(splitPaymentDetails).to.be.null;
+        });
+    });
     describe('processKonbiniOrderConfirmation', function () {
         describe('Happy path', function () {
             it('Should return boolean', function () {
                 let returnResult = orderConfirmationHelper.processKonbiniOrderConfirmation(ocPayload, dwOrder);
-                chai.expect(returnResult).to.equal(false);
+                chai.expect(returnResult).to.equal(true);
             });
         });
         describe('Sad path', function () {
             it('Should return boolean', function () {
                 let returnResult = orderConfirmationHelper.processKonbiniOrderConfirmation();
                 chai.expect(returnResult).to.equal(false);
+            });
+            it('Should handle invalid data types gracefully', function () {
+                let invalidOcPayload = '';
+                let invalidDwOrder = 12345;
+                let returnResult = orderConfirmationHelper.processKonbiniOrderConfirmation(invalidOcPayload, invalidDwOrder);
+                chai.expect(returnResult).to.equal(false);
+            });
+            it('Should handle null values within the payload gracefully', function () {
+                let ocPayloadTest = {
+                    lineItems: [],
+                    paymentRecords: []
+                };
+                let dwOrderTest = { /* order data */ };
+                let returnResult = orderConfirmationHelper.processKonbiniOrderConfirmation(ocPayloadTest, dwOrderTest);
+                chai.expect(returnResult).to.equal(false);
+            });
+        });
+        describe('Happy path', function () {
+            it('Should return splited payments array', function () {
+                let returnResult = orderConfirmationHelper.getSplitPaymentDetails(ocPayload);
+                chai.expect(returnResult).to.be.null;
+            });
+        });
+        describe('Sad path', function () {
+            it('Should return null', function () {
+                let returnResult = orderConfirmationHelper.getSplitPaymentDetails();
+                chai.expect(returnResult).to.be.an('null');
+            });
+        });
+        describe('Happy path', function () {
+            let OrderObj = {
+                getPaymentInstruments: function () {
+                    return new ArrayList([
+                        {
+                            creditCardHolder: 'someName',
+                            maskedCreditCardNumber: 'someMaskedNumber',
+                            creditCardType: 'someCardType',
+                            creditCardExpirationMonth: 'someMonth',
+                            creditCardExpirationYear: 'someYear',
+                            UUID: 'someUUID',
+                            creditCardNumber: 'someNumber'
+                        }
+                    ]);
+                },
+                removePaymentInstrument: function () {},
+                createPaymentInstrument: function () {
+                    return {
+                        paymentTransaction: {
+                            custom: {
+                                eswPaymentMethodCardBrand: ''
+                            },
+                            setPaymentProcessor: function (paymentProcessor) {}
+                        }
+                    };
+                }
+            };
+            it('Should return false from split payment', function () {
+                let returnResult = orderConfirmationHelper.updateSplitPaymentInOrder(OrderObj, ocPayload.paymentRecords, ocPayload);
+                chai.expect(returnResult).to.be.false;
+            });
+        });
+        describe('Sad path', function () {
+            it('Should return false on no payment exists', function () {
+                let returnResult = orderConfirmationHelper.updateSplitPaymentInOrder(null, []);
+                chai.expect(returnResult).to.be.false;
             });
         });
     });

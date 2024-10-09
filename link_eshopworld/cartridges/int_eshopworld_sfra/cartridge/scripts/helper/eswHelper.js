@@ -152,6 +152,19 @@ eswHelper.rebuildCart = function (orderId) {
     }
 };
 
+/**
+ * This function is used to rebuild cart on redirecting back to store front from ESW Checkout for SFRA.
+ * @param {request} req - req
+ */
+eswHelper.setEnableMultipleFxRatesCurrency = function (req) {
+    let country = eswHelper.getAvailableCountry();
+    if (eswHelper.checkIsEswAllowedCountry(country)) {
+        if (!eswHelper.overridePrice(req, country)) {
+            eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());
+        }
+    }
+};
+
 module.exports = {
     getEswHelper: function () {
         return eswHelper;

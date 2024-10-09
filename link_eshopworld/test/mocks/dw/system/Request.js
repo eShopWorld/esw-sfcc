@@ -1,10 +1,12 @@
+
+
 class Request {
     constructor() {
         this.locale = undefined;
         this.custom = {};
         this.httpCookies = [];
         this.httpParameterMap = {
-            initializeQueryString: function(queryString) {
+            initializeQueryString: function (queryString) {
                 var keyValuePairs = queryString.split('&');
                 for (var i = 0; i < keyValuePairs.length; i++) {
                     this.setParameter(keyValuePairs[i]);
@@ -14,7 +16,7 @@ class Request {
             /**
             * Returns a sub-map containing all parameters that start with the given prefix.
             */
-            getParameterMap: function(prefix) {
+            getParameterMap: function (prefix) {
                 var result = [];
                 for (var key in this) {
                     if (key.indexOf(prefix) === 0) {
@@ -25,39 +27,39 @@ class Request {
                 return result;
             },
 
-            setNonSubmittedKeys: function(keys) {
+            setNonSubmittedKeys: function (keys) {
                 var i;
                 var key;
                 for (i = 0; i < keys.length; i++) {
                     key = keys[i];
-                    this[key] = new Bean({
+                    this[key] = {
                         value: null,
                         stringValue: null,
                         intValue: null,
                         doubleValue: null,
                         submitted: false
-                    });
+                    };
                 }
             },
 
-            setParameter: function(keyValuePair) {
+            setParameter: function (keyValuePair) {
                 if (keyValuePair.indexOf('=') > 0) {
                     var key = keyValuePair.split('=')[0];
                     var value = keyValuePair.split('=').slice(1).join('=');
-                    this[key] = new Bean({
+                    this[key] = {
                         value: value,
                         intValue: parseInt(value),
                         doubleValue: parseFloat(value),
                         stringValue: value,
                         submitted: true,
-                        booleanValue: value === 'true' ? true : false
-                    });
+                        booleanValue: value === 'true'
+                    };
                 } else {
                     throw 'Invalid Querystring';
                 }
             },
 
-            destroyParameters: function() {
+            destroyParameters: function () {
                 for (var key in this) {
                     if (this.hasOwnProperty(key) && typeof this[key] !== 'function') {
                         delete this[key];
@@ -65,20 +67,20 @@ class Request {
                 }
             },
 
-            get: function(key) {
-                return this[key] || new Bean({
-                        value: "",
-                        intValue: 0,
-                        doubleValue: 0,
-                        stringValue: "",
-                        submitted: false
-                    });
+            get: function (key) {
+                return this[key] || {
+                    value: '',
+                    intValue: 0,
+                    doubleValue: 0,
+                    stringValue: '',
+                    submitted: false
+                };
             },
 
-            isParameterSubmitted: function(key) {
+            isParameterSubmitted: function (key) {
                 return this.get(key).submitted;
             }
-        }
+        };
     }
 
     getLocale() {

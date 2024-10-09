@@ -392,11 +392,14 @@
 }
 
 .selector-container .selectCountry {
-  z-index: 113;
+  z-index: 4;
 }
 
 .selector-container .selectLanguage {
-  z-index: 111;
+  z-index: 3;
+}
+.selector-container .selectCurrency {
+  z-index: 2;
 }
 
 .d-none {

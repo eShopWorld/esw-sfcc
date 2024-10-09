@@ -315,55 +315,6 @@ function getLineItemsV2(order, countryCode, currencyCode) {
 }
 
 /**
- * function to get product unit price info
- * @param {Object} cart - productLineItem
- * @returns {Object} - cart discount price info
- */
-function getCartDiscountPriceInfo(cart) {
-    let cartSubTotal = eswHelper.getSubtotalObject(cart, true),
-        beforeDiscount = cartSubTotal.value,
-        obj = {},
-        cartDiscounts = [],
-        currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode,
-        allPriceAdjustmentIter = cart.priceAdjustments.iterator(),
-        cartDiscountTotal = 0;
-    while (allPriceAdjustmentIter.hasNext()) {
-        let eachPriceAdjustment = allPriceAdjustmentIter.next();
-        if (eachPriceAdjustment.promotion && eswHelper.isThresholdEnabled(eachPriceAdjustment.promotion)) {
-             /* eslint-disable no-continue */
-            continue;
-        }
-        if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
-            let cartDiscount = {
-                'title': eachPriceAdjustment.promotionID,
-                'description': eachPriceAdjustment.lineItemText,
-                'discount': {
-                    'currency': currencyCode,
-                    'amount': eachPriceAdjustment.priceValue * -1
-                },
-                'beforeDiscount': {
-                    'currency': currencyCode,
-                    'amount': beforeDiscount
-                }
-            };
-            cartDiscountTotal += eachPriceAdjustment.priceValue;
-            cartDiscounts.push(cartDiscount);
-            beforeDiscount -= eachPriceAdjustment.priceValue * -1;
-        }
-    }
-    if (cartDiscounts.length > 0) {
-        obj = {
-            'price': {
-                'currency': currencyCode,
-                'amount': cartSubTotal.value - cartDiscountTotal
-            },
-            'discounts': cartDiscounts
-        };
-    }
-    return obj;
-}
-
-/**
  * function to get shopper checkout experience for version 3
  * @param {string} shopperLocale - shopper locale
  * @returns {Object} target object

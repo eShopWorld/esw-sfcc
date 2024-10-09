@@ -443,8 +443,8 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
-            <attribute-definition attribute-id="eswKonbiniPayloadJson">
-                <display-name xml:lang="x-default">Esw Konbini Payload Json</display-name>
+            <attribute-definition attribute-id="eswOverTheCounterPayloadJson">
+                <display-name xml:lang="x-default">Esw Over the Counter Payload Json</display-name>
                 <type>text</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -541,9 +541,9 @@
                 <attribute attribute-id="appeasementJsonPayload"/>
                 <attribute attribute-id="isAppeasement"/>
             </attribute-group>
-            <attribute-group group-id="eswKonbini">
-                <display-name xml:lang="x-default">ESW Konbini Payments</display-name>
-                <attribute attribute-id="eswKonbiniPayloadJson"/>
+            <attribute-group group-id="eswOverTheCounter">
+                <display-name xml:lang="x-default">ESW Over the Counter Payments</display-name>
+                <attribute attribute-id="eswOverTheCounterPayloadJson"/>
             </attribute-group>
         </group-definitions>
     </type-extension>
@@ -1687,6 +1687,14 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswSkipFlaggedLocalPrice">
+                <display-name xml:lang="x-default">ESW Skip Flagged Product Price</display-name>
+                <description xml:lang="x-default">Switch to enable/ disable Exclude flagged product prices from Localized pricebook generation</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
             <attribute-definition attribute-id="eswReturnOrderStatus">
                 <display-name xml:lang="x-default">ESW Return Order Status</display-name>
                 <description xml:lang="x-default">Required for Returns V3 - Indicates the return order status for which the return will be stored in SFCC</description>
@@ -1755,6 +1763,7 @@ Example: &#13;
                 <attribute attribute-id="eswProductionClientSecret"/>
                 <attribute attribute-id="eswLocalizedPricingCountries"/>
                 <attribute attribute-id="eswLocalizedPromotions"/>
+                <attribute attribute-id="eswSkipFlaggedLocalPrice"/>
             </attribute-group>
             <attribute-group group-id="ESW Checkout Configuration">
                 <display-name xml:lang="x-default">ESW Checkout Configuration</display-name>

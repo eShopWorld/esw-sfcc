@@ -22,11 +22,12 @@ function setInitialCookies(req) {
     let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
 
     let Site = require('dw/system/Site').getCurrent();
-    let locationParameter = req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
+    let locationParameter = !empty(req.httpParameterMap) ? req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')) : null;
     eswHelper.setCustomSessionVariables(country, currencyCode);
     eswHelper.createInitialCookies(country, currencyCode, locale);
+    eswHelper.setCustomerCookies();
 
-    if (!empty(locationParameter.value)) {
+    if (!empty(locationParameter) && !empty(locationParameter.value)) {
         eswHelper.setLocation(locationParameter.value);
         if (request.httpCookies['esw.Landing.Played'] == null) {
             eswHelper.createCookie('esw.Landing.Played', true, '/');
@@ -152,8 +153,8 @@ server.get('GetEswAppResources', function (req, res, next) {
     let selectedCountryParam = null;
     let Site = require('dw/system/Site').getCurrent();
     let Currency = require('dw/util/Currency');
-    let locationUrlParameter = req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
-    if (empty(locationUrlParameter.value)) {
+    let locationUrlParameter = !empty(req.httpParameterMap) ? req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')) : null;
+    if (empty(locationUrlParameter) || empty(locationUrlParameter.value)) {
         selectedCountryParam = !empty(request.httpCookies['esw.location']) && !empty(request.httpCookies['esw.location'].value) ? request.httpCookies['esw.location'].value : eswHelper.getAvailableCountry();
     } else {
         selectedCountryParam = locationUrlParameter.value;
@@ -173,6 +174,7 @@ server.get('GetEswAppResources', function (req, res, next) {
  * This is the preorder request which is generating at time of redirection from cart page to ESW checkout
  */
 server.get('PreOrderRequest', function (req, res, next) {
+    eswHelper.setEnableMultipleFxRatesCurrency(req);
     let BasketMgr = require('dw/order/BasketMgr');
     let currentBasket = BasketMgr.getCurrentBasket();
 
@@ -259,7 +261,7 @@ server.get('PreOrderRequest', function (req, res, next) {
 function getCartItem(obj, order, lineItem) {
     let item;
     let cartItem = obj.filter(function (value) {
-        if (value.product.productCode === order.productLineItems[lineItem].productID && value.lineItemId === order.productLineItems[lineItem].custom.eswLineItemId) {
+        if (value.product.productCode === order.productLineItems[lineItem].productID && 'eswLineItemId' in order.productLineItems[lineItem].custom && value.lineItemId === order.productLineItems[lineItem].custom.eswLineItemId) {
             item = value;
         }
         return item;
@@ -358,13 +360,17 @@ server.post('Notify', function (req, res, next) {
                     ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand, obj);
 
                     OrderMgr.placeOrder(order);
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_READY);
                     if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId) && obj.shopperCheckoutExperience.saveAddressForNextPurchase) {
                         ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId);
                     }
-                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    // Add konbini related order information
+                    let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
+                    if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_READY);
+                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        }
                     }
                 }
             });

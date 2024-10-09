@@ -1,4 +1,8 @@
 <isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled) ? dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled : false}" scope="page" />
+<isset value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" name="eswHelper" scope="page" />
+<isset name="sfCountryUrlParam" value="${eswHelper.getSfCountryUrlParam(request.httpParameterMap)}" scope="page" />
+
+
 <header>
     <isinclude template="/components/header/skipNav" />
     <div class="header-banner slide-up d-none">
@@ -20,7 +24,7 @@
     	<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page"/>
     </isif>
     <isif condition="${isEswEnabled && eswHelper.getEnableLandingPage() && request.httpParameterMap.get(dw.system.Site.current.preferences.custom.eswCountryUrlParam) == false}">
-		<isinclude url="${URLUtils.url('EShopWorld-GetEswLandingPage',dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam'), pdict.CurrentHttpParameterMap.get(dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam')))}"/>
+		<isinclude url="${URLUtils.url('EShopWorld-GetEswLandingPage',sfCountryUrlParam.countryUrlParamKey, sfCountryUrlParam.countryUrlParamVal)}"/>
 	</isif>
     <nav role="navigation">
         <div class="header container">
@@ -37,10 +41,10 @@
                             <div class="hidden-md-down">
                                 <isinclude url="${URLUtils.url('Account-Header')}" />
                                 <isif condition="${isEswEnabled}">
-                                	<isinclude url="${URLUtils.url('EShopWorld-GetEswHeader', dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam'),pdict.CurrentHttpParameterMap.get(dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam')))}"/>
+                                	<isinclude url="${URLUtils.url('EShopWorld-GetEswHeader', sfCountryUrlParam.countryUrlParamKey,sfCountryUrlParam.countryUrlParamVal)}"/>
                                 </isif>
                                 <isif condition="${isEswEnabled && eswHelper.isFrontendConversionEnabled()}">
-                                	<isinclude url="${URLUtils.url('EShopWorld-GetEswAppResources', dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam'),pdict.CurrentHttpParameterMap.get(dw.system.Site.current.getCustomPreferenceValue('eswCountryUrlParam')))}"/>
+                                	<isinclude url="${URLUtils.url('EShopWorld-GetEswAppResources', sfCountryUrlParam.countryUrlParamKey,sfCountryUrlParam.countryUrlParamVal)}"/>
                                 </isif>
                                 <isif condition="${isEswEnabled && eswHelper.isESWSupportedCountry()}">
 							        <i class="eshopworld-loader d-none"></i>

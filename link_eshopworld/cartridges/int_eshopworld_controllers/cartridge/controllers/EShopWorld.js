@@ -30,6 +30,7 @@ function setInitialCookies() {
     let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
 
     eswHelper.createInitialCookies(country, currencyCode, locale);
+    eswHelper.setCustomerCookies();
 
     let selectedFxRate = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate) : '';
     if (!selectedFxRate && selectedFxRate !== null) {
@@ -311,10 +312,8 @@ function handlePreOrderRequestV2() {
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
     eswHelper.validatePreOrder(requestObj, true);
-    let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
-    if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestObj.shopperCheckoutExperience.registration) && requestObj.shopperCheckoutExperience.registration.showRegistration) {
-        session.privacy.confirmedOrderID = requestObj.retailerCartId;
-    }
+    session.privacy.confirmedOrderID = requestObj.retailerCartId;
+
     let result = preorderServiceObj.call(JSON.stringify(requestObj));
     return result;
 }
@@ -427,17 +426,21 @@ function notify() {
                     // update ESW order Item custom attributes
                     ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
                     // update ESW Payment instrument custom attributes
-                    ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
+                    ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand, obj);
 
                     OrderMgr.placeOrder(order);
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_READY);
 
                     if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId) && obj.shopperCheckoutExperience.saveAddressForNextPurchase) {
                         ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId);
                     }
-                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    // Add konbini related order information
+                    let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
+                    if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_READY);
+                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        }
                     }
                 }
             });

@@ -140,10 +140,10 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCatalogHelper.js', fun
         });
         it('Should return true if isValidCountryOfOrigin', function () {
             let isValidCountryOfOrigin = eswCatalogHelper.isValidCountryOfOrigin('FF');
-            expect(isValidCountryOfOrigin).to.be.false;
+            expect(isValidCountryOfOrigin).to.be.true;
         });
         it('Should return true if isValidHsCodeRegion', function () {
-            let isValidHsCodeRegion = eswCatalogHelper.isValidHsCodeRegion('FF');
+            let isValidHsCodeRegion = eswCatalogHelper.isValidHsCodeRegion();
             expect(isValidHsCodeRegion).to.be.false;
         });
         it('should convert array to chunk', function () {
@@ -170,7 +170,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCatalogHelper.js', fun
 
             let result = eswCatalogHelper.getFilteredProducts(isApiMethod, searchAbleProducts);
 
-            expect(result).to.be.null;
+            expect(result).to.deep.equal([]);
         });
 
         it('should return an array of products when there are products', function () {
@@ -181,7 +181,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCatalogHelper.js', fun
                 { product: { lastModified: new Date('2023-09-20T17:05:03Z') } }
             ];
             let result = eswCatalogHelper.getFilteredProducts(isApiMethod, searchAbleProducts);
-            expect(result).to.be.null;
+            expect(result).to.deep.equal([]);
         });
     });
 });

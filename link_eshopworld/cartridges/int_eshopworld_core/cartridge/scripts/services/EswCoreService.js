@@ -32,6 +32,18 @@ const eShopWorldServices = {
         return oAuthService;
     },
     /*
+     * service for getting ESWSFTP
+     */
+    getESWSFTPService: function () {
+        let eseSFTPService = LocalServiceRegistry.createService('ESWSFTP', {
+            parseResponse: function (service, listOutput) {
+                eswHelper.eswInfoLogger('Esw ESWSFTP Response', listOutput.text);
+                return listOutput.text;
+            }
+        });
+        return eseSFTPService;
+    },
+    /*
      * service for getting oAuth Token for Pricing Advisor
      */
     getPricingOAuthService: function () {

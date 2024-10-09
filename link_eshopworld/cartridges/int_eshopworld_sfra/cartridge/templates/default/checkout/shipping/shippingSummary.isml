@@ -31,7 +31,11 @@
                 </div>
                 <div class="col-4 end-lines">
                     <p class="text-right pricing shipping-method-price">
-                        ${pdict.order.totals.totalShippingCost}
+                        <isif condition="${!empty(pdict.order.totals.totalShippingCost) && typeof pdict.order.totals.totalShippingCost === 'object'}">
+                            ${pdict.order.totals.totalShippingCost.formatted}
+                        <iselse/>
+                            ${pdict.order.totals.totalShippingCost} 
+                        </isif>
                     </p>
                 </div>
             </div>

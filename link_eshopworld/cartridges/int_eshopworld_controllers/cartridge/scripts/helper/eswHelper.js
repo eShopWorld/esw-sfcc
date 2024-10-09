@@ -91,9 +91,34 @@ eswHelper.isEswOrderHistory = function (lineItemContainer) {
 eswHelper.rebuildCartUponBackFromESW = function () {
     let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
     let BasketMgr = require('dw/order/BasketMgr');
+    let orderID = session.privacy.confirmedOrderID;
     try {
         let currentBasket = BasketMgr.getCurrentBasket();
         if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
+            if (eswHelper.isOrderPlaced(orderID)) {
+                if (!empty(currentBasket)) {
+                    Transaction.wrap(function () {
+                        let coupons = currentBasket.getCouponLineItems();
+                        let products = currentBasket.getAllProductLineItems();
+                        if (!empty(coupons)) {
+                            let couponsItr = coupons.iterator();
+                            while (couponsItr.hasNext()) {
+                                let coupon = couponsItr.next();
+                                currentBasket.removeCouponLineItem(coupon);
+                            }
+                        }
+                        if (!empty(products)) {
+                            let productsItr = products.iterator();
+                            while (productsItr.hasNext()) {
+                                let product = productsItr.next();
+                                currentBasket.removeProductLineItem(product);
+                            }
+                        }
+                    });
+                }
+                delete session.privacy.confirmedOrderID;
+                return true;
+            }
             if (!currentBasket) {
                 eswHelper.rebuildCart();
                 currentBasket = BasketMgr.getCurrentBasket();
