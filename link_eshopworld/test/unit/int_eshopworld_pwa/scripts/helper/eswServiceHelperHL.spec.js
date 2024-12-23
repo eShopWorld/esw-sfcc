@@ -1,8 +1,7 @@
-
 var chai = require('chai');
 var proxyquire = require('proxyquire').noCallThru();
 var expect = chai.expect;
-
+var sinon = require('sinon');
 // Sample data
 const Basket = require('../../../../mocks/dw/order/Basket');
 Basket.getPriceAdjustments = function () { return []; };
@@ -13,10 +12,19 @@ Basket.calculateTotals = function () { return 0; };
 const collections = require('../../../../mocks/dw.util.CollectionHelper');
 const SiteMock = require('../../../../mocks/dw/system/Site');
 const Money = require('../../../../mocks/dw.value.Money');
+var session = require('../../../../mocks/dw/system/Session');
+var StringUtils = require('../../../../mocks/dw/util/StringUtils');
+var Currency = require('../../../../mocks/dw/util/Currency');
 const URLUtilsMock = require('../../../../mocks/dw/web/URLUtils');
 const Logger = require('../../../../mocks/dw/system/Logger');
 var ArrayList = require('../../../../mocks/dw.util.Collection');
 const empty = require('../../../../mocks/dw.global.empty');
+
+var stubTransaction = sinon.stub();
+var stubTransaction = sinon.stub();
+var stubCookie = sinon.stub();
+var stubArrayList = sinon.stub();
+var stubURLUtils = sinon.stub();
 global.empty = empty(global);
 
 global.request.httpParameters = {
@@ -33,45 +41,14 @@ let MoneyObj = {
 };
 
 describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', function () {
-    var eswServiceHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL', {
-        'dw/system/Logger': Logger,
-        'dw/system/Site': SiteMock,
-        '*/cartridge/scripts/helper/eswPricingHelper': {
-            eswPricingHelper: {
-                getConvertedPrice: function () { return 1; },
-                getConversionPreference: function () { return {}; }
-            }
-        },
-        '*/cartridge/scripts/helper/eswPricingHelperHL': {
-            getShopperCurrency: function () {
-                return 'EUR';
-            },
-            isFixedPriceCountry: function () {
-                return true;
-            },
-            getConvertedPrice: function () {
-                return 15;
-            },
-            getConversionPreference: function () {
-                return {};
-            }
+    var serviceHelperV3 = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3', {
+        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
+            getCountryDetailByParam: function () { return null; }
         },
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
-                getCountryDetailByParam: function () {
-                    return {countryCode: 'CA'};
-                },
-                getCountryLocalizeObj: function () {
-                    return {};
-                },
-                isUseDeliveryContactDetailsForPaymentContactDetailsPrefEnabled: function () {
-                    return true;
-                },
-                getEswSessionTimeout: function () {
-                    return 15;
-                },
                 getMoneyObject: function () {
-                    return MoneyObj;
+                    return Money();
                 },
                 isEswRoundingsEnabled: function () {
                     return 'true';
@@ -79,111 +56,51 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
                 applyRoundingModel: function () {
                     return 'price';
                 },
-                getOverrideShipping: function () {
-                    return '';
+                getSubtotalObject: function () {
+                    return {
+                        available: true,
+                        value: '10.99',
+                        getDecimalValue: function () { return '10.99'; },
+                        getCurrencyCode: function () { return 'USD'; },
+                        subtract: function () { return new Money(isAvailable); }
+                    };
                 },
                 isThresholdEnabled: function () {
-                    return false;
+                    return true;
                 },
-                getSelectedCountryDetail: function (shopperCountry) {
-                    if (shopperCountry) {
-                        return {
-                            name: 'test',
-                            defaultCurrencyCode: 'EUR',
-                            isFixedPriceModel: true
-                        };
-                    }
-                    return null;
+                getDeliveryDiscountsPriceFormat: function () {
+                    return 14;
                 },
-                getOverridePriceBooks: function (country) {
-                    if (country) {
-                        return ['test-pricebook'];
-                    }
-                    return [];
-                },
-                getPricingAdvisorData: function () {
-                    return { fxRates: [{ toShopperCurrencyIso: 'EUR', fromRetailerCurrencyIso: 'USD' }] };
-                },
-                getBaseCurrencyPreference: function () {
-                    return 'USD';
-                },
-                getOrderProratedDiscount: function () {
-                    return 0;
+                getDeliveryDiscountsCurrencyCode: function () {
+                    return "EUR";
                 }
             }
         },
-        '*/cartridge/scripts/helper/eswHelperHL': {
-            getSubtotalObject: function () {
+        '*/cartridge/scripts/helper/eswPricingHelper': '',
+        'dw/system/Transaction': stubTransaction,
+        'dw/web/Cookie': stubCookie,
+        'dw/value/Money': Money,
+        'dw/system/Logger': Logger,
+        'dw/util/ArrayList': stubArrayList,
+        'dw/web/URLUtils': stubURLUtils,
+        'dw/system/Site': {
+            getCurrent: function () {
                 return {
-                    available: true,
-                    value: '10.99',
-                    getDecimalValue: function () { return '10.99'; },
-                    getCurrencyCode: function () { return 'EUR'; },
-                    subtract: function () { return new Money(isAvailable); }
-                };
-            },
-            getOrderDiscount: function () {
-                return {
-                    available: true,
-                    value: '10.99',
-                    getDecimalValue: function () { return '15.99'; },
-                    getCurrencyCode: function () { return 'EUR'; },
-                    subtract: function () { return new Money(isAvailable); }
-                };
-            },
-            getFinalOrderTotalsObject: function () {
-                return {
-                    available: true,
-                    value: '10.99',
-                    getDecimalValue: function () { return '12.99'; },
-                    getCurrencyCode: function () { return 'EUR'; },
-                    subtract: function () { return new Money(isAvailable); }
-                };
-            },
-            adjustThresholdDiscounts: function () {
-                return {};
-            },
-            getEswCartShippingCost: function () {
-                return {
-                    available: true,
-                    value: '5.00',
-                    getDecimalValue: function () { return '5.00'; },
-                    getCurrencyCode: function () { return 'EUR'; },
-                    subtract: function () { return new Money(isAvailable); }
-                };
-            },
-            getProductLineMetadataItems: function () {
-                return {};
-            },
-            isReturnProhibited: function () {
-                return false;
-            }
-        },
-        '*/cartridge/scripts/helper/eswPwaCoreHelper': {
-            getCountryDetailByParam: function () {
-                return {};
-            },
-            getCountryLocalizeObj: function () {
-                return {
-                    applyRoundingModel: ''
+                    getCustomPreferenceValue: function (value) {
+                        if (value == 'eswBaseCurrency') {
+                            return 'some value';
+                        }
+                        return 'true';
+                    }
                 };
             }
         },
-        'dw/order/BasketMgr': Basket,
-        '*/cartridge/scripts/util/Constants': '',
-        'dw/web/URLUtils': URLUtilsMock,
+        'dw/util/Currency': Currency,
+        'dw/util/StringUtils': StringUtils,
         '*/cartridge/scripts/util/collections': collections,
-        'dw/campaign/Discount': {
-            TYPE_FREE: null
-        },
-        '*/cartridge/scripts/helper/serviceHelperV3': {
-        },
-        '*/cartridge/scripts/helper/customizationHelper': {
-            getProductImage: function () {
-                return 'test image';
-            }
-        }
+        'dw/order/BasketMgr': Basket
     });
+
     // Unit test
     it('returns delivery discounts', () => {
         Basket.defaultShipment = {
@@ -214,7 +131,7 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswServiceHelperHL.js', fu
             },
             applyRoundingModel: 'false'
         };
-        let shopperCheckoutExperience = eswServiceHelperHL.getDeliveryDiscounts(Basket, false, localizeObj, {});
+        let shopperCheckoutExperience = serviceHelperV3.getDeliveryDiscounts(Basket, false, localizeObj, {});
         expect(shopperCheckoutExperience).to.have.property('ShippingDiscounts');
     });
 });

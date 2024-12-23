@@ -99,6 +99,14 @@
                 ],
                 "read_attributes": "(**)",
                 "write_attributes": "(**)"
+            },
+            {
+                "resource_id": "/orders/{order_no}",
+                "methods": [
+                    "get"
+                ],
+                "read_attributes": "(**)",
+                "write_attributes": "(**)"
             }
         ]
     }]

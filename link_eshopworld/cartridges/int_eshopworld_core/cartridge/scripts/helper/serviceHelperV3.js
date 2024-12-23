@@ -425,52 +425,58 @@ function getShopperCheckoutExperience(shopperLocale) {
     return checkoutExp;
 }
 /**
- * function to get the delivery discounts.
- * @param {dw.basket} cart - DW Basket object
- * @param {boolean} isConversionDisabled - Boolean
- * @return {Object} Object - Discounts
+ * Gets the delivery discounts.
+ * @param {Object} cart - he cart object.
+ * @param {Object} isConversionDisabled - Whether conversion is disabled.
+ * @param {Object} localizeObj - The localization object.
+ * @param {Object} conversionPrefs - The conversion preferences.
+ * @returns {Object|null} - The delivery discounts object or null if the cart is empty.
  */
-function getDeliveryDiscounts(cart, isConversionDisabled) {
-    if (empty(cart)) {
-        return null;
-    }
-    let beforeDiscount = (isConversionDisabled || cart.defaultShipment.shippingTotalNetPrice.value === 0) ? cart.defaultShipment.shippingTotalNetPrice.value : eswHelper.getMoneyObject(cart.defaultShipment.shippingTotalNetPrice.value, true, false, false).value,
-        obj = {},
-        ShippingDiscounts = [],
-        currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
+function getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs) {
+    if (empty(cart)) return null;
+
+    let priceFormat = eswHelper.getDeliveryDiscountsPriceFormat(cart, localizeObj, conversionPrefs);
+
+    let beforeDiscount = (isConversionDisabled || cart.defaultShipment.shippingTotalNetPrice.value === 0)
+        ? cart.defaultShipment.shippingTotalNetPrice.value
+        : priceFormat;
+
+    let ShippingDiscounts = [];
+    let currencyCode = eswHelper.getDeliveryDiscountsCurrencyCode(localizeObj, session);
     let shippingPriceAdjustmentIter = cart.defaultShipment.shippingPriceAdjustments.iterator();
-    let finalPrice = 0,
-        shippingDiscountAmount = 0;
+
+    if (localizeObj) localizeObj.applyRoundingModel = 'false';
+
     while (shippingPriceAdjustmentIter.hasNext()) {
         let shippingPriceAdjustment = shippingPriceAdjustmentIter.next();
         if (shippingPriceAdjustment.promotion && eswHelper.isThresholdEnabled(shippingPriceAdjustment.promotion)) {
-            // eslint-disable-next-line no-continue
             continue;
         }
-        if (shippingPriceAdjustment.appliedDiscount.type === dw.campaign.Discount.TYPE_FREE || (shippingPriceAdjustment.custom.thresholdDiscountType && shippingPriceAdjustment.custom.thresholdDiscountType === 'free')) {
-            shippingDiscountAmount = beforeDiscount;
-        } else if (shippingPriceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
-            shippingDiscountAmount = (isConversionDisabled || shippingPriceAdjustment.priceValue === 0) ? shippingPriceAdjustment.appliedDiscount.fixedPrice : eswHelper.getMoneyObject(shippingPriceAdjustment.appliedDiscount.fixedPrice, true, false, false).value;
-            shippingDiscountAmount = beforeDiscount - shippingDiscountAmount;
-        } else {
-            shippingDiscountAmount = (isConversionDisabled || shippingPriceAdjustment.priceValue === 0) ? shippingPriceAdjustment.priceValue * -1 : eswHelper.getMoneyObject(shippingPriceAdjustment.priceValue * -1, true, false, true).value;
-        }
-        let shippingDiscount = {
-            'title': shippingPriceAdjustment.promotionID,
-            'description': shippingPriceAdjustment.lineItemText,
-            'discount': {
-                'currency': currencyCode,
-                'amount': shippingDiscountAmount.toFixed(3)
-            },
-            'beforeDiscount': {
-                'currency': currencyCode,
-                'amount': beforeDiscount.toFixed(3)
-            }
-        };
+
+        let shippingDiscountAmount = eswHelper.calculateShippingDiscountAmount(
+            shippingPriceAdjustment,
+            beforeDiscount,
+            isConversionDisabled,
+            localizeObj,
+            conversionPrefs
+        );
+
+        let shippingDiscount = eswHelper.createShippingDiscount(
+            shippingPriceAdjustment,
+            shippingDiscountAmount,
+            beforeDiscount,
+            currencyCode,
+            localizeObj,
+            conversionPrefs
+        );
+
         ShippingDiscounts.push(shippingDiscount);
         beforeDiscount -= shippingDiscount.discount.amount;
     }
-    obj = {
+
+    if (localizeObj) localizeObj.applyRoundingModel = 'true';
+
+    let obj = {
         'ShippingDiscounts': ShippingDiscounts,
         'finalPrice': beforeDiscount
     };

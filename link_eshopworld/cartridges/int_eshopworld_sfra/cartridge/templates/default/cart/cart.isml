@@ -4,6 +4,7 @@
         assets.addCss('/css/cart.css');
     </isscript>
     <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+    <isset name="eswOverrideShipping" value="${eswHelper.getEswOverrideShipping()}" scope="page" />
     <isif condition="${pdict.reportingURLs && pdict.reportingURLs.length}">
         <isinclude template="reporting/reportingUrls" />
     </isif>
@@ -72,7 +73,7 @@
                     <div class="coupons-and-promos">
                         <isinclude template="cart/cartCouponDisplay" />
                     </div>
-                    <isif condition="${!eswHelper.getEShopWorldModuleEnabled() || !eswHelper.isESWSupportedCountry()}">
+                    <isif condition="${(!eswHelper.getEShopWorldModuleEnabled() || !eswHelper.isESWSupportedCountry()) || (eswHelper.isSelectedCountryOverrideShippingEnabled() && !empty(eswOverrideShipping) && eswOverrideShipping.length > 1)}">
 	                    <div class="row">
 	                        <isinclude template="cart/cartShippingMethodSelection" />
 	                    </div>

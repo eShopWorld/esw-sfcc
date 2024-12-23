@@ -64,7 +64,7 @@
         </triggers>
     </job>
 
-    <job job-id="eswRetailerPackageFeed" priority="0">
+     <job job-id="eswRetailerPackageFeed" priority="0">
         <description>This job syncs Retailer Package Information with ESW Package service.</description>
         <parameters/>
         <flow>
@@ -72,6 +72,16 @@
             <step step-id="sendASNtoESW" type="custom.ESW_ExecutePackageFeed" enforce-restart="false">
                 <description>Send Advanced Shipping Notification to ESW through ESW Package API v4.</description>
                 <parameters/>
+            </step>
+        </flow>
+        <flow>
+            <context site-id="RefArch"/>
+            <step step-id="getASNFromESW" type="custom.ESW_GetASN" enforce-restart="false">
+                <description>Get Package ASN info from ESW.&#xA;*** Search is restricted to a maximum of 3 days ***</description>
+                <parameters>
+                    <parameter name="startDate"></parameter>
+                    <parameter name="endDate"></parameter>
+                </parameters>
             </step>
         </flow>
         <rules/>
@@ -173,13 +183,6 @@
             <context site-id="RefArch"/>
             <step step-id="eswToSfccOrderCancellation" type="custom.ESW_EswToSfccOrderCancellation" enforce-restart="false">
                 <description>This job step is responsbile for order cancellations</description>
-                <parameters/>
-            </step>
-        </flow>
-        <flow>
-            <context site-id="RefArch"/>
-            <step step-id="orderReturn" type="custom.ESW_orderReturns" enforce-restart="false">
-                <description>This job step is responsbile for order returns .</description>
                 <parameters/>
             </step>
         </flow>

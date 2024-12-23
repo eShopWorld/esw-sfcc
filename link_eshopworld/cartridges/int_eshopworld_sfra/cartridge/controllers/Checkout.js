@@ -35,20 +35,10 @@ server.prepend(
             }
             let BasketMgr = require('dw/order/BasketMgr'),
                 currentBasket = BasketMgr.getCurrentBasket();
-
             if (currentBasket) {
-                let viewData = res.getViewData(),
-                    Transaction = require('dw/system/Transaction'),
-                    basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+                let viewData = res.getViewData();
                 // Set override shipping methods if configured
-                Transaction.wrap(function () {
-                    if (eswHelper.getShippingServiceType(currentBasket) === 'POST') {
-                        eswServiceHelper.applyShippingMethod(currentBasket, 'POST', eswHelper.getAvailableCountry(), true);
-                    } else {
-                        eswServiceHelper.applyShippingMethod(currentBasket, 'EXP2', eswHelper.getAvailableCountry(), true);
-                    }
-                    basketCalculationHelpers.calculateTotals(currentBasket);
-                });
+                eswHelper.applyShippingOverrideMethod(currentBasket);
                 res.setViewData(viewData);
             }
         }

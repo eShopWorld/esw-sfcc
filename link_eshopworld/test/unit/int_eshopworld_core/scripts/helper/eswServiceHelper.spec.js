@@ -46,6 +46,12 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
                 },
                 isThresholdEnabled: function () {
                     return true;
+                },
+                getDeliveryDiscountsPriceFormat: function () {
+                    return 14;
+                },
+                getDeliveryDiscountsCurrencyCode: function () {
+                    return "EUR";
                 }
             }
         },

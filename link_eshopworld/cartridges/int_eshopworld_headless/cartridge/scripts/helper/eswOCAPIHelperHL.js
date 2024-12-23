@@ -5,6 +5,8 @@
 // API Includes
 const Site = require('dw/system/Site').getCurrent();
 
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+
 // Script Includes
 const priceBookKeyWords = Site.getCustomPreferenceValue('eswPriceBookKeyWords');
 const retailerCurrencies = new RegExp(priceBookKeyWords, 'gi');
@@ -204,7 +206,6 @@ const OCAPIHelper = {
     handleEswPreOrderCall: function (order, orderResponse) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code']) && eswHelper.checkIsEswAllowedCountry(param['country-code'][0])) {
@@ -236,7 +237,6 @@ const OCAPIHelper = {
     handleEswBasketAttributes: function (basket) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code']) && eswHelper.checkIsEswAllowedCountry(param['country-code'][0])) {
@@ -263,7 +263,6 @@ const OCAPIHelper = {
     handleEswOrderAttributes: function (order) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
             param = request.httpParameters;
 
         if (!empty(param['country-code']) && eswHelper.checkIsEswAllowedCountry(param['country-code'][0])) {
@@ -289,8 +288,7 @@ const OCAPIHelper = {
      * @param {Object} basket - Basket object SFCC API
      */
     setDefaultOverrideShippingMethod: function (basket) {
-        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
-            eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
+        let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
             customizationHelper = require('*/cartridge/scripts/helper/customizationHelper'),
             Transaction = require('dw/system/Transaction'),
             ShippingMgr = require('dw/order/ShippingMgr'),
@@ -316,6 +314,11 @@ const OCAPIHelper = {
                     eswHelperHL.applyShippingMethod(basket, defaultShippingMethodID, param['country-code'][0], false);
                 }
             });
+        }
+    },
+    handleEswOrderDetailCall: function (order, orderResponse) {
+        if (orderResponse.c_eswPackageJSON && !empty(orderResponse.c_eswPackageJSON)) {
+            orderResponse.c_eswPackageJSON = eswHelper.strToJson(orderResponse.c_eswPackageJSON);
         }
     }
 };

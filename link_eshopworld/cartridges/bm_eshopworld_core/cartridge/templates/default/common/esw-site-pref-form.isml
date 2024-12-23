@@ -6,15 +6,24 @@
                     <h1><strong>${pdict.sitePrefFields.displayName}</strong></h1>
                 </section>
             </td>
-            <td class="top right"><input type="submit" value="Save" class="esw-frm-submit-btn" /></td>
+            <td class="top right">
+                <div class="permanent-tooltip-container">
+                    <input type="submit" value="Save" class="esw-frm-submit-btn" />
+                    <isif condition="${isPackageConfigPage}">
+                        <span class="permanentTooltip">
+                            ${Resource.msg('msg.pkg.model.save', 'eswbm', null)}
+                        </span>
+                    </isif>
+                </div>
+            </td>
         </tr>
     </table>
     <div class="esw-v-seperatpr">&nbsp;</div>
     <table class="table esw-form-table">
         <tr>
-            <th class="table_header w e s">Name</th>
-            <th class="table_header w e s">Value</th>
-            <th class="table_header w e s">Default Value</th>
+            <th class="table_header w e s">${Resource.msg('esw.bm.Name', 'eswbm', null)}</th>
+            <th class="table_header w e s">${Resource.msg('lbl.esw.value', 'eswbm', null)}</th>
+            <th class="table_header w e s">${Resource.msg('lbl.esw.default.value', 'eswbm', null)}</th>
         </tr>
         <isloop items="${pdict.sitePrefFields.attributes}" var="sitePrefField">
             <tr class="esw-field-${sitePrefField.id}">
@@ -22,9 +31,9 @@
                     <label>${sitePrefField.displayName}</label>
                     <hr />
                     <p>
-                        (${sitePrefField.id})
+                        ${!empty(sitePrefField.id) ? '(' + sitePrefField.id + ')' : ''}
                         <br />
-                        (${sitePrefField.type.type})
+                        ${!empty(sitePrefField.type.type) ? '(' + sitePrefField.type.type + ')' : ''}
                     </p>
                 </td>
                 <td class="top center">
@@ -35,15 +44,73 @@
                 <td class="top center">
                     <isif
                         condition=" ${!empty(sitePrefField.defaultValue) && sitePrefField.defaultValue.getValue() === true}">
-                        Yes
+                        ${Resource.msg('lbl.yes', 'eswbm', null)}
                         <iselseif
-                            condition="${!empty(sitePrefField.defaultValue) && sitePrefField.defaultValue.getValue() === false}">
-                            No
-                        <iselse/>
-                            ${!empty(sitePrefField.defaultValue) ? sitePrefField.defaultValue.getValue() : ''}
+                            condition="${!empty(sitePrefField.defaultValue) && sitePrefField.defaultValue.getValue() === false}" />
+                        ${Resource.msg('lbl.no', 'eswbm', null)}
+                    <iselse/>
+                        ${!empty(sitePrefField.defaultValue) ? sitePrefField.defaultValue.getDisplayValue() : ''}
                     </isif>
                 </td>
             </tr>
         </isloop>
     </table>
+
+    <iscomment>Package Config Form</iscomment>
+    <isif condition="${isPackageConfigPage}">
+        <div
+            class="js-mixed-selection ${pdict.sitePrefFields.attributes[0].currentValue.value === 'mixed' ? '' : 'hidden'}">
+            <div class="mt-6"></div>
+            <table class="js-pkg-tbl-tbody esw-form-table esw-dynamic-table esw-pkg-conf-tbl">
+                <thead>
+                    <tr>
+                        <th>${Resource.msg('label.country', 'eswbm', null)}</th>
+                        <th>${Resource.msg('label.pkg.integration.model', 'eswbm', null)}</th>
+                        <th>${Resource.msg('label.action', 'eswbm', null)}</th>
+                    </tr>
+                </thead>
+                <tbody class="js-pkgResourceBody">
+                    <isloop items="${alreadyUpdatedCountries}" var="alreadyUpdatedCountry"
+                        status="alreadyUpdatedCountryLoopStatus">
+                        <tr>
+                            <td>
+                                <select class="esw-bm-select esw-pref-input js-arrInput"
+                                    name="countryPkgAsnMixed[${alreadyUpdatedCountryLoopStatus.index}]country">
+                                    <isloop items="${pdict.eswCountrtiesCoArr}" var="eswCountrtyCo">
+                                        <option value="${eswCountrtyCo.countryCode}"
+                                            ${alreadyUpdatedCountry.countryCode === eswCountrtyCo.countryCode ? 'selected="selected"' : ''}>
+                                            ${eswCountrtyCo.name}
+                                        </option>
+                                    </isloop>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="esw-bm-select esw-pref-input js-arrInput"
+                                    name="countryPkgAsnMixed[${alreadyUpdatedCountryLoopStatus.index}]model">
+                                    <isloop items="${pdict.sitePrefFields.attributes[0].enumValues}"
+                                        var="eswPkgConfVal">
+                                        <isif condition="${eswPkgConfVal.value !== Constants.eswPkgOptionMixed.value}">
+                                            <option value="${eswPkgConfVal.value}"
+                                                ${alreadyUpdatedCountry.pkgModel === eswPkgConfVal.value ? 'selected="selected"' : ''}>
+                                                ${eswPkgConfVal.displayValue}
+                                            </option>
+                                        </isif>
+                                    </isloop>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="button js-delete" type="button">${Resource.msg('resource.delete', 'eswbm', null)}</button>
+                            </td>
+                        </tr>
+                    </isloop>
+                </tbody>
+                <tfoot>
+                    <td colspan="3">
+                        <button class="button js-addPkgResource" type="button">${Resource.msg('resource.add', 'eswbm', null)}</button>
+                    </td>
+                </tfoot>
+            </table>
+        </div>
+    </isif>
+    <iscomment>End Package Config Form</iscomment>
 </form>

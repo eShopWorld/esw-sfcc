@@ -33,6 +33,31 @@
                 }
             },
             {
+                "@type-id": "custom.ESW_GetASN",
+                "timeout-in-seconds": "180000",
+                "description": "Get Package ASN info from ESW.\n*** Search is restricted to a maximum of 3 days ***",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/getASNFromESW.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "startDate",
+                            "@type": "date-string",
+                            "@required":"false",
+                            "@target-type":"date",
+                            "description": "Start date (Search is restricted to a maximum of 3 days)"
+                        },
+                        {
+                          "@name": "endDate",
+                          "@type": "date-string",
+                          "@required":"false",
+                          "@target-type":"date",
+                          "description": "End date (Search is restricted to a maximum of 30 days)"
+                        }
+                      ]
+                }
+            },
+            {
                 "@type-id": "custom.ESW_GenerateLocalizePricing",
                 "timeout-in-seconds": "180000",
                 "description": "This job used to calculate and generate localize price books.",
@@ -73,16 +98,6 @@
                 "timeout-in-seconds": "180000",
                 "description": "This job cancel orders in SFCC which are cancelled in ESW",
                 "module": "int_eshopworld_core/cartridge/scripts/jobs/EswToSfccOrderCancellation.js",
-                "function": "execute",
-                "parameters": {
-                    "parameters": []
-                }
-            },
-            {
-                "@type-id": "custom.ESW_orderReturns",
-                "timeout-in-seconds": "180000",
-                "description": "This job returns orders in esw which are returned in sfcc",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/ESWOrderReturns.js",
                 "function": "execute",
                 "parameters": {
                     "parameters": []

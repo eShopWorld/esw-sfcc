@@ -115,4 +115,13 @@ describe("ServiceTests", function () {
             chai.expect(resp.status).equals(401);
         });
     });
+    describe('EswGetAsnPackage Service', function() {
+        it('should throw 401 status with data', async function () {
+            let resp = await chai.request('https://logistics-package-api.sandbox.eshopworld.com').get('/api/v4/Package/GetAsnPackage').query({
+                FromDate: '2023-01-01T00:00:00Z',
+                ToDate: '2023-01-31T23:59:59Z'
+            });
+            chai.expect(resp.status).equals(401);
+        });
+    });
 });

@@ -10,6 +10,7 @@ var siteMock = require('../../../../mocks/dw/system/Site');
 var Logger = require('../../../../mocks/dw/system/Logger');
 var StringUtils = require('../../../../mocks/dw/util/StringUtils');
 var PriceBookMgrMock = require('../../../../mocks/dw/catalog/PriceBookMgr');
+const BasketMgr = require('../../../../mocks/dw/order/BasketMgr');
 global.empty = empty(global);
 
 var stubTransaction = sinon.stub();
@@ -28,6 +29,11 @@ var session = {
 
 global.session = session;
 
+// Mock totalShippingCost parameter
+const totalShippingCost = {
+    decimalValue: 5.00 // Example shipping cost in decimal format
+};
+
 describe('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper.js', function () {
     var eswHelper = proxyquire('../../../../../cartridges/int_eshopworld_controllers/cartridge/scripts/helper/eswHelper', {
         '*/cartridge/scripts/helper/eswCoreHelper': {
@@ -36,13 +42,16 @@ describe('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper.js', fun
                 getOverridePriceBook: function () { return { countryCode: 'fake countryCode' } },
                 getOverridePriceBooks: function () { return {}; },
                 getEShopWorldModuleEnabled: function () { return true; },
-                isESWSupportedCountry: function () { return true; }
+                isESWSupportedCountry: function () { return true; },
+                getFinalOrderTotalsObject: function () { return 10; },
+                getShippingDiscount: function () { },
             }
         },
         '*/cartridge/scripts/helper/serviceHelper': {
             failOrder: function () { return ''; }
         },
         'dw/catalog/PriceBookMgr': PriceBookMgrMock,
+        'dw/order/BasketMgr': BasketMgr,
         '*/cartridge/scripts/util/collections': '',
         'dw/system/Transaction': stubTransaction,
         'dw/web/Cookie': stubCookie,
@@ -69,6 +78,12 @@ describe('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper.js', fun
         it('Should return null', function () {
             let rebuildCart = eswHelper.rebuildCart();
             expect(rebuildCart).to.equal(undefined);
+        });
+    });
+    describe('getOrderTotalWithShippingCost', function () {
+        it('Should getOrderTotalWithShippingCost', function () {
+            let getOrderTotalWithShippingCost = eswHelper.getOrderTotalWithShippingCost(totalShippingCost);
+            expect(getOrderTotalWithShippingCost).to.equal(undefined);
         });
     });
 });

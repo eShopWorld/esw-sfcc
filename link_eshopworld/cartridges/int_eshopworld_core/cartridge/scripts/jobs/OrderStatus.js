@@ -9,17 +9,6 @@ const Order = require('dw/order/Order');
 
 const ocUtils = {
     /**
- * Generates a random UUID.
- * @returns {string} - A randomly generated UUID.
- */
-    generateUUID: function () {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-            return v.toString(16);
-        });
-    },
-    /**
      * Helper to prepare the order cancellation request object
      *
      * @param {dw.order.Order} order The order to transmit data for
@@ -31,7 +20,7 @@ const ocUtils = {
             activityStatus: args.action,
             reasonCode: (order.cancelDescription !== null) ? order.cancelDescription : 'ShopperCancel',
             settlementReference: order.orderNo,
-            transactionReference: this.generateUUID(),
+            transactionReference: order.custom.eswOrderNo,
             transactionDateTime: new Date(),
             actionedBy: args.actionBy,
             actionedByUser: args.actionByUserEmail

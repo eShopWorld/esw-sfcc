@@ -126,7 +126,7 @@ const eswOrderProcessHelper = {
             // cancel order check
             let order = OrderMgr.getOrder(reqBodyJson.Request.BrandOrderReference);
             let cancelOrderJsonPayload = [];
-            if (order.status.value !== Order.ORDER_STATUS_CANCELLED) {
+            if (order && order.status.value !== Order.ORDER_STATUS_CANCELLED) {
                 let isPartialOrderCancelled = reqBodyJson.Request && 'LineItemId' in reqBodyJson.Request;
                 Transaction.wrap(function () {
                     if (!isPartialOrderCancelled) {

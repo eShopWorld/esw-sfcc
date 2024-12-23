@@ -1,0 +1,31 @@
+<isdecorate template="application/ESWMenuFrame">
+    <isinclude template="util/modules" />
+    <isset value="${require('*/cartridge/scripts/util/Constants')}" name="Constants" scope="page" />
+    <isset value="${true}" name="isPackageConfigPage" scope="page" />
+    <isset value="${pdict.alreadyUpdatedCountries}" name="alreadyUpdatedCountries" scope="page" />
+    <isinclude template="/common/esw-site-pref-form" />
+    <iscomment> HTML Template for New Row </iscomment>
+    <script type="text/template" id="js-pkgResourceHtmlTemplate" data-count-start="${pdict.alreadyUpdatedCountries.length - 1}">
+        <tr>
+            <td>
+                <select class="esw-bm-select esw-pref-input js-arrInput" name="countryPkgAsnMixed[formIndex]country">
+                    <isloop items="${pdict.eswCountrtiesCoArr}" var="eswCountrtyCo">
+                        <option value="${eswCountrtyCo.countryCode}">${eswCountrtyCo.name}</option>
+                    </isloop>
+                </select>
+            </td>
+            <td>
+                <select class="esw-bm-select esw-pref-input  js-arrInput" name="countryPkgAsnMixed[formIndex]model">
+                    <isloop items="${pdict.sitePrefFields.attributes[0].enumValues}" var="eswPkgConfVal">
+                        <isif condition="${eswPkgConfVal.value !== Constants.eswPkgOptionMixed.value}">
+                            <option value="${eswPkgConfVal.value}">${eswPkgConfVal.displayValue}</option>
+                        </isif>
+                    </isloop>
+                </select>
+            </td>
+            <td>
+                <button class="button js-delete" type="button">${Resource.msg('resource.delete', 'eswbm', null)}</button>
+            </td>
+        </tr>
+    </script>
+</isdecorate>
