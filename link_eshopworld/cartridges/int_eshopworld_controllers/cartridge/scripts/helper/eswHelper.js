@@ -3,6 +3,8 @@
  **/
 const Transaction = require('dw/system/Transaction');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const formatMoney = require('dw/util/StringUtils').formatMoney;
+const Money = require('dw/value/Money');
 
 /*
  * Function to apply pricebook if country is override
@@ -95,7 +97,7 @@ eswHelper.rebuildCartUponBackFromESW = function () {
     try {
         let currentBasket = BasketMgr.getCurrentBasket();
         if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
-            if (eswHelper.isOrderPlaced(orderID)) {
+            if (orderID && eswHelper.isOrderPlaced(orderID)) {
                 if (!empty(currentBasket)) {
                     Transaction.wrap(function () {
                         let coupons = currentBasket.getCouponLineItems();
@@ -124,20 +126,59 @@ eswHelper.rebuildCartUponBackFromESW = function () {
                 currentBasket = BasketMgr.getCurrentBasket();
             }
             if (currentBasket) {
-                Transaction.wrap(function () {
-                    if (eswHelper.getShippingServiceType(currentBasket) === 'POST') {
-                        eswServiceHelper.applyShippingMethod(currentBasket, 'POST', eswHelper.getAvailableCountry(), true);
-                    } else {
-                        eswServiceHelper.applyShippingMethod(currentBasket, 'EXP2', eswHelper.getAvailableCountry(), true);
-                    }
-                    eswHelper.adjustThresholdDiscounts(currentBasket);
-                });
+                // Apply orderride shipping method only when the shipping for basket is not setup for rest call this part will be skipped out
+                if (empty(currentBasket.shipments[0].shippingMethodID)) {
+                    Transaction.wrap(function () {
+                        if (eswHelper.getShippingServiceType(currentBasket) === 'POST') {
+                            eswServiceHelper.applyShippingMethod(currentBasket, 'POST', eswHelper.getAvailableCountry(), true);
+                        } else {
+                            eswServiceHelper.applyShippingMethod(currentBasket, 'EXP2', eswHelper.getAvailableCountry(), true);
+                        }
+                        eswHelper.adjustThresholdDiscounts(currentBasket);
+                    });
+                }
             }
         }
         return true;
     } catch (e) {
         return false;
     }
+};
+
+/*
+ * Function is used to get Order total including shipping cost
+ */
+eswHelper.getOrderTotalWithShippingCost = function (totalShippingCost) {
+    let BasketMgr = require('dw/order/BasketMgr');
+    // eslint-disable-next-line no-mixed-operators
+    return formatMoney(new Money(eswHelper.getFinalOrderTotalsObject().value + totalShippingCost.decimalValue - eswHelper.getShippingDiscount(BasketMgr.currentBasket), request.httpCookies['esw.currency'].value));
+};
+    /**
+ * renders PackageJSON tracking information
+ * @param {productLineItems} productLineItems - the current line items
+ * @param {dw.order.LineItemCtnr} order - the current line item container
+ * @return {Object|null} - object/null
+ */
+eswHelper.getEswPackageJSON = function (productLineItems, order) {
+    let logger = require('dw/system/Logger'),
+        collections = require('*/cartridge/scripts/util/collections'),
+        eswPackageJSONProducts = [];
+    try {
+        if (eswHelper.isEswSplitShipmentEnabled() && ('eswPackageJSON' in order.custom && !empty(order.custom.eswPackageJSON))) {
+            let eswPackageJSON = eswHelper.strToJson(order.custom.eswPackageJSON);
+            collections.forEach(productLineItems, function (lineItem) {
+                eswPackageJSON.forEach(function (item) {
+                    if (lineItem.productID === item.productLineItem) {
+                        eswPackageJSONProducts.push(item);
+                    }
+                });
+            });
+        }
+        return eswPackageJSONProducts.length > 0 ? eswPackageJSONProducts : null;
+    } catch (error) {
+        logger.error('ESW Error fetchinh split package {0} {1}', error.message, error.stack);
+    }
+    return null;
 };
 
 module.exports = {

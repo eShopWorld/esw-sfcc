@@ -73,6 +73,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelperV3.js', func
         },
         'dw/order/BasketMgr': basketMgr,
         '*/cartridge/scripts/util/collections': collections,
+        '*/cartridge/scripts/helper/eswPricingHelper': {},
         'dw/system/Site': {
             getCurrent: function () {
                 return {

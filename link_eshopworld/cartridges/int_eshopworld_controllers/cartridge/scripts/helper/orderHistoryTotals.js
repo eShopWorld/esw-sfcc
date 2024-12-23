@@ -30,6 +30,18 @@ function getOrderTotals(total, currency) {
 }
 
 /**
+ * Get Cart Page Converted ESW shipping cost
+ * @param {dw.value.Money} shippingCost - Total shipping cost
+ * @returns {dw.value.Money} convertedShippingCost - Converted Shipping Cost
+ */
+function getEswCartShippingCost(shippingCost) {
+    if (!eswHelper.isShippingCostConversionEnabled()) {
+        return new dw.value.Money(shippingCost.decimalValue, request.getHttpCookies()['esw.currency'].value);
+    }
+    return eswHelper.getMoneyObject(shippingCost, true, false, false);
+}
+
+/**
  * Get Order/ Shipping level discounts for Account Order History
  * From originalOrder (ESW Orders) custom attributes
  * @param {number} discountAmount - Order/ Shipping discount Amount
@@ -66,7 +78,7 @@ function orderTotals(lineItemContainer) {
         priceAdjustments: ''
     };
     if (lineItemContainer) {
-        let eswShopperCurrencyCode = lineItemContainer.originalOrder.custom.eswShopperCurrencyCode;
+        let eswShopperCurrencyCode = 'originalOrder' in lineItemContainer ? lineItemContainer.originalOrder.custom.eswShopperCurrencyCode : null;
         orderTotalsObject.subTotal = (eswShopperCurrencyCode != null) ? getCalculatedSubTotal(lineItemContainer, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.getAdjustedMerchandizeTotalPrice(false).decimalValue, lineItemContainer.getCurrencyCode());
         orderTotalsObject.totalShippingCost = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyDeliveryPriceInfo, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.shippingTotalPrice.decimalValue, lineItemContainer.getCurrencyCode());
 
@@ -85,6 +97,10 @@ function orderTotals(lineItemContainer) {
         orderTotalsObject.shippingLevelDiscountTotal = (eswShopperCurrencyCode != null) ? getDiscountForAccountHistory(null, eswShopperCurrencyCode) : eswHelper.getShippingLevelDiscountTotal(lineItemContainer, false);
         if (eswHelper.isESWSupportedCountry()) {
             orderTotalsObject.discounts = eswHelper.getDiscounts(lineItemContainer);
+        }
+        if (eswHelper.isEswNativeShippingHidden() && eswHelper.isSelectedCountryOverrideShippingEnabled()) {
+            orderTotalsObject.cartPageShippingCost = eswHelper.isESWSupportedCountry() ? getEswCartShippingCost(lineItemContainer.adjustedShippingTotalPrice) : null;
+            orderTotalsObject.grandTotal = eswHelper.getOrderTotalWithShippingCost(getEswCartShippingCost(lineItemContainer.shippingTotalPrice));
         }
     }
     return orderTotalsObject;

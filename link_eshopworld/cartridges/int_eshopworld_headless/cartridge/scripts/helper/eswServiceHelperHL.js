@@ -103,63 +103,6 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
     return productUnitPriceInfo;
 }
 /**
- * function to get the delivery discounts.
- * @param {Object} cart - Cart
- * @param {Object} isConversionDisabled - Boolean
- * @param {Object} localizeObj - Object
- * @param {Object} conversionPrefs - Object
- * @return {Object} Object - Discounts
- */
-function getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs) {
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
-    let beforeDiscount = (isConversionDisabled || cart.defaultShipment.shippingTotalNetPrice.value === 0) ? cart.defaultShipment.shippingTotalNetPrice.value : pricingHelper.getConvertedPrice(Number(cart.defaultShipment.shippingTotalNetPrice), localizeObj, conversionPrefs),
-        obj = {},
-        currencyCode = localizeObj.localizeCountryObj.currencyCode,
-        ShippingDiscounts = [];
-    let shippingPriceAdjustmentIter = cart.defaultShipment.shippingPriceAdjustments.iterator();
-    let finalPrice = 0,
-        shippingDiscountAmount = 0;
-    localizeObj.applyRoundingModel = 'false';
-    while (shippingPriceAdjustmentIter.hasNext()) {
-        let shippingPriceAdjustment = shippingPriceAdjustmentIter.next();
-        if (shippingPriceAdjustment.promotion && eswHelper.isThresholdEnabled(shippingPriceAdjustment.promotion)) {
-            // eslint-disable-next-line no-continue
-            continue;
-        }
-        if (shippingPriceAdjustment.appliedDiscount.type === dw.campaign.Discount.TYPE_FREE || (shippingPriceAdjustment.custom.thresholdDiscountType && shippingPriceAdjustment.custom.thresholdDiscountType === 'free')) {
-            shippingDiscountAmount = beforeDiscount;
-        } else if (shippingPriceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
-            localizeObj.applyRoundingModel = 'true';
-            shippingDiscountAmount = (isConversionDisabled || shippingPriceAdjustment.priceValue === 0) ? shippingPriceAdjustment.appliedDiscount.fixedPrice : pricingHelper.getConvertedPrice(Number(shippingPriceAdjustment.appliedDiscount.fixedPrice), localizeObj, conversionPrefs);
-            shippingDiscountAmount = beforeDiscount - shippingDiscountAmount;
-            localizeObj.applyRoundingModel = 'false';
-        } else {
-            shippingDiscountAmount = (isConversionDisabled || shippingPriceAdjustment.priceValue === 0) ? shippingPriceAdjustment.priceValue * -1 : pricingHelper.getConvertedPrice(Number(shippingPriceAdjustment.priceValue * -1), localizeObj, conversionPrefs);
-        }
-        let shippingDiscount = {
-            'title': shippingPriceAdjustment.promotionID,
-            'description': shippingPriceAdjustment.lineItemText,
-            'discount': {
-                'currency': currencyCode,
-                'amount': shippingDiscountAmount.toFixed(2)
-            },
-            'beforeDiscount': {
-                'currency': currencyCode,
-                'amount': beforeDiscount.toFixed(2)
-            }
-        };
-        ShippingDiscounts.push(shippingDiscount);
-        beforeDiscount -= shippingDiscount.discount.amount;
-    }
-    localizeObj.applyRoundingModel = 'true';
-    obj = {
-        'ShippingDiscounts': ShippingDiscounts,
-        'finalPrice': beforeDiscount
-    };
-
-    return obj;
-}
-/**
  * function to get line items for version 3
  * @param {Object} order - Order API object
  * @param {string} countryCode - shopper's countryCode
@@ -335,6 +278,5 @@ function getShopperCheckoutExperience(shopperLocale) {
 module.exports = {
     getLineItemsV3: getLineItemsV3,
     getShopperCheckoutExperience: getShopperCheckoutExperience,
-    getDeliveryDiscounts: getDeliveryDiscounts,
     getLineItemsV2: getLineItemsV2
 };

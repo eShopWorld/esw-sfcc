@@ -27,13 +27,34 @@ const localizeObj = {
     },
     applyRoundingModel: 'false'
 };
+
+// Example order object
+const order = {
+    shipments: [
+        {
+            getID: () => 'shipment_1',  // Mocking a function to get the shipment ID
+            productLineItems: [
+                { productID: 'product_1' },  // Product IDs that match ESW package items
+                { productID: 'product_2' }
+            ]
+        },
+        {
+            getID: () => 'shipment_2',
+            productLineItems: [
+                { productID: 'product_3' }
+            ]
+        }
+    ]
+};
 describe('int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL.js', function () {
     var eswOCAPIHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL', {
         'dw/system/Site': SiteMock,
         '*/cartridge/scripts/util/collections': collections,
+        '*/cartridge/scripts/helper/eswCheckoutHelperHL': '',
         'dw/system/Logger': LoggerMock,
         'dw/web/Resource': ResourceMock,
         'dw/order/OrderMgr': orderMgrMock,
+        '*/cartridge/scripts/helper/eswCoreApiHelper': {},
         '*/cartridge/scripts/helper/eswPwaCoreHelper': {
             getCountryDetailByParam: function () {
                 return {
@@ -68,7 +89,6 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL.js', func
             }
         },
         '*/cartridge/scripts/helper/eswPricingHelperHL': '',
-        '*/cartridge/scripts/helper/eswCheckoutHelperHL': '',
         '*/cartridge/scripts/helper/eswCoreHelper': {
             getEswHelper: {
                 getCountryDetailByParam: function () {
@@ -256,5 +276,27 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswOCAPIHelperHL.js', func
         };
         let adjustThresholdDiscounts = eswOCAPIHelperHL.adjustThresholdDiscounts(Basket, localizeObj, {});
         chai.expect(adjustThresholdDiscounts).to.be.undefined;
+    });
+    describe('Happy Path', function () {
+        it('handle Esw update EswPackage JSON', () => {
+            // Example orderResponse object with ESW package JSON
+            const orderResponse = {
+                c_eswPackageJSON: JSON.stringify([
+                    { productLineItem: 'product_1', packageInfo: 'Package info for product 1' },
+                    { productLineItem: 'product_2', packageInfo: 'Package info for product 2' },
+                    { productLineItem: 'product_3', packageInfo: 'Package info for product 3' }
+                ])
+            };
+            eswOCAPIHelperHL.updateEswPackageJSON(order, orderResponse);
+            expect(orderResponse).to.have.property('c_eswPackageJSON');
+        });
+    });
+    describe('Sad Path', function () {
+        it('handle Esw update EswPackage JSON', () => {
+            // Example orderResponse object with ESW package JSON
+            const orderResponse = {};
+            eswOCAPIHelperHL.updateEswPackageJSON(order, orderResponse);
+            expect(orderResponse).to.be.an('object');
+        });
     });
 });

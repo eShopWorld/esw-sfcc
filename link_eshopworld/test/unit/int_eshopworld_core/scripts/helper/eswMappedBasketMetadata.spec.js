@@ -152,7 +152,8 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
             }
         },
         'dw/order/BasketMgr': basketMgr,
-        '*/cartridge/scripts/helper/serviceHelperV3': ''
+        '*/cartridge/scripts/helper/serviceHelperV3': '',
+        '*/cartridge/scripts/helper/eswPricingHelper': {}
     }).getEswHelper;
     describe('Happy path', function () {
         it('Should getPromoThresholdAmount', function () {

@@ -1,7 +1,6 @@
 /* eslint-disable quote-props */
 'use strict';
 
-
 const server = require('server');
 const ArrayList = require('dw/util/ArrayList');
 const PagingModel = require('dw/web/PagingModel');
@@ -186,7 +185,6 @@ server.post('SyncProduct', function (req, res, next) {
     next();
 });
 
-
 server.get('CatalogConfig', function (req, res, next) {
     let csrf = request.httpParameterMap.csrf_token.stringValue;
     let sitePrefFields = bmHelper.loadGroups(
@@ -222,27 +220,40 @@ server.get('CatalogConfig', function (req, res, next) {
     next();
 });
 
+
 server.post('SavePostedConfig', function (req, res, next) {
     let reqForm = req.form;
+    let formHasPkgAndSelectToMix = false;
     Transaction.wrap(function () {
         Object.keys(req.form).forEach(function (formKey) {
             let formKeyVal = req.form[formKey];
-            if (!empty(formKeyVal)) {
-                formKeyVal = formKeyVal.trim();
-                // Converting boolean
-                switch (formKeyVal) {
-                    case 'true':
-                        formKeyVal = true;
-                        break;
-                    case 'false':
-                        formKeyVal = false;
-                        break;
-                    default:
-                    // Do nothing
+            if (formKey.indexOf('arrInput') === -1) {
+                if (!empty(formKeyVal)) {
+                    formKeyVal = formKeyVal.trim();
+                    // Converting boolean
+                    switch (formKeyVal) {
+                        case 'true':
+                            formKeyVal = true;
+                            break;
+                        case 'false':
+                            formKeyVal = false;
+                            break;
+                        default:
+                        // Do nothing
+                    }
+                }
+                // Store configuration
+                Site.getCurrent().setCustomPreferenceValue(formKey, formKeyVal);
+                // Check if Package config form submitted with mix config
+                if (formKey === 'eswPkgAsnType' && formKeyVal === 'mixed') {
+                    formHasPkgAndSelectToMix = true;
                 }
             }
-            Site.getCurrent().setCustomPreferenceValue(formKey, formKeyVal);
         });
+        // Storing config in case of mix
+        if (formHasPkgAndSelectToMix) {
+            bmHelper.storeMixedPkgConf(req.form);
+        }
     });
     res.json({ success: true, data: reqForm });
     return next();
@@ -400,6 +411,69 @@ server.post('ExportOrderShipment', function (req, res, next) {
         Logger.error('ESW BM ExportOrderShipment Error: ' + status.message);
     }
     res.redirect(URLUtils.url('EShopWorldBM-PkgAsnExport'));
+    next();
+});
+
+server.get('RetailerConfiguration', function (req, res, next) {
+    let csrf = request.httpParameterMap.csrf_token.stringValue;
+    let sitePrefFields = bmHelper.loadGroups(
+        Site.getCurrent().getPreferences(),
+        URLUtils.url('ViewApplication-BM', 'csrf_token', csrf),
+        '#/?preference#site_preference_group_attributes!id!{0}',
+        'ESW Retailer Display Configuration'
+    );
+    res.render('/retailer/retailer-config-form', {
+        sitePrefFields: sitePrefFields,
+        currentController: 'RetailerConfiguration'
+    });
+    next();
+});
+
+
+server.get('PackageConfigurations', function (req, res, next) {
+    let csrf = request.httpParameterMap.csrf_token.stringValue,
+        sitePrefFields = bmHelper.loadGroups(
+        Site.getCurrent().getPreferences(),
+        URLUtils.url('ViewApplication-BM', 'csrf_token', csrf),
+        '#/?preference#site_preference_group_attributes!id!{0}',
+        'ESW Package Integration Configuration'
+    );
+
+    let eswCountrtiesCoItr = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc');
+    let eswCountrtiesCoArr = [];
+    let alreadyUpdatedCountries = [];
+    let defaultCountryForMixForm = [];
+    while (eswCountrtiesCoItr.hasNext()) {
+        let currentCountryCo = eswCountrtiesCoItr.next();
+        defaultCountryForMixForm.push({
+            countryCode: currentCountryCo.custom.countryCode,
+            name: currentCountryCo.custom.name,
+            pkgModel: null
+        });
+        eswCountrtiesCoArr.push({
+            countryCode: currentCountryCo.custom.countryCode,
+            name: currentCountryCo.custom.name
+        });
+        // For each pkg model, append country seperately to display in view
+        if (currentCountryCo.custom && Object.prototype.hasOwnProperty.call(currentCountryCo.custom, 'eswSynchronizePkgModel')) {
+            alreadyUpdatedCountries.push({
+                countryCode: currentCountryCo.custom.countryCode,
+                name: currentCountryCo.custom.name,
+                pkgModel: currentCountryCo.custom.eswSynchronizePkgModel.value
+            });
+        }
+    }
+    // If no country selected for mix, then populate single country
+    if (empty(alreadyUpdatedCountries)) {
+        alreadyUpdatedCountries = defaultCountryForMixForm;
+    }
+
+    res.render('/package/package-conf', {
+        currentController: 'Package',
+        eswCountrtiesCoArr: eswCountrtiesCoArr,
+        alreadyUpdatedCountries: alreadyUpdatedCountries,
+        sitePrefFields: sitePrefFields
+    });
     next();
 });
 

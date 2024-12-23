@@ -37,8 +37,8 @@ cart.defaultShipment.shippingPriceAdjustments = new ArrayList([{
     basedOnCoupon: true
 }]);
 cart.shipments = [
-    {shippingMethodID: ''}
-]
+    { shippingMethodID: '' }
+];
 cart.getPriceAdjustments = function () {
     return new ArrayList([{
         basedOnCampaign: true,
@@ -92,7 +92,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
         global.request.httpCookies = cookie.httpCookies;
     });
     var eswCalculationHelper = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper', {
-        'dw/system/Logger':  Logger,
+        'dw/system/Logger': Logger,
         'dw/web/Cookie': Cookie,
         'dw/system/Transaction': Transaction,
         'dw/util/ArrayList': stubArrayList,
@@ -100,6 +100,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
         'dw/value/Money': Money,
         'dw/content/ContentMgr': {},
         'dw/campaign/PromotionMgr': {},
+        '*/cartridge/scripts/helper/eswPricingHelper': {},
         'dw/system/Site': {
             getCurrent: function () {
                 return {
@@ -128,19 +129,19 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
                     return Money(true, request.httpCookies['esw.currency'].value);
                 },
                 getMoneyObject: function () {
-                    return Money
+                    return Money;
                 }
             }
         }
     }).getEswHelper;
     describe('Happy path', function () {
-        it("it Should calculate and return override price", function () {
+        it('it Should calculate and return override price', function () {
             let applyOverridePriceResponse = eswCalculationHelper.applyOverridePrice(10, 'US');
             expect(applyOverridePriceResponse).to.equal(10);
         });
     });
     describe('Happy path', function () {
-        it("it Should calculate order discount", function () {
+        it('it Should calculate order discount', function () {
             let getOrderDiscount = eswCalculationHelper.getOrderDiscount(basketMgr.getCurrentBasket(), {});
             expect(getOrderDiscount.getCurrencyCode()).to.equal('CAD');
         });
@@ -157,46 +158,46 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
                     }
                 }
             };
-    
+
             global.request.httpCookies = cookie.httpCookies;
         });
-        it("it Should calculate order discount for Dynamic Model", function () {
+        it('it Should calculate order discount for Dynamic Model', function () {
             let getOrderDiscount = eswCalculationHelper.getOrderDiscount(basketMgr.getCurrentBasket(), {});
             expect(getOrderDiscount.getCurrencyCode()).to.equal('EUR');
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error", function () {
+    describe('Sad Path', function () {
+        it('Should throw error', function () {
             let getOrderDiscount = eswCalculationHelper.getOrderDiscount();
             expect(getOrderDiscount).to.equal(null);
         });
     });
     describe('Happy path', function () {
-        it("it Should calculate order Total", function () {
+        it('it Should calculate order Total', function () {
             let getFinalOrderTotalsObject = eswCalculationHelper.getFinalOrderTotalsObject();
             expect(getFinalOrderTotalsObject).to.equal(null);
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error", function () {
+    describe('Sad Path', function () {
+        it('Should throw error', function () {
             let getFinalOrderTotalsObject = eswCalculationHelper.getFinalOrderTotalsObject();
             expect(getFinalOrderTotalsObject).to.equal(null);
         });
     });
-    describe("Sad Path", function () {
-        it("Should throw error calculate price return numbered value", function () {
+    describe('Sad Path', function () {
+        it('Should throw error calculate price return numbered value', function () {
             let applyOverridePriceResponse = eswCalculationHelper.applyOverridePrice(null, false, false);
             expect(applyOverridePriceResponse).to.equal(0);
         });
     });
     describe('Happy path', function () {
-        it("it Should confirm if delivery based coupon applied", function () {
+        it('it Should confirm if delivery based coupon applied', function () {
             let getOrderDiscount = eswCalculationHelper.isDeliveryDiscountBasedOnCoupon(cart, '');
             expect(getOrderDiscount).to.equal(true);
         });
     });
-    describe("Sad Path", function () {
-        it("it Should confirm if delivery based coupon applied", function () {
+    describe('Sad Path', function () {
+        it('it Should confirm if delivery based coupon applied', function () {
             cart.defaultShipment.shippingPriceAdjustments = new ArrayList([{
                 basedOnCoupon: false,
                 basedOnCampaign: false,
@@ -222,11 +223,20 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
         });
     });
     describe('Happy path', function () {
-        it("it Should set base currency price Book", function () {
+        it('it Should set base currency price Book', function () {
             global.session.setCurrency = function () {
                 return;
             };
             eswCalculationHelper.setBaseCurrencyPriceBook('CAD');
+        });
+    });
+    describe('Happy path', function () {
+        it('it Should getEswOverrideShipping', function () {
+            global.session.setCurrency = function () {
+                return;
+            };
+            let getEswOverrideShipping = eswCalculationHelper.getEswOverrideShipping('CAD');
+            expect(getEswOverrideShipping).to.equal(null);
         });
     });
 });

@@ -33,4 +33,7 @@
 <isif condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-PkgAsnExport') !== -1}">
   <script src="${dw.web.URLUtils.staticURL('/js/returns.js?v=1.0.1')}"></script>
 </isif>
+<isif condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-PackageConfigurations') !== -1}">
+  <script src="${dw.web.URLUtils.staticURL('/js/package.js?v=1.0.1')}"></script>
+</isif>
 <isinclude url="${URLUtils.url('SiteNavigationBar-IncludeFrameBottom')}" sf-toolkit="on" />

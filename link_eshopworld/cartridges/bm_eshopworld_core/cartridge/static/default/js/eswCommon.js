@@ -36,6 +36,31 @@ function selectAllProducts() {
     }
 }
 
+function generateArrForPkgModel(serializeForm) {
+    let parsedData = [];
+    serializeForm.forEach(function (item) {
+        let name = item.name;
+        let value = item.value;
+        let match = name.match(/countryPkgAsnMixed\[(\d+)\](\w+)/);
+
+        if (match) {
+            let index = match[1];
+            let key = match[2];
+
+            if (!parsedData[index]) {
+                parsedData[index] = {};
+            }
+
+            if (key === 'country') {
+                parsedData[index].country = value;
+            } else if (key === 'model') {
+                parsedData[index].pkgAsnModel = value;
+            }
+        }
+    });
+    return parsedData;
+}
+
 window.addEventListener("load", function () {
     let $selectedSearch = document.querySelector(".productsList");
     let selectedSearch = $selectedSearch.dataset.selectedsearch;
@@ -88,6 +113,40 @@ function isValidJSON(jsonString) {
     } catch (error) {
         return false;
     }
+}
+
+/**
+ * Checks if any value is selected more than once in .js-pkgResourceBody select[name$="]country"].
+ * @returns {Array} - Returns an array of duplicate values if found, otherwise an empty array.
+ */
+function findDuplicateCountrySelectionsPkgs() {
+    // Get all select elements with name ending in ]country within .js-pkgResourceBody
+    let selectValues = $('.js-pkgResourceBody select[name$="]country"]').map(function () {
+        return $(this).val();
+    }).get();
+
+    // Create an object to count occurrences of each value
+    let valueCounts = {};
+
+    // Count occurrences of each value
+    for (let i = 0; i < selectValues.length; i++) {
+        let value = selectValues[i];
+        if (valueCounts[value]) {
+            valueCounts[value]++;
+        } else {
+            valueCounts[value] = 1;
+        }
+    }
+
+    // Collect all values selected more than once
+    let duplicates = [];
+    Object.keys(valueCounts).forEach(function (key) {
+        if (valueCounts[key] > 1) {
+            duplicates.push(key);
+        }
+    });
+
+    return duplicates; // Return the array of duplicate values
 }
 
 $(document).ready(function () {
@@ -201,12 +260,36 @@ $(document).ready(function () {
     // Submit configuration form only
     if ($('#esw-bm-config-form')) {
         $('#esw-bm-config-form').submit(function (e) {
+            let serializeForm = $('#esw-bm-config-form').serializeArray();
             $(".esw-frm-submit-btn").attr('disabled', true);
             e.preventDefault();
-            let formData = {};
-            $('.esw-pref-input').each(function () {
+            let formData = { arrInput: [] };
+
+            // Pkg config form
+            if ($(".js-pkg-tbl-tbody").length) {
+                // Set initial color to green
+                $("#esw-snackbar").css('background-color', '#04844b');
+                let pkgAsnFormMapping = generateArrForPkgModel(serializeForm);
+                if (pkgAsnFormMapping.length > 0) {
+                    formData.pkgConfig = true;
+                    formData.arrInput = pkgAsnFormMapping;
+                }
+                let duplicateCountries = findDuplicateCountrySelectionsPkgs();
+                if (duplicateCountries.length > 0) {
+                    $('#esw-snackbar').html('One country cannot have more than one package model.');
+                    $("#esw-snackbar").addClass('show');
+                    $("#esw-snackbar").css('background-color', 'red');
+                    setTimeout(function () { $("#esw-snackbar").removeClass('show'); }, 3000);
+                    $(".esw-frm-submit-btn").attr('disabled', false);
+                    throw new Error('One country cannot have more than one package model.');
+                }
+            }
+
+            $('.esw-pref-input').each(function (index) {
                 // req.form on server is removing empty values
-                formData[$(this).attr('name')] = ($(this).val().length === 0) ? ' ' : $(this).val();
+                if ($(this).attr('name').indexOf('[') === -1) {
+                    formData[$(this).attr('name')] = ($(this).val().length === 0) ? ' ' : $(this).val();
+                }
             });
             let formAction = $(this).attr('action');
             sendAjax(formAction, formData, 'The custom preferences were saved.', true);

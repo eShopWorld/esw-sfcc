@@ -28,33 +28,43 @@ function updateIntegrationMonitoring(configReport) {
  * @returns {Array} - array of countries
  */
 function getCountriesConfigurations() {
-    let allCountriesCO = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
-        countriesArr = [];
-    if (allCountriesCO.count > 0) {
-        while (allCountriesCO.hasNext()) {
-            let countryDetail = allCountriesCO.next();
-            let countryCode = countryDetail.getCustom().countryCode;
-            if (!empty(countryCode)) {
-                countriesArr.push({
-                    countryCode: countryCode,
-                    isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
-                    name: countryDetail.getCustom().name,
-                    defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
-                    eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
-                    baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
-                    isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
-                    isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
-                    ESW_HUB_Address: {
-                        hubAddress: countryDetail.getCustom().hubAddress,
-                        hubAddressState: countryDetail.getCustom().hubAddressState,
-                        hubAddressCity: countryDetail.getCustom().hubAddressCity,
-                        hubAddressPostalCode: countryDetail.getCustom().hubAddressPostalCode
-                    }
-                });
+    let logger = require('dw/system/Logger');
+    try {
+        let allCountriesCO = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
+            countriesArr = [];
+        if (allCountriesCO.count > 0) {
+            while (allCountriesCO.hasNext()) {
+                let countryDetail = allCountriesCO.next();
+                let countryCode = countryDetail.getCustom().countryCode;
+                if (!empty(countryCode)) {
+                    countriesArr.push({
+                        countryCode: countryCode,
+                        isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
+                        name: countryDetail.getCustom().name,
+                        defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
+                        eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
+                        baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
+                        isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
+                        isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
+                        ESW_HUB_Address: {
+                            hubAddress: countryDetail.getCustom().hubAddress,
+                            hubAddressState: countryDetail.getCustom().hubAddressState,
+                            hubAddressCity: countryDetail.getCustom().hubAddressCity,
+                            hubAddressPostalCode: countryDetail.getCustom().hubAddressPostalCode
+                        },
+                        eswPackage: {
+                            eswToSfcc: countryDetail.getCustom().eswToSfcc,
+                            sfccToEsw: countryDetail.getCustom().sfccToEsw
+                        }
+                    });
+                }
             }
         }
+        return countriesArr;
+    } catch (error) {
+        logger.error('Error while fetching Countries Configurations {0} ', error);
     }
-    return countriesArr;
+    return null;
 }
 /**
  * Return the currencies configs
@@ -181,6 +191,9 @@ function getServiceUrl(serviceID) {
             case 'ESWSFTP':
                 serviceUrl = eswCoreService.getESWSFTPService().getURL();
                 break;
+            case 'EswGetAsnPackage':
+                serviceUrl = eswCoreService.getAsnServiceForEswToSfcc().getURL();
+                break;
             default:
                 break;
         }
@@ -225,13 +238,20 @@ function refactorCustomObjectResponse(customObject) {
                 });
             } else if (obj.type.type === 'Set of String') {
                 let listArray = [];
-                collections.forEach(obj.enumValues, function (enumValue) {
-                    listArray.push(enumValue.value);
-                });
-                jsonPrefrencesArray.push({
-                    displayName: obj.id,
-                    value: listArray
-                });
+                if ('value' in obj.currentValue) {
+                    jsonPrefrencesArray.push({
+                        displayName: obj.displayName,
+                        value: obj.currentValue.value
+                    });
+                } else {
+                    collections.forEach(obj.enumValues, function (enumValue) {
+                        listArray.push(enumValue.value);
+                    });
+                    jsonPrefrencesArray.push({
+                        displayName: obj.id,
+                        value: listArray
+                    });
+                }
             } else {
                 jsonPrefrencesArray.push({
                     displayName: obj.id,
@@ -335,7 +355,8 @@ function loadReport(csrf) {
                             'ESW Package Integration Configuration': !empty(packageSitePrefFields) ? refactorCustomObjectResponse(packageSitePrefFields) : {}
                         },
                         'Service URL:': {
-                            EswPackageV4Service: getServiceUrl('EswPackageV4Service')
+                            EswPackageV4Service: getServiceUrl('EswPackageV4Service'),
+                            EswGetAsnPackageService: getServiceUrl('EswGetAsnPackage')
                         }
                     },
                     Checkout: {
@@ -383,6 +404,107 @@ function loadReport(csrf) {
     return configReport;
 }
 
+/**
+ * Gets the length of the mixed package configuration.
+ * @param {string|Array|Object} mixedPkgConf - The mixed package configuration.
+ * @returns {number} The length of the mixed package configuration.
+ */
+function getLengthOfMixedPkgConf(mixedPkgConf) {
+    if (typeof mixedPkgConf === 'string') {
+        return mixedPkgConf.length;
+    } else if (Array.isArray(mixedPkgConf)) {
+        return mixedPkgConf.length;
+    } else if (typeof mixedPkgConf === 'object' && mixedPkgConf !== null) {
+        return Object.keys(mixedPkgConf).length;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * Converts mixed package input to an array.
+ * @param {Object} formData - The form data to be converted.
+ * @returns {Array} The converted array.
+ */
+function convertMixedPkgInputToArr(formData) {
+    let parsedData = {};
+    /**
+     * Adds data to the parsedData object.
+     * @param {string} name - The name of the form field.
+     * @param {string} value - The value of the form field.
+     */
+    function addToParsedData(name, value) {
+        let nameParts = name.match(/arrInput\[(\d+)\]\[(\w+)\]/);
+        if (nameParts) {
+            let index = nameParts[1];
+            let key = nameParts[2];
+
+            if (!parsedData[index]) {
+                parsedData[index] = {};
+            }
+
+            if (key === 'country') {
+                parsedData[index].country = value;
+            } else if (key === 'pkgAsnModel') {
+                parsedData[index].pkgAsnModel = value;
+            }
+        }
+    }
+
+    // Loop through the form data
+    Object.keys(formData).forEach(function (formKey) {
+        let formKeyVal = formData[formKey];
+        if (Array.isArray(formKeyVal)) {
+            formKeyVal.forEach(function (item) {
+                addToParsedData(item.name, item.value);
+            });
+        } else {
+            addToParsedData(formKey, formKeyVal);
+        }
+    });
+
+    // Convert parsedData to an array
+    let resultArray = Object.keys(parsedData).map(function (key) {
+        return parsedData[key];
+    });
+
+    return resultArray;
+}
+
+/**
+ * Stores the mixed package configuration.
+ *
+ * @param {Object} reqForm - The request form containing the mixed package configuration.
+ */
+function storeMixedPkgConf(reqForm) {
+    // This iterator to use remove all previous configuration in case of mix
+    let eswCountrtiesCoItr = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc');
+    // Second iterator to repopulate the data
+    let eswCountrtiesCoItr2 = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc');
+    let mixedPkgConf = convertMixedPkgInputToArr(reqForm);
+    // Remove all pkg config from contry in case of mix
+    while (eswCountrtiesCoItr.hasNext()) {
+        let currentCountryToRemoveCo = eswCountrtiesCoItr.next();
+        currentCountryToRemoveCo.custom.eswSynchronizePkgModel = null;
+    }
+    // Repopulate pkg configs
+    if (getLengthOfMixedPkgConf(mixedPkgConf) > 0) {
+        while (eswCountrtiesCoItr2.hasNext()) {
+            let currentCountryToUpdateCo = eswCountrtiesCoItr2.next();
+                    // eslint-disable-next-line no-loop-func
+            let countryConfigs = mixedPkgConf.filter(function (mixedConfig) {
+                return currentCountryToUpdateCo.custom.countryCode === mixedConfig.country;
+            });
+            for (let i = 0; i < countryConfigs.length; i++) {
+                let currentMixedConf = countryConfigs[i];
+                if (!empty(currentMixedConf.pkgAsnModel)) {
+                    currentCountryToUpdateCo.custom.eswSynchronizePkgModel = currentMixedConf.pkgAsnModel;
+                }
+            }
+        }
+    }
+}
+
 exports.loadGroups = loadGroups;
 exports.removeElements = removeElements;
 exports.getFieldType = getFieldType;
@@ -390,3 +512,5 @@ exports.mapGroup = mapGroup;
 exports.mapAttribute = mapAttribute;
 exports.loadReport = loadReport;
 exports.updateIntegrationMonitoring = updateIntegrationMonitoring;
+exports.convertMixedPkgInputToArr = convertMixedPkgInputToArr;
+exports.storeMixedPkgConf = storeMixedPkgConf;

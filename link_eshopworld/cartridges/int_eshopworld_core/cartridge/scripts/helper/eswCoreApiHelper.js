@@ -4,6 +4,10 @@
 // API Includes
 const Logger = require('dw/system/Logger');
 const Site = require('dw/system/Site').getCurrent();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const ShippingMgr = require('dw/order/ShippingMgr');
+const pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
 
 /**
  * Updates the productLineItems (pli) with in the basket
@@ -16,9 +20,6 @@ const Site = require('dw/system/Site').getCurrent();
  */
 function eswPliPriceConversions(basket, pliAttributeMap, localizeObj, conversionPrefs, isFixedPriceCountry) {
     let collections = require('*/cartridge/scripts/util/collections');
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
-    let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
-    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
     collections.forEach(basket.productLineItems, function (item) {
         if (!empty(pliAttributeMap)) {
@@ -39,7 +40,47 @@ function eswPliPriceConversions(basket, pliAttributeMap, localizeObj, conversion
         item.custom.eswReturnProhibited = eswHelperHL.isReturnProhibited(item.product.ID, localizeObj.localizeCountryObj.countryCode);
     });
 }
+/**
+    * Handles/ send override shipping method
+    * @param {Object} basket - Basket object SFCC API
+    * @param {Object} basketResponse - Basket object from OCAPI Response
+    */
+function sendOverrideShippingMethods(basket, basketResponse) {
+    let param = request.httpParameters;
+    let countryCode = null;
+    if (!empty(param['country-code']) && param['country-code'][0]) {
+        countryCode = param['country-code'][0];
+    } else if (param.get('locale') && param.get('locale')[0] && param.get('locale')[0].includes('-')) {
+        countryCode = param.get('locale')[0].split('-')[1];
+    } else if (basket.custom.eswShopperCurrency) {
+        countryCode = basket.custom.eswShopperCurrency;
+    }
 
+    // If countryCode is null, return early to avoid further errors
+    if (!countryCode) {
+        return;
+    }
+
+    let shippingModel = ShippingMgr.getShipmentShippingModel(basket.shipments[0]),
+        applicableShippingMethodsOnCart = shippingModel.applicableShippingMethods.toArray();
+
+    if (eswHelper.isEswNativeShippingHidden() && eswHelper.isSelectedCountryOverrideShippingEnabled(countryCode)) {
+        let overrideShipping = eswHelper.getEswOverrideShipping(countryCode);
+        let filteredShippingMethods = applicableShippingMethodsOnCart.filter(function (method) {
+            return overrideShipping.includes(method.ID);
+        });
+        let overrideShippingMethods = filteredShippingMethods.map(function (method) {
+            return {
+                _type: 'shipping_method',
+                id: method.ID,
+                name: method.displayName,
+                price: shippingModel.getShippingCost(method).amount.value,
+                estimatedArrivalTime: (method.custom.estimatedArrivalTime) ? method.custom.estimatedArrivalTime : null
+            };
+        });
+        basketResponse.c_available_shipping_methods = overrideShippingMethods;
+    }
+}
 /**
  * Updates the basket by converting and
  * storing the prices to esw custom attributes
@@ -50,11 +91,7 @@ function eswBasketPriceConversions(basket) {
         if (Object.hasOwnProperty.call(basket, 'orderNo')) {
             return;
         }
-        let param = request.httpParameters,
-            pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
-            eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
-            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-
+        let param = request.httpParameters;
 
         if (!empty(param['country-code']) && !empty(basket)) {
             let shopperCountry = param['country-code'][0];
@@ -100,5 +137,6 @@ function eswBasketPriceConversions(basket) {
 }
 
 module.exports = {
-    eswBasketPriceConversions: eswBasketPriceConversions
+    eswBasketPriceConversions: eswBasketPriceConversions,
+    sendOverrideShippingMethods: sendOverrideShippingMethods
 };

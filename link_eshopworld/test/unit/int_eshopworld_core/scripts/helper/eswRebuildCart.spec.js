@@ -145,6 +145,7 @@ describe('int_eshopworld_core/cartridge/scripts/helper/eswCoreHelper.js', functi
             }
         },
         'dw/order/BasketMgr': basketMgr,
+        '*/cartridge/scripts/helper/eswPricingHelper': {},
         '*/cartridge/scripts/helper/serviceHelperV3': ''
     }).getEswHelper;
     describe('Happy path', function () {

@@ -1,6 +1,6 @@
 {
   "name": "EShopWorld",
-  "version": "24.6.0",
+  "version": "24.7.0",
   "description": "New Overlay Cartridge",
   "main": "index.js",
   "engines": {

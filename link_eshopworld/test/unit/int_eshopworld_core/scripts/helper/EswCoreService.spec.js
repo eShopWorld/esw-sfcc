@@ -90,5 +90,9 @@ describe('int_eshopworld_core/cartridge/scripts/services/EswCoreService.js', fun
             let serviceRes = EswCoreService.createRequest(service);
             expect(serviceRes).to.be.undefined;
         });
+        it('Should  not return false for getAsnServiceForEswToSfcc', function () {
+            let serviceRes = EswCoreService.getAsnServiceForEswToSfcc();
+            expect(serviceRes).not.to.be.false;
+        });
     });
 });

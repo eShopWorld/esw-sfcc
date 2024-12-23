@@ -24,3 +24,8 @@ exports.modifyPOSTResponse = function (order, orderResponse) {
 
     return new Status(Status.OK);
 };
+
+exports.modifyGETResponse = function (order, orderResponse) {
+    OCAPIHelper.handleEswOrderDetailCall(order, orderResponse);
+    return new Status(Status.OK);
+};

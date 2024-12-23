@@ -298,6 +298,28 @@ const eShopWorldServices = {
             }
         });
         return catalogService;
+    },
+    /**
+     * Service call to ESW to get packages
+     * @returns {Object} - Service response
+     */
+    getAsnServiceForEswToSfcc: function () {
+        return LocalServiceRegistry.createService('EswGetAsnPackage', {
+            createRequest: function (service, params) {
+                let bearerToken = 'Bearer ' + params.eswOAuthToken;
+                let svcUrl = service.URL + '?FromDate=' + params.requestBody.FromDate + '&ToDate=' + params.requestBody.ToDate;
+                service.addHeader('Content-Type', 'application/json');
+                service.addHeader('Authorization', bearerToken);
+                service.setRequestMethod('GET');
+                service.setURL(svcUrl);
+                eswHelper.eswInfoLogger('createRequest - GET ASN Service from ESW to SFCC : ', svcUrl);
+                return svcUrl;
+            },
+            parseResponse: function (service, svcResponse) {
+                eswHelper.eswInfoLogger('parseResponse - GET ASN Service from ESW to SFCC : ', svcResponse.text);
+                return JSON.parse(svcResponse.text);
+            }
+        });
     }
 };
 /**

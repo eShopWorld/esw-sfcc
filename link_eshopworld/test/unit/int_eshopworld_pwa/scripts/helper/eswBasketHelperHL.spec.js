@@ -23,6 +23,36 @@ describe('int_eshopworld_pwa/cartridge/scripts/helper/eswBasketHelperHL.js', fun
     var eswBasketHelperHL = proxyquire('../../../../../cartridges/int_eshopworld_core/cartridge/scripts/helper/eswCoreApiHelper.js', {
         'dw/system/Logger': Logger,
         'dw/system/Site': SiteMock,
+        '*/cartridge/scripts/helper/eswPricingHelper': {},
+        '*/cartridge/scripts/helper/eswCoreApiHelper': {},
+        'dw/order/ShippingMgr': {
+            getDefaultShippingMethod: function () {
+                return 'defaultShippingMethod';
+            },
+            getShipmentShippingModel: function (shipment) {
+                return shipment
+            }
+        },
+        '*/cartridge/scripts/helper/eswCoreHelper': {
+            getEswHelper: {
+                getCatalogUploadMethod: function () { return 'api'; },
+                getCheckoutServiceName: function () { return 'testService'; },
+                getCustomObjectDetails: function () { return {}; },
+                queryAllCustomObjects: function () {
+                    return [
+                        { custom: 'GB' }
+                    ];
+                },
+                getPricingAdvisorData: function () {
+                    return {
+
+                    };
+                },
+                formatTimeStamp: function () {
+                    return 'YYYY-MM-DD';
+                }
+            }
+        },
         '*/cartridge/scripts/helper/eswPricingHelperHL': {
             getShopperCurrency: function () {
                 return 'EUR';

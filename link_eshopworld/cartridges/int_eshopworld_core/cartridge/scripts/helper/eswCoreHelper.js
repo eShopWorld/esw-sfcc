@@ -12,10 +12,14 @@ const logger = require('dw/system/Logger');
 const ArrayList = require('dw/util/ArrayList');
 const URLUtils = require('dw/web/URLUtils');
 const ContentMgr = require('dw/content/ContentMgr');
+const eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
 
 const getEswHelper = {
     isEnableLandingPageRedirect: function () {
         return Site.getCustomPreferenceValue('eswEnableLandingPageRedirect');
+    },
+    isEswSplitShipmentEnabled: function () {
+        return Site.getCustomPreferenceValue('eswEnableSplitShipment');
     },
     isEswCatalogFeatureEnabled: function () {
         return Site.getCustomPreferenceValue('isEswCatalogFeatureEnabled');
@@ -26,6 +30,9 @@ const getEswHelper = {
     isEswCatalogApiMethod: function () {
         let Constants = require('*/cartridge/scripts/util/Constants');
         return this.isEswCatalogFeatureEnabled() && this.getCatalogUploadMethod() === Constants.API;
+    },
+    isEswMultiAddressEnabled: function () {
+        return Site.getCustomPreferenceValue('isEswMultiAddressEnabled');
     },
     getEswCatalogFeedLastExec: function () {
         return Site.getCustomPreferenceValue('eswCatalogFeedTimeStamp');
@@ -322,6 +329,9 @@ const getEswHelper = {
     },
     isOrderDetailEnabled: function () {
         return Site.getCustomPreferenceValue('eswEnableOrderDetail');
+    },
+    isEswNativeShippingHidden: function () {
+        return Site.getCustomPreferenceValue('eswHideNativeShipping');
     },
     getSelectedCountryDetail: function (countryCode) {
         let baseCurrency = this.getBaseCurrencyPreference(countryCode),
@@ -1038,6 +1048,19 @@ const getEswHelper = {
         }
         return 'EXP2';
     },
+    applyShippingOverrideMethod: function (currentBasket) {
+        let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers'),
+            eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        Transaction.wrap(function () {
+            if (eswHelper.getShippingServiceType(currentBasket) === 'POST') {
+                eswServiceHelper.applyShippingMethod(currentBasket, 'POST', eswHelper.getAvailableCountry(), true);
+            } else {
+                eswServiceHelper.applyShippingMethod(currentBasket, 'EXP2', eswHelper.getAvailableCountry(), true);
+            }
+            basketCalculationHelpers.calculateTotals(currentBasket);
+        });
+    },
     /*
      * Function to set url locale
      */
@@ -1338,7 +1361,10 @@ const getEswHelper = {
         let collections = require('*/cartridge/scripts/util/collections');
         let fxRate = 1;
         if (!empty(JSON.parse(session.privacy.fxRate))) {
-            fxRate = JSON.parse(session.privacy.fxRate).rate;
+            let country = this.getAvailableCountry();
+            if (!this.getSelectedCountryDetail(country).isFixedPriceModel) {
+                fxRate = JSON.parse(session.privacy.fxRate).rate;
+            }
         } else {
             // Fix for headless architect
             countryCode = request.httpParameters.get('country-code');
@@ -1816,10 +1842,27 @@ const getEswHelper = {
         return responseJSON;
     },
     /**
+    * Return actionURL for Headless Architect
+    * @param {string} urlExpansionPairs - ESW PWA URL Expansion Pairs configured in BM. (e.g., BaseURL|http://www.google.com or BaseURL|EShopWorld-Notify)
+    * @param {string} shopperLocale - LanguageISOCode of the shopper (current locale). (e.g., en_US)
+    * @returns {string} - actionURL or Processed URL return in function (e.g., http://www.google.com or EShopWorld-Notify)
+    */
+    buildUrlFromExpansionPairs: function (urlExpansionPairs, shopperLocale) {
+        let actionURL = urlExpansionPairs.split('|')[1];
+
+        // Check if actionURL is a complete URL
+        const isCompleteURL = actionURL.startsWith('www.') || actionURL.startsWith('http://') || actionURL.startsWith('https://');
+
+        // If !isCompleteURL
+        return !isCompleteURL
+            ? URLUtils.https(new dw.web.URLAction(urlExpansionPairs.substring(urlExpansionPairs.indexOf('|') + 1), Site.ID, shopperLocale)).toString()
+            : actionURL;
+    },
+    /**
      * Override pricebook currency
-     * @param {*} req - request object
-     * @param {*} selectedCountry - selected country
-     * @param {*} selectedCurrency - selected currency
+     * @param {Object} req - request object
+     * @param {string} selectedCountry - selected country
+     * @param {string} selectedCurrency - selected currency
      * @returns {boolean} - true/false
      */
     overridePriceCore: function (req, selectedCountry, selectedCurrency) {
@@ -2267,7 +2310,6 @@ const getEswHelper = {
      * @returns {Object} - localize object
      */
     getCountryLocalizeObj: function (selectedCountryDetail) {
-        let eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
         let selectedFxRate = this.getESWCurrencyFXRate(selectedCountryDetail.defaultCurrencyCode, selectedCountryDetail.countryCode);
         let selectedCountryAdjustments = this.getESWCountryAdjustments(selectedCountryDetail.countryCode);
         let localizeObj = {
@@ -2283,6 +2325,203 @@ const getEswHelper = {
         localizeObj.selectedRoundingRule = selectedRoundingRule[0];
         localizeObj.selectedCountry = localizeObj;
         return localizeObj;
+    },
+    /**
+     * Check if selected country's override shipping Enabled setting
+     * @param {string} countryISO - country code
+     * @return {boolean} - true/ false
+     */
+    isSelectedCountryOverrideShippingEnabled: function (countryISO) {
+        let shippingOverrides = this.getOverrideShipping(),
+            countryCode = !empty(countryISO) ? countryISO : this.getAvailableCountry(),
+            isOverrideCountry;
+
+        if (shippingOverrides.length > 0) {
+            isOverrideCountry = JSON.parse(shippingOverrides).filter(function (item) {
+                return (item.countryCode === countryCode);
+            });
+            if (!empty(isOverrideCountry)) {
+                return true;
+            }
+        }
+        return false;
+    },
+    /**
+     * return override shipping Array
+     * @param {string} countryISO - country code
+     * @return {Object|null} - override shipping methods
+     */
+    getEswOverrideShipping: function (countryISO) {
+        try {
+            let shippingOverrides = this.getOverrideShipping(),
+                countryCode = !empty(countryISO) ? countryISO : this.getAvailableCountry(),
+                isOverrideCountry;
+
+            if (shippingOverrides.length > 0) {
+                isOverrideCountry = JSON.parse(shippingOverrides).filter(function (item) {
+                    return (item.countryCode === countryCode);
+                });
+                if (!empty(isOverrideCountry)) {
+                    return isOverrideCountry[0].shippingMethod.ID;
+                }
+            }
+        } catch (error) {
+            logger.error('Error while fetching override shipping Methods {0} {1}', error.message, error.stack);
+        }
+        return null;
+    },
+    /**
+    * function to get if isPWA
+    * @param {*} param - param or country id (IE, CA) string
+    * @return {boolean} Boolean - true or false
+    */
+    isEswPwa: function (param) {
+        return !empty(param.locale);
+    },
+    /**
+   * Gets the delivery currency code based on the localization object and session.
+   *
+   * @param {Object} localizeObj - The localization object containing country-specific details.
+   * @param {Object} session - The session object containing user session details.
+   * @returns {string} - The currency code for the delivery.
+   */
+    getDeliveryDiscountsCurrencyCode: function (localizeObj, session) {
+        try {
+            if (localizeObj && localizeObj.localizeCountryObj) {
+                return localizeObj.localizeCountryObj.currencyCode;
+            } else if (session && session.privacy && !empty(session.privacy.fxRate)) {
+                return JSON.parse(session.privacy.fxRate).toShopperCurrencyIso;
+            } else {
+                return session.getCurrency().currencyCode;
+            }
+        } catch (error) {
+            logger.error('Error parsing fxRate: {0}', error);
+            return session.getCurrency().currencyCode;
+        }
+    },
+    /**
+     * Gets the delivery discounts price format based on the provided conditionals.
+     *
+     * @param {Object} cart - The cart object.
+     * @param {Object} localizeObj - The localization object.
+     * @param {Object} conversionPrefs - The conversion preferences.
+     * @returns {number} - The price format.
+     */
+    getDeliveryDiscountsPriceFormat: function (cart, localizeObj, conversionPrefs) {
+        let isPWA = this.isEswPwa(request.httpParameters);
+
+        if (!localizeObj && !conversionPrefs) {
+            return this.getMoneyObject(cart.defaultShipment.shippingTotalNetPrice.value, true, false, false).value;
+        }
+        if (isPWA) {
+            let selectedCountryDetail = this.getCountryDetailByParam(localizeObj.localizeCountryObj.countryCode);
+            let selectedCountryLocalizeObj = this.getCountryLocalizeObj(selectedCountryDetail);
+            return this.getMoneyObject(
+                Number(cart.defaultShipment.shippingTotalNetPrice),
+                false,
+                false,
+                !selectedCountryLocalizeObj.applyRoundingModel,
+                selectedCountryLocalizeObj
+            ).value;
+        }
+        return eswPricingHelper.getConvertedPrice(
+            Number(cart.defaultShipment.shippingTotalNetPrice),
+            localizeObj,
+            conversionPrefs
+        );
+    },
+     /**
+     * Gets the discount price based on the architecture.
+     *
+     * @param {number} value - The original price value.
+     * @param {Object} localizeObj - The localization object.
+     * @param {Object} conversionPrefs - The conversion preferences.
+     * @param {boolean} isDiscount - Whether the price is a discount.
+     * @returns {number} - The converted price based on the architecture.
+     */
+    getDiscountPriceBasedOnArchitecture: function (value, localizeObj, conversionPrefs, isDiscount) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        const isPWA = eswHelper.isEswPwa(request.httpParameters);
+        if (isPWA && localizeObj.localizeCountryObj) {
+            shopperCountry = localizeObj.localizeCountryObj.countryCode;
+            let selectedCountryDetail = eswHelper.getCountryDetailByParam(shopperCountry);
+            let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
+            return this.getMoneyObject(value, false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+        } else {
+            let isHeadlessArchitecture = localizeObj && conversionPrefs;
+            return isHeadlessArchitecture ? eswPricingHelper.getConvertedPrice(Number(value), localizeObj, conversionPrefs) : this.getMoneyObject(value, true, false, isDiscount).value;
+        }
+    },
+    /**
+     * Calculates the shipping discount amount.
+     *
+     * @param {Object} shippingPriceAdjustment - The shipping price adjustment object.
+     * @param {number} beforeDiscount - The price before discount.
+     * @param {boolean} isConversionDisabled - Whether conversion is disabled.
+     * @param {Object} localizeObj - The localization object.
+     * @param {Object} conversionPrefs - The conversion preferences.
+     * @returns {number} - The calculated shipping discount amount.
+     */
+    calculateShippingDiscountAmount: function (shippingPriceAdjustment, beforeDiscount, isConversionDisabled, localizeObj, conversionPrefs) {
+        let type = shippingPriceAdjustment.appliedDiscount.type;
+        let isFreeShipping = type === dw.campaign.Discount.TYPE_FREE ||
+            (shippingPriceAdjustment.custom.thresholdDiscountType && shippingPriceAdjustment.custom.thresholdDiscountType === 'free');
+
+        // Check for free shipping discount
+        if (isFreeShipping) {
+            return beforeDiscount;
+        }
+
+        // Check for fixed price discount
+        if (type === 'FIXED_PRICE') {
+            let fixedPrice = shippingPriceAdjustment.appliedDiscount.fixedPrice;
+            if (localizeObj) localizeObj.applyRoundingModel = 'true';
+            let discountAmount = isConversionDisabled || shippingPriceAdjustment.priceValue === 0
+                ? fixedPrice
+                : this.getDiscountPriceBasedOnArchitecture(fixedPrice, localizeObj, conversionPrefs, false);
+            if (localizeObj) localizeObj.applyRoundingModel = 'false';
+            return beforeDiscount - discountAmount;
+        }
+        // Check for standard discount
+        let otherPrice = shippingPriceAdjustment.priceValue * -1;
+        return isConversionDisabled || shippingPriceAdjustment.priceValue === 0
+            ? otherPrice
+            : this.getDiscountPriceBasedOnArchitecture(otherPrice, localizeObj, conversionPrefs, true);
+    },
+    /**
+     * Creates a shipping discount object.
+     *
+     * @param {Object} shippingPriceAdjustment - The shipping price adjustment object.
+     * @param {number} shippingDiscountAmount - The calculated shipping discount amount.
+     * @param {number} beforeDiscount - The price before discount.
+     * @param {string} currencyCode - The currency code.
+     * @param {Object} localizeObj - The localization object.
+     * @param {Object} conversionPrefs - The conversion preferences.
+     * @returns {Object} - The shipping discount object.
+     */
+    createShippingDiscount: function (shippingPriceAdjustment, shippingDiscountAmount, beforeDiscount, currencyCode, localizeObj, conversionPrefs) {
+        let isHeadlessArchitecture = localizeObj && conversionPrefs;
+
+        return {
+            title: shippingPriceAdjustment.promotionID,
+            description: shippingPriceAdjustment.lineItemText,
+            discount: {
+                currency: currencyCode,
+                amount: isHeadlessArchitecture ? shippingDiscountAmount.toFixed(2) : shippingDiscountAmount.toFixed(3)
+            },
+            beforeDiscount: {
+                currency: currencyCode,
+                amount: isHeadlessArchitecture ? beforeDiscount.toFixed(2) : beforeDiscount.toFixed(3)
+            }
+        };
+    },
+    /**
+     * Generate address name based on the full address object
+     * @param {dw.order.OrderAddress} address - Object that contains shipping address
+     * @returns {string} - String with the generated address name
+     */
+    generateAddressName: function (address) {
+        return [(address.address1 || ''), (address.city || ''), (address.postalCode || '')].join(' - ');
     }
 };
 

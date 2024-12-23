@@ -27,4 +27,9 @@ exports.DECIMAL_LENGTH = 8;
 exports.VERSION_2 = 'v2';
 exports.VERSION_3 = 'v3';
 exports.NOHOLD = 'NoHold';
-
+exports.IS_DELIVERY = 'IsDelivery';
+exports.eswPkgOptionMixed = {
+    displayValue: 'Mixed - Specific field for country level',
+    value: 'mixed'
+};
+exports.pkgAsnMaxDays = 3;

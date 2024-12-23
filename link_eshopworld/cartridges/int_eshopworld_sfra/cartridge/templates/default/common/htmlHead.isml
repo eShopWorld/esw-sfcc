@@ -38,6 +38,7 @@
 
 <isif condition="${'eswEshopworldModuleEnabled' in dw.system.Site.current.preferences.custom && dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled}">
     <script defer="defer" src="${URLUtils.staticURL('/js/EswHooks.js')}"></script>
+    <script defer="defer" src="${URLUtils.staticURL('/js/shippingSummary.js')}"></script>
     <isif condition="${!eswHelper.isSameGeoIpCountry().isSameCountry}">
         <script id="eswMattAutoOpen" defer="defer" src="${URLUtils.staticURL('/js/EswMattAutoOpen.js')}" data-current-geo-location="${eswHelper.isSameGeoIpCountry().geoLocation}"></script>
     </isif>
@@ -65,3 +66,4 @@ ${dw.system.HookMgr.callHook('app.template.htmlHead', 'htmlHead', pdict) || ''}
 </iscomment>
 <isprint value="${require('*/cartridge/scripts/theming/skin.js').renderSkin()}" encoding="off">
 <link rel="stylesheet" href="${URLUtils.staticURL('/css/skin/skin.css')}" />
+<link rel="stylesheet" href="${URLUtils.staticURL('/css/tooltips.css')}"/>

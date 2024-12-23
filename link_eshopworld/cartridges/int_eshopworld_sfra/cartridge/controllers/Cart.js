@@ -70,6 +70,15 @@ server.prepend(
     function (req, res, next) {
         eswHelper.setEnableMultipleFxRatesCurrency(req);
         eswHelper.rebuildCartUponBackFromESW();
+        let eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        let BasketMgr = require('dw/order/BasketMgr'),
+            currentBasket = BasketMgr.getCurrentBasket();
+        if (currentBasket && eswCoreHelper.getEShopWorldModuleEnabled() && eswCoreHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
+            let viewData = res.getViewData();
+            // Set override shipping methods if configured
+            eswCoreHelper.applyShippingOverrideMethod(currentBasket);
+            res.setViewData(viewData);
+        }
         return next();
     }
 );

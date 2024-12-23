@@ -409,14 +409,13 @@ function getShopperCheckoutExperience(order, shopperLocale) {
      * @returns {Object} target object
      */
 function getExpansionPairs() {
-    let URLAction = require('dw/web/URLAction'),
-        urlExpansionPairs = eswHelper.getUrlExpansionPairs(),
+    let urlExpansionPairs = eswHelper.getUrlExpansionPairs(),
         obj = {},
         i = 0;
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (let index in urlExpansionPairs) {
         i = urlExpansionPairs[index].indexOf('|');
-        obj[urlExpansionPairs[index].substring(0, i)] = URLUtils.https(new URLAction(urlExpansionPairs[index].substring(i + 1), Site.ID, request.httpCookies['esw.LanguageIsoCode'].value)).toString();
+        obj[urlExpansionPairs[index].substring(0, i)] = eswHelper.buildUrlFromExpansionPairs(urlExpansionPairs[index], request.httpCookies['esw.LanguageIsoCode'].value);
     }
     obj.metadataItems = getRetailerCheckoutMetadataItems();
     return obj;
@@ -429,18 +428,23 @@ function getExpansionPairs() {
  * @returns {Object} - expansion pairs in JSON format
  */
 function getPWAHLExpansionPairs(shopperLocale, shopperCountry) {
+    let param = request.httpParameters;
     let urlExpansionPairs = eswHelper.getUrlExpansionPairs(),
         obj = {},
         i = 0;
+    let isHeadless = !empty(param['country-code']) && !empty(param['country-code'][0]);
     try {
         for (let index = 0; index < urlExpansionPairs.length; index++) {
             if (Object.prototype.hasOwnProperty.call(urlExpansionPairs, index)) {
                 i = urlExpansionPairs[index].indexOf('|');
+                let key = urlExpansionPairs[index].substring(0, i);
                 let actionURL = urlExpansionPairs[index].split('|')[1];
-                if (actionURL.substring(0, 4).toLowerCase() === 'http') {
-                    obj[urlExpansionPairs[index].substring(0, i)] = actionURL.replace(/{countryCode}+/g, shopperCountry.toLowerCase());
+                if (isHeadless) {
+                    obj[key] = eswHelper.buildUrlFromExpansionPairs(urlExpansionPairs[index], shopperLocale);
                 } else {
-                    obj[urlExpansionPairs[index].substring(0, i)] = URLUtils.https(new dw.web.URLAction(urlExpansionPairs[index].substring(i + 1), Site.ID, shopperLocale)).toString();
+                    obj[key] = actionURL.substring(0, 4).toLowerCase() === 'http'
+                        ? actionURL.replace(/{countryCode}+/g, shopperCountry.toLowerCase())
+                        : URLUtils.https(new dw.web.URLAction(urlExpansionPairs[index].substring(i + 1), Site.ID, shopperLocale)).toString();
                 }
             }
         }
@@ -503,20 +507,23 @@ function getRetailerCheckoutMetadataItems(shopperLocale) {
 */
 function getContactDetails(shopperEmail, shopperCountry) {
     let metaDataArr = eswHelper.getMappedCustomerMetadata();
+    let contactDetailsType = 'IsDelivery';
     if ((customer.profile == null) && (empty(shopperEmail) || shopperEmail.substring(0, 8) === 'eswUser_')) {
         return [];
     }
-    let addresses = (customer.profile != null) ? customer.profile.addressBook.addresses : null,
+    let defaultAddress = (customer.profile != null) ? customer.profile.addressBook.preferredAddress : null,
+        addresses = (customer.profile != null) ? customer.profile.addressBook.addresses : null,
         address = {
             'contactDetailsType': 'isDelivery',
             'email': (customer.profile != null) ? customer.profile.email : shopperEmail,
             'country': shopperCountry || request.getHttpCookies()['esw.location'].value,
             'metadataItems': metaDataArr
         },
-        addressObj = [];
+        addressObj = [],
+        allAddressObj = [];
     if (addresses != null && !empty(addresses)) {
         collections.forEach(addresses, function (addr) {
-            if ((shopperCountry && shopperCountry === addr.countryCode.value) || eswHelper.getAvailableCountry() === addr.countryCode.value) {
+            if ((addr.ID === defaultAddress.ID) && ((shopperCountry && shopperCountry === addr.countryCode.value) || eswHelper.getAvailableCountry() === addr.countryCode.value)) {
                 address = {
                     'contactDetailsType': 'isDelivery',
                     'email': customer.profile.email,
@@ -533,17 +540,68 @@ function getContactDetails(shopperEmail, shopperCountry) {
                     'poBox': addr.postBox,
                     'firstName': addr.firstName,
                     'lastName': addr.lastName,
-                    'metadataItems': metaDataArr
+                    'metadataItems': metaDataArr,
+                    'isSelected': !empty(addr.custom.eswIsSelected) ? addr.custom.eswIsSelected : '',
+                    'isDefault': true
                 };
                 addressObj.push(address);
+            } else if ((shopperCountry && shopperCountry === addr.countryCode.value) || eswHelper.getAvailableCountry() === addr.countryCode.value) {
+                address = {
+                    'contactDetailsType': contactDetailsType,
+                    'email': customer.profile.email,
+                    'contactDetailsNickName': addr.ID,
+                    'addressId': addr.ID,
+                    'address1': addr.address1,
+                    'address2': addr.address2,
+                    'address3': null,
+                    'city': addr.city,
+                    'region': addr.stateCode,
+                    'country': addr.countryCode.value,
+                    'postalCode': addr.postalCode,
+                    'telephone': addr.phone,
+                    'poBox': addr.postBox,
+                    'firstName': addr.firstName,
+                    'lastName': addr.lastName,
+                    'metadataItems': metaDataArr,
+                    'isSelected': !empty(addr.custom.eswIsSelected) ? addr.custom.eswIsSelected : '',
+                    'lastModified': addr.getLastModified()
+                };
+                allAddressObj.push(address);
             }
         });
     }
 
-    if (addressObj === null || empty(addressObj)) {
+    if ((addressObj === null || empty(addressObj)) && empty(allAddressObj)) {
         addressObj.push(address);
     }
-    return addressObj;
+    if (addressObj.length !== 0) {
+        allAddressObj.sort((a, b) => b.lastModified - a.lastModified);
+        allAddressObj.forEach(function (addr) { delete addr.lastModified; });
+        addressObj = addressObj.concat(allAddressObj);
+    }
+    return !empty(addressObj) ? addressObj : allAddressObj;
+}
+
+/**
+ * Function to rearrange delivery information if user selected EX shipping
+ * @param {Array} isOverrideCountry isOverrideCountry
+ * @param {string} selectedShippingMethod selectedShippingMethod
+ * @returns {Array} isOverrideCountry isOverrideCountry
+ */
+function reArrangeOverrideShippingBasedOnCustomerSelection(isOverrideCountry, selectedShippingMethod) {
+    try {
+        // Check if the shipping method contains EXP2
+        const exp2Index = isOverrideCountry[0].shippingMethod.ID.indexOf(selectedShippingMethod);
+
+        if (exp2Index !== -1 && exp2Index !== 0) {
+            const [exp2Item] = isOverrideCountry[0].shippingMethod.ID.splice(exp2Index, 1);
+            isOverrideCountry[0].shippingMethod.ID.unshift(exp2Item);
+        }
+    } catch (error) {
+        let logger = require('dw/system/Logger');
+        logger.error('ESW reArrangeOverrideShippingBasedOn CustomerSelection setup erros: {0} {1}', error.message, error.stack);
+    }
+    return isOverrideCountry;
 }
 
 /**
@@ -566,6 +624,9 @@ function getShippingRates(v2Flag, shopperCurrency) {
     }
 
     if (!empty(isOverrideCountry)) {
+        if (cart.shipments[0].shippingMethodID) {
+            reArrangeOverrideShippingBasedOnCustomerSelection(isOverrideCountry, cart.shipments[0].shippingMethodID);
+        }
         if (!empty(isOverrideCountry[0].shippingMethod.ID)) {
             let shippingRates = [];
             let isConversionDisabled = 'disableConversion' in isOverrideCountry[0] && isOverrideCountry[0].disableConversion === 'true';
@@ -982,5 +1043,6 @@ module.exports = {
     getNonGiftCertificateAmount: getNonGiftCertificateAmount,
     getApplicableDefaultShippingMethod: getApplicableDefaultShippingMethod,
     updatePaymentInstrument: updatePaymentInstrument,
-    getProductLineMetadataItems: getProductLineMetadataItems
+    getProductLineMetadataItems: getProductLineMetadataItems,
+    reArrangeOverrideShippingBasedOnCustomerSelection: reArrangeOverrideShippingBasedOnCustomerSelection
 };

@@ -185,7 +185,7 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
     let cart = order,
         eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
         eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL'),
-        serviceHelperV3HL = require('*/cartridge/scripts/helper/eswServiceHelperHL'),
+        eswServiceHelperV3 = require('*/cartridge/scripts/helper/serviceHelperV3'),
         shopperCountry = localizeObj.localizeCountryObj.countryCode,
         currencyIso = localizeObj.localizeCountryObj.currencyCode,
         shippingOverrides = eswHelper.getOverrideShipping(),
@@ -215,7 +215,7 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
             for (let rate in isOverrideCountry[0].shippingMethod.ID) {
                 shippingMethod = eswHelperHL.applyShippingMethod(cart, isOverrideCountry[0].shippingMethod.ID[rate], shopperCountry, false);
                 if (shippingMethod != null && cart.adjustedShippingTotalPrice.valueOrNull != null) {
-                    discountObj = serviceHelperV3HL.getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs);
+                    discountObj = eswServiceHelperV3.getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs);
                     let adjustedShippingCost = (isConversionDisabled || cart.adjustedShippingTotalPrice.value === 0) ? cart.adjustedShippingTotalPrice.value : pricingHelper.getConvertedPrice(Number(cart.adjustedShippingTotalPrice), localizeObj, conversionPrefs);
                     if (!v2Flag) {
                         shippingRate = {
@@ -251,7 +251,7 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
         for (let i in cart.defaultShipment.shippingPriceAdjustments) {
             let adjustment = cart.defaultShipment.shippingPriceAdjustments[i];
             if (adjustment.appliedDiscount.type === dw.campaign.Discount.TYPE_FREE) {
-                discountObj = serviceHelperV3HL.getDeliveryDiscounts(cart, false, localizeObj, conversionPrefs);
+                discountObj = eswServiceHelperV3.getDeliveryDiscounts(cart, false, localizeObj, conversionPrefs);
                 shippingRate = {
                     deliveryOption: 'POST',
                     deliveryOptionOverridePriceInfo: {

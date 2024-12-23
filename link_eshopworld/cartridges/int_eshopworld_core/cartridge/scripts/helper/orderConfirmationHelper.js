@@ -346,40 +346,82 @@ const getEswOcHelper = {
         }
         order.billingAddress.phone = !empty(billingCustomer[0].telephone) ? billingCustomer[0].telephone : shippingCustomer[0].telephone;
     },
+    removeIsSelected: function (addressBook) {
+        let addressList = addressBook.getAddresses();
+        if (!empty(addressList)) {
+            collections.forEach(addressList, function (address) {
+                address.custom.eswIsSelected = false;
+            });
+        }
+    },
+    /**
+     * @param {Object} existingAddress - An existing or new Address
+     * @param {Object} updatedAddress - Address from the OC response
+     * @param {Object} addressBook - The address book of the customer
+     */
+    updateAddress: function (existingAddress, updatedAddress, addressBook) {
+        existingAddress.setFirstName(updatedAddress.firstName);
+        existingAddress.setLastName(updatedAddress.lastName);
+        existingAddress.setAddress1(updatedAddress.address1);
+        existingAddress.setAddress2(updatedAddress.address2);
+        existingAddress.setCity(updatedAddress.city);
+        existingAddress.setCountryCode(updatedAddress.country);
+        existingAddress.setPostalCode(updatedAddress.postalCode);
+        existingAddress.setPhone(updatedAddress.telephone);
+        if (!empty(updatedAddress.region)) {
+            existingAddress.setStateCode(updatedAddress.region);
+        }
+        if ('isDefault' in updatedAddress && updatedAddress.isDefault === true) {
+            addressBook.setPreferredAddress(existingAddress);
+        }
+        if ('isSelected' in updatedAddress) {
+            if (updatedAddress.isSelected) {
+                this.removeIsSelected(addressBook);
+            }
+            existingAddress.custom.eswIsSelected = updatedAddress.isSelected;
+        }
+    },
     /**
     * Save Customer Address in AddressBook
     * @param {Object} contactDetails - contact details from ESW OC response
     * @param {string} customerID - Registered customer Number
+    * @param {boolean} saveAddress - Save Address in AddressBook
     */
-    saveAddressinAddressBook: function (contactDetails, customerID) {
+    saveAddressinAddressBook: function (contactDetails, customerID, saveAddress) {
         try {
-            let addressHelpers = require('*/cartridge/scripts/helpers/addressHelpers');
-            let addressBook = CustomerMgr.getCustomerByCustomerNumber(customerID).getAddressBook();
-            let addressList = addressBook.getAddresses();
-
-            if (!empty(addressList)) {
-                // eslint-disable-next-line no-restricted-syntax, guard-for-in
-                for (let i in addressList) {
-                    if (addressList[i].ID === addressHelpers.generateAddressName(contactDetails[0])) {
-                        return;
+            let addressBook = CustomerMgr.getCustomerByCustomerNumber(customerID).getAddressBook(),
+                addressList = addressBook.getAddresses(),
+                isMultiAdrressEnabled = eswHelper.isEswMultiAddressEnabled();
+            if (!isMultiAdrressEnabled && !saveAddress) {
+                return; // Do not save address in address book
+            }
+            contactDetails.forEach(contact => {
+                let isSaveAddressEnabled = (!empty(contact.saveToProfile) && contact.saveToProfile) || (!isMultiAdrressEnabled && saveAddress);
+                // Skip iteration if saving address is not enabled
+                if (!isSaveAddressEnabled) {
+                    return;
+                }
+                let addressID = !empty(contact.addressId) ? contact.addressId : eswHelper.generateAddressName(contact);
+                let existingAddress = null;
+                if (!empty(addressList)) {
+                    for (let i = 0; i < addressList.length; i++) {
+                        if (addressList[i].ID === addressID) {
+                            existingAddress = addressList[i];
+                            break;
+                        }
                     }
                 }
-            }
-            let newAddress = addressBook.createAddress(addressHelpers.generateAddressName(contactDetails[0]));
-            if (contactDetails[0].contactDetailType.equalsIgnoreCase('IsDelivery')) {
-                newAddress.setFirstName(contactDetails[0].firstName);
-                newAddress.setLastName(contactDetails[0].lastName);
-                newAddress.setAddress1(contactDetails[0].address1);
-                newAddress.setAddress2(contactDetails[0].address2);
-                newAddress.setCity(contactDetails[0].city);
-                newAddress.setCountryCode(contactDetails[0].country);
-                newAddress.setPostalCode(contactDetails[0].postalCode);
-                newAddress.setPhone(contactDetails[0].telephone);
-                if (!empty(contactDetails[0].region)) {
-                    newAddress.setStateCode(contactDetails[0].region);
+                if (!empty(existingAddress)) {
+                    if (!empty(contact.status) && contact.status === 'Edited') {
+                        addressBook.removeAddress(existingAddress);
+                        let newAddress = addressBook.createAddress(eswHelper.generateAddressName(contact));
+                        this.updateAddress(newAddress, contact);
+                    }
+                } else if (contact.contactDetailType.equalsIgnoreCase(Constants.IS_DELIVERY)) {
+                    let newAddress = addressBook.createAddress(addressID);
+                    this.updateAddress(newAddress, contact, addressBook);
                 }
-                addressBook.setPreferredAddress(newAddress);
-            }
+            });
         } catch (error) {
             eswHelper.eswInfoLogger('error on adding new address to customer addressbook' + error);
         }

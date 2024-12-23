@@ -449,6 +449,12 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswPackageJSON">
+                <display-name xml:lang="x-default">ESW Package JSON</display-name>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="eswV2">
@@ -511,6 +517,7 @@
                 <attribute attribute-id="eswReceivedASN"/>
                 <attribute attribute-id="eswPackageReference"/>
                 <attribute attribute-id="eswTrackingURL"/>
+                <attribute attribute-id="eswPackageJSON"/>
             </attribute-group>
             <attribute-group group-id="eswV2OrderAPI">
                 <display-name xml:lang="x-default">ESW Order Cancellation</display-name>
@@ -1110,6 +1117,26 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                     </value-definition>
                 </value-definitions>
             </attribute-definition>
+            <attribute-definition attribute-id="eswPkgAsnType">
+                <display-name xml:lang="x-default">ESW Package ASN Type</display-name>
+                <type>enum-of-string</type>
+                <mandatory-flag>true</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <value-definitions>
+                    <value-definition default="true">
+                        <display xml:lang="x-default">Synchronize SFCC shipment with ESW</display>
+                        <value>sfccToEsw</value>
+                    </value-definition>
+                    <value-definition>
+                        <display xml:lang="x-default">Synchronize ESW Package/ASN with SFCC</display>
+                        <value>eswToSfcc</value>
+                    </value-definition>
+                    <value-definition>
+                        <display xml:lang="x-default">Mixed - Specific field for country level</display>
+                        <value>mixed</value>
+                    </value-definition>
+                </value-definitions>
+            </attribute-definition>
             <attribute-definition attribute-id="eswLocalizedShoppingFeedCustomAttrFieldMapping">
                 <display-name xml:lang="x-default">ESW Shopping Feed Product Custom Fields Mapping</display-name>
                 <description xml:lang="x-default">Map Product custom attributes IDs to ESW Shopping Feed keys using this preference.
@@ -1666,6 +1693,14 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>true</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswHideNativeShipping">
+                <display-name xml:lang="x-default">ESW Hide Native Shipping</display-name>
+                <description xml:lang="x-default">If true SFCC native shipping methods will be Hidden on cart page</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
             <attribute-definition attribute-id="eswEnableTaxInformation">
                 <display-name xml:lang="x-default">ESW Enable Tax Information</display-name>
                 <type>boolean</type>
@@ -1713,12 +1748,30 @@ Example: &#13;
                 </value-definitions>
                 <default-value>Processed</default-value>
             </attribute-definition>
+             <attribute-definition attribute-id="isEswMultiAddressEnabled">
+                <display-name xml:lang="x-default">is ESW Multiple Addresses Enabled</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswEnableSplitShipment">
+                <display-name xml:lang="x-default">ESW Enable Split Shipment</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="ESW Localized Shopping Feed Configuration">
                 <display-name xml:lang="x-default">ESW Localized Shopping Feed Configuration</display-name>
                 <attribute attribute-id="eswLocalizedShoppingFeedDelimiter"/>
                 <attribute attribute-id="eswLocalizedShoppingFeedCustomAttrFieldMapping"/>
+            </attribute-group>
+            <attribute-group group-id="ESW Package Integration Configuration">
+                <display-name xml:lang="x-default">ESW Package Integration Configuration</display-name>
+                <attribute attribute-id="eswPkgAsnType"/>
             </attribute-group>
             <attribute-group group-id="ESW General Configuration">
                 <display-name xml:lang="x-default">ESW General Configuration</display-name>
@@ -1739,6 +1792,7 @@ Example: &#13;
                 <attribute attribute-id="eswImageType"/>
                 <attribute attribute-id="eswCountryUrlParam"/>
                 <attribute attribute-id="eswEnableTaxInformation"/>
+                <attribute attribute-id="eswEnableSplitShipment"/>
             </attribute-group>
             <attribute-group group-id="ESW Retailer Display Configuration">
                 <display-name xml:lang="x-default">ESW Retailer Display Configuration</display-name>
@@ -1751,6 +1805,7 @@ Example: &#13;
                 <attribute attribute-id="eswEnableFooterBar"/>
                 <attribute attribute-id="eswEnableLandingPageRedirect"/>
                 <attribute attribute-id="eswEnableOrderDetail"/>
+                <attribute attribute-id="eswHideNativeShipping"/>
             </attribute-group>
             <attribute-group group-id="ESW Pricing Configuration">
                 <display-name xml:lang="x-default">ESW Pricing Configuration</display-name>
@@ -1782,6 +1837,7 @@ Example: &#13;
                 <attribute attribute-id="eswEnablePostOcRegistration"/>
                 <attribute attribute-id="eswCustomerMetaData"/>
                 <attribute attribute-id="eswBasketMetaData"/>
+                <attribute attribute-id="isEswMultiAddressEnabled"/>
             </attribute-group>
             <attribute-group group-id="ESW Catalog Integration Configuration">
                 <display-name xml:lang="x-default">ESW Catalog Integration Configuration</display-name>
@@ -1869,6 +1925,23 @@ Example: &#13;
             <attribute-group group-id="ESW Returns">
                 <display-name xml:lang="x-default">ESW Returns</display-name>
                 <attribute attribute-id="eswOutboundShipmentJson"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+    <type-extension type-id="CustomerAddress">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswIsSelected">
+                <display-name xml:lang="x-default">ESW Is Selected</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="ESW">
+                <display-name xml:lang="x-default">ESW</display-name>
+                <attribute attribute-id="eswIsSelected"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

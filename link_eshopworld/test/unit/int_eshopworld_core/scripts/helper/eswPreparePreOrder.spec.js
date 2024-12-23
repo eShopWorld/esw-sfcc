@@ -132,28 +132,6 @@ var productMock = {
     }
 };
 
-let OverrideShipping = JSON.stringify([
-    {
-        countryCode: 'GB',
-        shippingMethod: {
-            ID: ['POST_GB', 'EXP2_GB']
-        }
-    },
-    {
-        countryCode: 'CA',
-        shippingMethod: {
-            ID: ['POST_CA', 'EXP2_CA']
-        }
-    },
-    {
-        countryCode: 'SE',
-        shippingMethod: {
-            ID: ['POST_CA', 'EXP2_CA']
-        }
-    }
-]);
-
-
 var createApiBasket = function (options) {
     var safeOptions = options || {};
 
@@ -220,11 +198,11 @@ describe('int_eshopworld_core/cartridge/scripts/helper/serviceHelper.js', functi
                 getEnableInventoryCheck: function () {
                     return false;
                 },
+                buildUrlFromExpansionPairs: function () {
+                    return 'http://url.com';
+                },
                 getMoneyObject: function () {
                     return Money();
-                },
-                getEnableInventoryCheck: function () {
-                    return false;
                 },
                 isEswRoundingsEnabled: function () {
                     return 'true';
