@@ -225,12 +225,6 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
-            <attribute-definition attribute-id="eswDeliveryOption">
-                <display-name xml:lang="x-default">ESW Delivery Option</display-name>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-            </attribute-definition>
             <attribute-definition attribute-id="eswShopperCurrencyOrderDiscountsInfo">
                 <display-name xml:lang="x-default">ESW Shopper Currency Order Discounts Info</display-name>
                 <type>text</type>
@@ -466,7 +460,6 @@
                 <attribute attribute-id="eswFraudHold"/>
                 <attribute attribute-id="eswEmailMarketingOptIn"/>
                 <attribute attribute-id="eswSMSMarketingOptIn"/>
-                <attribute attribute-id="eswDeliveryOption"/>
             </attribute-group>
             <attribute-group group-id="eswV2RetailerCurrency">
                 <display-name xml:lang="x-default">ESW Retailer Currency Order Confirmation</display-name>
@@ -584,6 +577,17 @@
 
     <type-extension type-id="Product">
         <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswFulfilmentCountryIso">
+                <display-name xml:lang="x-default">ESW Fulfilment Country ISO</display-name>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <site-specific-flag>false</site-specific-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <visible-flag>false</visible-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <order-required-flag>false</order-required-flag>
+                <externally-defined-flag>false</externally-defined-flag>
+            </attribute-definition>
             <attribute-definition attribute-id="eswProductRestrictedCountries">
                 <display-name xml:lang="x-default">ESW List Of Countries Where Product Is Restricted</display-name>
                 <description xml:lang="x-default">Product is restricted and not sellable in the mentioned countries.&#13;
@@ -720,10 +724,26 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswSyncMessage"/>
                 <attribute attribute-id="eswLocalizedShoppingProduct"/>
             </attribute-group>
+            <attribute-group group-id="ESW Multi Origin">
+                <display-name xml:lang="x-default">ESW Multi Origin</display-name>
+                <attribute attribute-id="eswFulfilmentCountryIso"/>
+            </attribute-group>
         </group-definitions>
     </type-extension>
     <type-extension type-id="ProductLineItem">
         <custom-attribute-definitions>
+            <attribute-definition attribute-id="eswFulfilmentCountryIso">
+                <display-name xml:lang="x-default">ESW Fulfilment Country ISO</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswDeliveryOption">
+                <display-name xml:lang="x-default">ESW Delivery Option</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
             <attribute-definition attribute-id="eswShopperCurrencyItemDiscountsInfo">
                 <display-name xml:lang="x-default">ESW Shopper Currency Item Discounts Info</display-name>
                 <description xml:lang="x-default">Discount on cart items in shopper's currency</description>
@@ -1072,6 +1092,11 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswShopperCashOnDeliveryTaxFeeCurrency"/>
                 <attribute attribute-id="eswShopperCashOnDeliveryTaxFee"/>
             </attribute-group>
+            <attribute-group group-id="ESW Multi Origin">
+                <display-name xml:lang="x-default">ESW Multi Origin</display-name>
+                <attribute attribute-id="eswFulfilmentCountryIso"/>
+                <attribute attribute-id="eswDeliveryOption"/>
+            </attribute-group>
         </group-definitions>
     </type-extension>
 
@@ -1144,6 +1169,13 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <type>text</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswMultiOriginEnabled">
+                <display-name xml:lang="x-default">ESW Multi Origin Enabled</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
             </attribute-definition>
             <attribute-definition attribute-id="enableGeoLookup">
                 <display-name xml:lang="x-default">Enable Geo Lookup</display-name>
@@ -1748,7 +1780,7 @@ Example: &#13;
                 </value-definitions>
                 <default-value>Processed</default-value>
             </attribute-definition>
-             <attribute-definition attribute-id="isEswMultiAddressEnabled">
+            <attribute-definition attribute-id="isEswMultiAddressEnabled">
                 <display-name xml:lang="x-default">is ESW Multiple Addresses Enabled</display-name>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
@@ -1756,7 +1788,7 @@ Example: &#13;
                 <default-value>false</default-value>
             </attribute-definition>
             <attribute-definition attribute-id="eswEnableSplitShipment">
-                <display-name xml:lang="x-default">ESW Enable Split Shipment</display-name>
+                <display-name xml:lang="x-default">ESW Enable Multiple Shipment</display-name>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -1768,6 +1800,10 @@ Example: &#13;
                 <display-name xml:lang="x-default">ESW Localized Shopping Feed Configuration</display-name>
                 <attribute attribute-id="eswLocalizedShoppingFeedDelimiter"/>
                 <attribute attribute-id="eswLocalizedShoppingFeedCustomAttrFieldMapping"/>
+            </attribute-group>
+            <attribute-group group-id="ESW Multi Origin">
+                <display-name xml:lang="x-default">ESW Multi Origin</display-name>
+                <attribute attribute-id="eswMultiOriginEnabled"/>
             </attribute-group>
             <attribute-group group-id="ESW Package Integration Configuration">
                 <display-name xml:lang="x-default">ESW Package Integration Configuration</display-name>

@@ -297,7 +297,8 @@ const getEswOcHelper = {
             this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFee', Number(itemCashOnDeliveryTaxesObj.shopper.amount));
             this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFeeCurrency', itemCashOnDeliveryTaxesObj.shopper.currency);
         }
-
+        lineItem.custom.eswFulfilmentCountryIso = !empty(cartItem[0].fulfilmentCountryIso) ? cartItem[0].fulfilmentCountryIso : '';
+        lineItem.custom.eswDeliveryOption = !empty(cartItem[0].deliveryOption) ? cartItem[0].deliveryOption : '';
         return {
             ShopperDiscount: [],
             RetailerDiscount: []
@@ -396,7 +397,7 @@ const getEswOcHelper = {
                 return; // Do not save address in address book
             }
             contactDetails.forEach(contact => {
-                let isSaveAddressEnabled = (!empty(contact.saveToProfile) && contact.saveToProfile) || (!isMultiAdrressEnabled && saveAddress);
+                let isSaveAddressEnabled = (!empty(contact.saveToProfile) && contact.saveToProfile) || (isMultiAdrressEnabled && saveAddress);
                 // Skip iteration if saving address is not enabled
                 if (!isSaveAddressEnabled) {
                     return;
@@ -650,6 +651,7 @@ const getEswOcHelper = {
             this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFeeCurrency', !empty(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes) ? cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes.substring(0, 3) : '');
             this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFee', !empty(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes) ? Number(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes.substring(3)) : 0);
         }
+        lineItem.custom.eswFulfilmentCountryIso = !empty(cartItem[0].fulfilmentCountryIso) ? cartItem[0].fulfilmentCountryIso : '';
     },
     /**
     * Update ESW Order Item level custom attibutes for OC V2

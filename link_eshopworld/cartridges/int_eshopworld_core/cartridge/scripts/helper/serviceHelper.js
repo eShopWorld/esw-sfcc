@@ -242,6 +242,9 @@ function getCartItemsV2(order, shopperCountry, shopperCurrency) {
             'cartGrouping': 'Group 1',
             'metadataItems': null
         };
+        if (eswHelper.isEnabledMultiOrigin()) {
+            cartItem.FulfilmentCountryIso = !empty(item.custom.eswFulfilmentCountryIso) ? item.custom.eswFulfilmentCountryIso : '';
+        }
         cartItems.push(cartItem);
     }
     return { cartItems: cartItems, finalCartSubtotal: finalCartSubtotal };
