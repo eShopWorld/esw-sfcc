@@ -1,24 +1,30 @@
 <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+<div class="price">
+	<isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
+		<isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page" />
+		<isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(lineItem)}" scope="page" />
+		<isset name="eswMoFormattedTotalPrice" value="${lineItem.priceTotal.eswMoFormattedTotalPrice}" scope="page" />
+		<isset name="eswMoFormattedNonAdjustedPrice" value="${lineItem.priceTotal.eswMoFormattedNonAdjustedPrice}"
+			scope="page" />
 
-<isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
-	<isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page" />
-	<isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(lineItem)}" scope="page" />
-	
-	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
-	    <isif condition=${lineItem.priceTotal.nonAdjustedPrice}>
-	    	${formatMoney(lineItem.priceTotal.nonAdjustedPrice)}
-	    </isif>
-	</div>
-	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">
-		<isif condition="${!empty(matchingLineItem)}">
-		    ${formatMoney(eswHelper.getSubtotalObject(matchingLineItem, false))}
+		<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
+			<isif condition=${lineItem.priceTotal.nonAdjustedPrice}>
+				${eswMoFormattedNonAdjustedPrice || formatMoney(lineItem.priceTotal.nonAdjustedPrice)}
+			</isif>
+		</div>
+		<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">
+			<isif condition="${!empty(matchingLineItem)}">
+				${eswMoFormattedTotalPrice || formatMoney(eswHelper.getSubtotalObject(matchingLineItem, false))}
+				<iselse>
+					${eswMoFormattedTotalPrice || lineItem.priceTotal.price}
+			</isif>
+		</div>
 		<iselse>
-			${lineItem.priceTotal.price}
-		</isif>
-	</div>
-<iselse>
-	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
-	    ${lineItem.priceTotal.nonAdjustedPrice}
-	</div>
-	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">${lineItem.priceTotal.price}</div>
-</isif>
+			<div
+				class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
+				${lineItem.priceTotal.nonAdjustedPrice}
+			</div>
+			<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">${lineItem.priceTotal.price}
+			</div>
+	</isif>
+</div>

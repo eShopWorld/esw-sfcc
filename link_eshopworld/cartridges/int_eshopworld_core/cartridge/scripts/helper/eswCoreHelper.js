@@ -37,6 +37,9 @@ const getEswHelper = {
     getEswCatalogFeedLastExec: function () {
         return Site.getCustomPreferenceValue('eswCatalogFeedTimeStamp');
     },
+    isEnabledMultiOrigin: function () {
+        return this.getEShopWorldModuleEnabled() && Site.getCustomPreferenceValue('eswMultiOriginEnabled');
+    },
     /**
      * Determine pa version used by the service URL
      * @returns {string} pa version

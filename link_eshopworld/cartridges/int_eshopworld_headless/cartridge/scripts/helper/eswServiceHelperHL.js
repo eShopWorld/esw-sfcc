@@ -161,6 +161,9 @@ function getLineItemsV3(order, countryCode, currencyCode) {
             cartGrouping: 'Group 1',
             metadataItems: null
         };
+        if (eswHelper.isEnabledMultiOrigin()) {
+            cartItem.FulfilmentCountryIso = !empty(item.custom.eswFulfilmentCountryIso) ? item.custom.eswFulfilmentCountryIso : '';
+        }
         lineItems.push(cartItem);
     }
     return lineItems;
@@ -252,6 +255,9 @@ function getLineItemsV2(order, countryCode, currencyCode) {
             cartGrouping: 'Group 1',
             metadataItems: null
         };
+        if (eswHelper.isEnabledMultiOrigin()) {
+            cartItem.fulfilmentCountryIso = !empty(item.custom.eswFulfilmentCountryIso) ? item.custom.eswFulfilmentCountryIso : '';
+        }
         lineItems.push(cartItem);
     }
     return lineItems;

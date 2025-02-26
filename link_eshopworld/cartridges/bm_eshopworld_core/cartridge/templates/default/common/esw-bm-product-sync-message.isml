@@ -23,18 +23,19 @@
         </div>
     </isloop>
 <iselse/>
-    <isset value="${eswSyncHelper.getSyncStatusInfo(product.product)}" name="syncStatus" scope="page" />
+    <isset value="${'product' in product && product.product !== true ? product.product : product}" name="product" scope="page" />
+    <isset value="${eswSyncHelper.getSyncStatusInfo(product)}" name="syncStatus" scope="page" />
     <isif condition="${syncStatus === 'synced'}">
         <div class="alert-success alert">
             ${Resource.msg('label.status.success.message', 'eswbm', null)}
-            <isprint value="${new Date(JSON.parse(product.product.custom.eswSyncMessage).lastSynced)}"
+            <isprint value="${new Date(JSON.parse(product.custom.eswSyncMessage).lastSynced)}"
                 style="DATE_SHORT" />
-            <isprint value="${new Date(JSON.parse(product.product.custom.eswSyncMessage).lastSynced)}"
+            <isprint value="${new Date(JSON.parse(product.custom.eswSyncMessage).lastSynced)}"
                 style="DATE_TIME" />
             <div class="btn btn-primary tooltip">
                 <div class="left">
                     <h3>${Resource.msg('label.api.response', 'eswbm', null)}</h3>
-                    <p><code>${product.product.custom.eswSyncMessage}</code></p>
+                    <p><code>${product.custom.eswSyncMessage}</code></p>
                     <ul>
                         <i></i>
                     </ul>
@@ -47,7 +48,7 @@
                 <div class="btn btn-primary tooltip">
                     <div class="left">
                         <h3>${Resource.msg('label.api.response', 'eswbm', null)}</h3>
-                        <p><code>${product.product.custom.eswSyncMessage}</code></p>
+                        <p><code>${product.custom.eswSyncMessage}</code></p>
                         <ul>
                             <i></i>
                         </ul>

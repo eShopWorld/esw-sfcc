@@ -219,7 +219,7 @@
 }
 
 .selectors.headerDropdown .esw-country-selector {
-	position: relative;
+	position: inherit;
 	top: 0;
 	right: 0;
 }
