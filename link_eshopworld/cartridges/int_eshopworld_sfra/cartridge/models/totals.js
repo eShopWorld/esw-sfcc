@@ -148,9 +148,9 @@ function totals(lineItemContainer) {
                 if (Object.hasOwnProperty.call(lineItemContainer, 'orderNo')) {
                     orderHistoryFlag = true;
                 }
-                this.subTotal = getTotals(lineItemContainer.getAdjustedMerchandizeTotalPrice(false));
+                this.subTotal = (isESWSupportedCountry) ? formatMoney(eswHelper.getFinalOrderTotalsObject()) : getTotals(lineItemContainer.getAdjustedMerchandizeTotalPrice(false));
                 this.totalShippingCost = getTotals(lineItemContainer.shippingTotalPrice);
-                this.totalTax = getTotals(lineItemContainer.totalTax);
+                this.totalTax = (isESWSupportedCountry && lineItemContainer.totalTax.available) ? formatMoney(new dw.value.Money(lineItemContainer.totalTax.decimalValue, request.getHttpCookies()['esw.currency'].value)) : getTotals(lineItemContainer.totalTax);
                 // Exclude shipping cost from grand total
                 let cartPageShippingCost = new dw.value.Money(0, request.getHttpCookies()['esw.currency'].value);
                 this.grandTotal = (isESWSupportedCountry) ? eswHelper.getOrderTotalWithShippingCost(cartPageShippingCost) : getTotals(lineItemContainer.totalGrossPrice);
