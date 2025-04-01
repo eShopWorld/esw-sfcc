@@ -1461,6 +1461,7 @@ const getEswHelper = {
     setLocation: function (country) {
         let selectedCountry = country,
             currencyCode;
+        let locale = null;
         if (selectedCountry == false && !empty(request.httpCookies['esw.location'])) {
             selectedCountry = request.httpCookies['esw.location'].value;
         }
@@ -1470,7 +1471,13 @@ const getEswHelper = {
             } else {
                 currencyCode = request.getHttpCookies()['esw.currency'].value;
             }
-            let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : this.getAllowedLanguages()[0].value;
+            if (empty(request.getHttpHeaders().get('x-glopal-language'))) {
+                locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : this.getAllowedLanguages()[0].value;
+            } else {
+                // If request has glopal header then set esw.LanguageIsoCode to glopal header
+                request.httpCookies['esw.LanguageIsoCode'] = request.getHttpHeaders().get('x-glopal-language');
+                locale = request.httpCookies['esw.LanguageIsoCode'];
+            }
             this.selectCountry(selectedCountry, currencyCode, locale);
         }
     },
