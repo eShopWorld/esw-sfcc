@@ -7,65 +7,7 @@ const HookMgr = require('dw/system/HookMgr');
 
 // Public Helper Methods
 const eswHelperHL = {
-    /**
-     * This function is used to get total of cart/ order/ productLineItems based on input
-     * @param {Object} cart - the cart/ order/ productLineItems object
-     * @param {boolean} isCart - true/ false
-     * @param {boolean} listPrice - true/ false
-     * @param {boolean} unitPrice - true/ false
-     * @param {Object} localizeObj - local country currency preference
-     * @param {Object} conversionPrefs - the conversion preferences which contains selected fxRate, countryAdjustments and roundingRule
-     * @returns {dw.Money} - sub total of an input
-     */
-    getSubtotalObject: function (cart, isCart, listPrice, unitPrice, localizeObj, conversionPrefs) {
-        let total = 0;
-        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
-        if (isCart) {
-            // eslint-disable-next-line guard-for-in
-            for (let productLineItem in cart.productLineItems) { // eslint-disable-line no-restricted-syntax
-                total += this.getSubtotalObject(cart.productLineItems[productLineItem], false, false, false, localizeObj, conversionPrefs);
-            }
-        } else {
-            let cartBasePrice = 0;
-            if (!empty(cart.optionProductLineItems)) {
-                // eslint-disable-next-line guard-for-in, no-restricted-syntax
-                for (let option in cart.optionProductLineItems) {
-                    cartBasePrice += cart.optionProductLineItems[option].adjustedNetPrice.value;
-                }
-            }
-            cartBasePrice += cart.basePrice.value;
 
-            let calculatedCartBasePrice = pricingHelper.getConvertedPrice(cartBasePrice, localizeObj, conversionPrefs);
-            total = calculatedCartBasePrice * cart.quantity.value;
-            if (listPrice) {
-                if (unitPrice) {
-                    total /= cart.quantity.value;
-                }
-                return new dw.value.Money(total, localizeObj.localizeCountryObj.currencyCode);
-            }
-            if (cart.getAdjustedPrice().getValue() > 0) {
-                cart.priceAdjustments.toArray().forEach(function (adjustment) {
-                    if (adjustment.appliedDiscount.type === dw.campaign.Discount.TYPE_FIXED_PRICE) {
-                        total = pricingHelper.getConvertedPrice(Number(adjustment.appliedDiscount.fixedPrice), localizeObj, conversionPrefs) * adjustment.quantity;
-                        if (adjustment.quantity < cart.quantity.value) {
-                            total += (cart.quantity.value - adjustment.quantity) * calculatedCartBasePrice;
-                        }
-                    } else {
-                        localizeObj.applyRoundingModel = 'false';
-                        let adjustedUnitPrice = pricingHelper.getConvertedPrice(adjustment.price / cart.quantity.value, localizeObj, conversionPrefs);
-                        total -= (adjustedUnitPrice * cart.quantity.value) * -1;
-                        localizeObj.applyRoundingModel = 'true';
-                    }
-                });
-            } else {
-                total = 0;
-            }
-        }
-        if (unitPrice) {
-            total /= cart.quantity.value;
-        }
-        return new Money(total, localizeObj.localizeCountryObj.currencyCode);
-    },
     /**
      * Returns unit price of the productLineItem
      * @param {Object} lineItem - the productLineItem object
@@ -74,7 +16,8 @@ const eswHelperHL = {
      * @returns {dw.Money} - the unit price of line item
      */
     getUnitPriceCost: function (lineItem, localizeObj, conversionPrefs) {
-        return new dw.value.Money((this.getSubtotalObject(lineItem, false, false, false, localizeObj, conversionPrefs).value / lineItem.quantity.value), localizeObj.localizeCountryObj.currencyCode);
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        return new dw.value.Money((eswHelper.getSubtotalObject(lineItem, false, false, false, localizeObj, conversionPrefs).value / lineItem.quantity.value), localizeObj.localizeCountryObj.currencyCode);
     },
     /**
      * This function is used to get Order Pro-rated Discount
@@ -87,6 +30,8 @@ const eswHelperHL = {
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
             if (!empty(eachPriceAdjustment.promotion) && eachPriceAdjustment.promotion.promotionClass === Promotion.PROMOTION_CLASS_ORDER) {
+                orderLevelProratedDiscount += eachPriceAdjustment.priceValue;
+            } else if (empty(eachPriceAdjustment.promotion) && eachPriceAdjustment.promotionID && eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
                 orderLevelProratedDiscount += eachPriceAdjustment.priceValue;
             }
         }
@@ -164,6 +109,14 @@ const eswHelperHL = {
                 shipment.setShippingMethod(method);
                 HookMgr.callHook('dw.order.calculate', 'calculate', cart, false);
                 return method;
+            } else if (!isNotifyReq && method.displayName.equals(shippingMethodID) && method.currencyCode === cart.getCurrencyCode()) {
+                if (!empty(isOverrideShippingCountry)) {
+                    if (isOverrideShippingCountry[0].shippingMethod.ID.indexOf(method.ID) !== -1) {
+                        shipment.setShippingMethod(method);
+                        HookMgr.callHook('dw.order.calculate', 'calculate', cart, false);
+                        return method;
+                    }
+                }
             }
         }
         return null;
@@ -180,7 +133,7 @@ const eswHelperHL = {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let orderLevelProratedDiscount = eswHelper.getOrderProratedDiscount(cart);
-        let price = this.getSubtotalObject(item, false, false, false, localizeObj, conversionPrefs).value;
+        let price = eswHelper.getSubtotalObject(item, false, false, false, localizeObj, conversionPrefs).value;
         if (orderLevelProratedDiscount > 0 && item.proratedPrice.value < item.adjustedPrice.value) {
             localizeObj.applyRoundingModel = 'false';
             // Subtracting item's pro-rated price from item's adjusted price provides, the order level discount.
@@ -198,7 +151,8 @@ const eswHelperHL = {
     * @returns {dw.Money} - converted order total
     */
     getFinalOrderTotalsObject: function (cart, localizeObj, conversionPrefs) {
-        return new dw.value.Money((this.getSubtotalObject(cart, true, false, false, localizeObj, conversionPrefs).value - this.getOrderDiscount(cart, localizeObj, conversionPrefs).value), localizeObj.localizeCountryObj.currencyCode);
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        return new dw.value.Money((eswHelper.getSubtotalObject(cart, true, false, false, localizeObj, conversionPrefs).value - this.getOrderDiscount(cart, localizeObj, conversionPrefs).value), localizeObj.localizeCountryObj.currencyCode);
     },
     /**
      * function to get the product line item metadata sends custom attributes in

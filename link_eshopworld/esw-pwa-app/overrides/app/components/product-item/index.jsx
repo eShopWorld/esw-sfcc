@@ -7,10 +7,17 @@
  */
 import React from 'react'
 import PropTypes from 'prop-types'
-import {FormattedMessage} from 'react-intl'
+import {FormattedMessage, useIntl} from 'react-intl'
 
 // Chakra Components
-import {Box, Fade, Flex, Stack, Text} from '@salesforce/retail-react-app/app/components/shared/ui'
+import {
+    Box,
+    Fade,
+    Flex,
+    Stack,
+    Text,
+    VisuallyHidden
+} from '@salesforce/retail-react-app/app/components/shared/ui'
 
 // Project Components
 import {HideOnDesktop, HideOnMobile} from '@salesforce/retail-react-app/app/components/responsive'
@@ -26,11 +33,9 @@ import QuantityPicker from '@salesforce/retail-react-app/app/components/quantity
 import {noop} from '@salesforce/retail-react-app/app/utils/utils'
 
 // Hooks
-import {useDerivedProduct} from '@salesforce/retail-react-app/app/hooks'
-
-// Esw Customization
-import {EswReturnProhibitMsg} from '../../esw/components/product-return-prohibit-msg'
-// End Esw Customization
+import {useCurrency, useDerivedProduct} from '@salesforce/retail-react-app/app/hooks'
+import { getEswShopperCurrencyConfigByKey } from '../../esw/esw-helpers'
+import { EswReturnProhibitMsg } from '../../../../../esw-pwa-app/overrides/app/esw/components/product-return-prohibit-msg'
 
 /**
  * Component representing a product item usually in a list with details about the product - name, variant, pricing, etc.
@@ -50,8 +55,16 @@ const ProductItem = ({
 }) => {
     const {stepQuantity, showInventoryMessage, inventoryMessage, quantity, setQuantity} =
         useDerivedProduct(product)
+    const {currency: activeCurrency, setCurrency} = useCurrency()
+    const intl = useIntl()
+    // ESW customization
+    setCurrency(typeof product.currency !== 'undefined' ? product.currency : getEswShopperCurrencyConfigByKey('code'))
+    // End ESW customization
     return (
-        <Box position="relative" data-testid={`sf-cart-item-${product.productId}`}>
+        <Box
+            position="relative"
+            data-testid={`sf-cart-item-${product.productId ? product.productId : product.id}`}
+        >
             <ItemVariantProvider variant={product}>
                 {showLoading && <LoadingSpinner />}
                 <Stack layerStyle="cardBordered" align="flex-start">
@@ -63,14 +76,31 @@ const ProductItem = ({
                                 <CartItemVariantAttributes />
                                 <HideOnDesktop>
                                     <Box marginTop={2}>
-                                        <CartItemVariantPrice align="left" />
+                                        <CartItemVariantPrice
+                                            align="left"
+                                            currency={activeCurrency}
+                                        />
                                     </Box>
                                 </HideOnDesktop>
                             </Stack>
 
                             <Flex align="flex-end" justify="space-between">
                                 <Stack spacing={1}>
-                                    <Text fontSize="sm" color="gray.700">
+                                    <Text
+                                        fontSize="sm"
+                                        color="gray.700"
+                                        aria-label={intl.formatMessage(
+                                            {
+                                                id: 'item_variant.quantity.label',
+                                                defaultMessage:
+                                                    'Quantity selector for {productName}. Selected quantity is {quantity}'
+                                            },
+                                            {
+                                                quantity: product?.quantity,
+                                                productName: product?.name
+                                            }
+                                        )}
+                                    >
                                         <FormattedMessage
                                             defaultMessage="Quantity:"
                                             id="product_item.label.quantity"
@@ -99,24 +129,35 @@ const ProductItem = ({
                                                 )
                                             } else if (stringValue === '') {
                                                 // We want to allow the use to clear the input to start a new input so here we set the quantity to '' so NAN is not displayed
-                                                // User will not be able to add '' qauntity to the cart due to the add to cart button enablement rules
+                                                // User will not be able to add '' quantity to the cart due to the add to cart button enablement rules
                                                 setQuantity(stringValue)
                                             }
                                         }}
+                                        productName={product?.name}
                                     />
+                                    <VisuallyHidden role="status">
+                                        {product?.name}
+                                        {intl.formatMessage(
+                                            {
+                                                id: 'item_variant.assistive_msg.quantity',
+                                                defaultMessage: 'Quantity {quantity}'
+                                            },
+                                            {
+                                                quantity: product?.quantity
+                                            }
+                                        )}
+                                    </VisuallyHidden>
                                 </Stack>
                                 <Stack>
                                     <HideOnMobile>
-                                        <CartItemVariantPrice />
+                                        <CartItemVariantPrice currency={activeCurrency} />
                                     </HideOnMobile>
                                     <Box display={['none', 'block', 'block', 'block']}>
                                         {primaryAction}
                                     </Box>
                                 </Stack>
                             </Flex>
-                            {/* Esw return prohibit message */}
-                            <EswReturnProhibitMsg product={product} />
-                            {/* End Esw return prohibit message */}
+
                             <Box>
                                 {product && showInventoryMessage && (
                                     <Fade in={true}>
@@ -126,11 +167,12 @@ const ProductItem = ({
                                     </Fade>
                                 )}
                             </Box>
-
+                            {/* Esw return prohibit message */}
+                            <EswReturnProhibitMsg product={product} />
+                            {/* End Esw return prohibit message */}
                             {secondaryActions}
                         </Stack>
                     </Flex>
-
                     <Box display={['block', 'none', 'none', 'none']} w={'full'}>
                         {primaryAction}
                     </Box>

@@ -2,15 +2,34 @@
 /**
 * Helper script for order confirmation back into SFCC from ESW Checkout
 **/
+const Constants = require('*/cartridge/scripts/util/Constants');
 const Site = require('dw/system/Site').getCurrent();
 const CustomerMgr = require('dw/customer/CustomerMgr');
 const CustomObjectMgr = require('dw/object/CustomObjectMgr');
+
+const Money = require('dw/value/Money');
+const PaymentMgr = require('dw/order/PaymentMgr');
+const Order = require('dw/order/Order');
 
 /* Script Modules */
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
 
 const getEswOcHelper = {
+    /**
+    * Set order/lineitem custom attributes
+    * @param {Object} order - order
+    * @param {Object} attributeName - attributeName
+    * @param {Object} attributeValue - attributeValue
+    */
+    checkAndSetOrderCustomAttribute: function (order, attributeName, attributeValue) {
+        // Check if the custom attribute exists
+        try {
+            order.custom[attributeName] = attributeValue;
+        } catch (error) {
+            eswHelper.eswInfoLogger('error on adding custom attribute on order' + error + attributeName);
+        }
+    },
     /**
     * Set override price books if applicable
     * @param {string} deliveryCountry - Delivery Country ISO
@@ -32,17 +51,18 @@ const getEswOcHelper = {
     * @param {string} deliveryOption - Delivery Options POST/EXP2
     * @param {string} deliveryCountry - Delivery Country ISO
     * @param {Object} req - Request object
+    * @param {string} currentMethodID - Current Shipping Method ID
     */
-    setApplicableShippingMethods: function (order, deliveryOption, deliveryCountry, req) {
+    setApplicableShippingMethods: function (order, deliveryOption, deliveryCountry, req, currentMethodID) {
         let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
-        let appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry, false);
+        let appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry, false, currentMethodID);
         if (appliedShipping == null) {
             if (req) {
                 eswHelper.setBaseCurrencyPriceBook(req, Site.defaultCurrency);
             } else {
                 eswHelper.setBaseCurrencyPriceBook(Site.defaultCurrency);
             }
-            appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry);
+            appliedShipping = eswServiceHelper.applyShippingMethod(order, deliveryOption, deliveryCountry, false, currentMethodID);
         }
     },
     /**
@@ -140,70 +160,84 @@ const getEswOcHelper = {
     * @param {Object} order - SFCC order object
     */
     updateEswOrderAttributesV3: function (obj, order) {
-        order.custom.eswShopperCurrencyDeliveryTaxes = Number(obj.charges.deliveryTaxes.shopper.amount);
-        order.custom.eswRetailerCurrencyDeliveryTaxes = Number(obj.charges.deliveryTaxes.retailer.amount);
-        order.custom.eswShopperCurrencyDeliveryDuty = Number(obj.charges.deliveryDuty.shopper.amount);
-        order.custom.eswRetailerCurrencyDeliveryDuty = Number(obj.charges.deliveryDuty.retailer.amount);
-        order.custom.eswShopperCurrencyDuty = Number(obj.charges.duty.shopper.amount);
-        order.custom.eswRetailerCurrencyDuty = Number(obj.charges.duty.retailer.amount);
-        order.custom.eswShopperCurrencyDelivery = Number(obj.charges.delivery.shopper.amount);
-        order.custom.eswRetailerCurrencyDelivery = Number(obj.charges.delivery.retailer.amount);
-        order.custom.eswShopperCurrencyTaxes = Number(obj.charges.taxes.shopper.amount);
-        order.custom.eswRetailerCurrencyTaxes = Number(obj.charges.taxes.retailer.amount);
-        order.custom.eswShopperCurrencyOtherTaxes = Number(obj.charges.otherTaxes.shopper.amount);
-        order.custom.eswRetailerCurrencyOtherTaxes = Number(obj.charges.otherTaxes.retailer.amount);
-        order.custom.eswShopperCurrencyAdministration = Number(obj.charges.administration.shopper.amount);
-        order.custom.eswRetailerCurrencyAdministration = Number(obj.charges.administration.retailer.amount);
-        order.custom.eswShopperCurrencyUplift = Number(obj.charges.uplift.shopper.amount);
-        order.custom.eswRetailerCurrencyUplift = Number(obj.charges.uplift.retailer.amount);
-        order.custom.eswRetailerCurrencyCode = obj.checkoutTotal.retailer.currency;
-        order.custom.eswShopperCurrencyCode = obj.checkoutTotal.shopper.currency;
-        order.custom.eswOrderNo = obj.eShopWorldOrderNumber;
-        order.custom.eswShopperCurrencyTotal = Number(obj.charges.total.shopper.amount);
-        order.custom.eswRetailerCurrencyTotal = Number(obj.charges.total.retailer.amount);
-        order.custom.eswShopperCurrencyPaymentAmount = Number(obj.checkoutTotal.shopper.amount);
-        order.custom.eswRetailerCurrencyPaymentAmount = Number(obj.checkoutTotal.retailer.amount);
-        order.custom.eswEmailMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
-        order.custom.eswDeliveryOption = obj.deliveryOption.deliveryOption;
-        order.custom.eswSMSMarketingOptIn = !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false;
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryTaxes', Number(obj.charges.deliveryTaxes.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryTaxes', Number(obj.charges.deliveryTaxes.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryDuty', Number(obj.charges.deliveryDuty.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryDuty', Number(obj.charges.deliveryDuty.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDuty', Number(obj.charges.duty.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDuty', Number(obj.charges.duty.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDelivery', Number(obj.charges.delivery.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDelivery', Number(obj.charges.delivery.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyTaxes', Number(obj.charges.taxes.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTaxes', Number(obj.charges.taxes.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyOtherTaxes', Number(obj.charges.otherTaxes.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyOtherTaxes', Number(obj.charges.otherTaxes.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyAdministration', Number(obj.charges.administration.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyAdministration', Number(obj.charges.administration.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyUplift', Number(obj.charges.uplift.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyUplift', Number(obj.charges.uplift.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyCode', obj.checkoutTotal.retailer.currency);
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyCode', obj.checkoutTotal.shopper.currency);
+        this.checkAndSetOrderCustomAttribute(order, 'eswOrderNo', obj.eShopWorldOrderNumber);
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyTotal', Number(obj.charges.total.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTotal', Number(obj.charges.total.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyPaymentAmount', Number(obj.checkoutTotal.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyPaymentAmount', Number(obj.checkoutTotal.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswEmailMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
+        this.checkAndSetOrderCustomAttribute(order, 'eswDeliveryOption', obj.deliveryOption.deliveryOption);
+        this.checkAndSetOrderCustomAttribute(order, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn || false);
 
         let shoppercurrencyAmount = Number(obj.checkoutTotal.shopper.amount);
         let retailercurrencyAmount = Number(obj.checkoutTotal.retailer.amount);
 
-        order.custom.eswFxrateOc = (shoppercurrencyAmount / retailercurrencyAmount).toFixed(4);
-        order.custom.eswRetailerCurrencyTotalOrderDiscount = order.custom.eswShopperCurrencyTotalOrderDiscount / order.custom.eswFxrateOc;
-        order.custom.eswShopperCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.deliveryOptionPriceInfo.price.shopper.amount);
-        order.custom.eswRetailerCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.deliveryOptionPriceInfo.price.retailer.amount);
+        this.checkAndSetOrderCustomAttribute(order, 'eswFxrateOc', (shoppercurrencyAmount / retailercurrencyAmount).toFixed(Constants.DECIMAL_LENGTH));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTotalOrderDiscount', order.custom.eswShopperCurrencyTotalOrderDiscount / (shoppercurrencyAmount / retailercurrencyAmount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryPriceInfo', Number(obj.deliveryOption.deliveryOptionPriceInfo.price.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryPriceInfo', Number(obj.deliveryOption.deliveryOptionPriceInfo.price.retailer.amount));
 
-        order.custom.eswPaymentMethod = (obj.paymentDetails && obj.paymentDetails != null) ? obj.paymentDetails.method : null;
-        order.custom.eswFraudHold = (obj.fraudHold && obj.fraudHold != null) ? obj.fraudHold : null;
+        this.checkAndSetOrderCustomAttribute(order, 'eswPaymentMethod', (obj.paymentDetails && obj.paymentDetails.method) ? obj.paymentDetails.method : null);
+        this.checkAndSetOrderCustomAttribute(order, 'eswFraudHold', (obj.fraudHold && obj.fraudHold) ? obj.fraudHold : null);
 
         let eswRetailerCurrencyDeliveryDiscountsInfo = this.getDeliveryDiscountsInfo(obj.deliveryOption, 'retailer');
         let eswShopperCurrencyDeliveryDiscountsInfo = this.getDeliveryDiscountsInfo(obj.deliveryOption, 'shopper');
+        let orderCashOnDeliveryObj = (!empty(obj.charges) && !empty(obj.charges.cashOnDelivery)) ? obj.charges.cashOnDelivery : '';
+        if (!empty(orderCashOnDeliveryObj)) {
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryFee', Number(orderCashOnDeliveryObj.retailer.amount));
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryFeeCurrency', orderCashOnDeliveryObj.retailer.currency);
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryFee', Number(orderCashOnDeliveryObj.shopper.amount));
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryFeeCurrency', orderCashOnDeliveryObj.shopper.currency);
+        }
+        let orderCashOnDeliveryTaxesObj = (!empty(obj.charges) && !empty(obj.charges.cashOnDeliveryTaxes)) ? obj.charges.cashOnDeliveryTaxes : '';
+        if (!empty(orderCashOnDeliveryTaxesObj)) {
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryTaxFee', Number(orderCashOnDeliveryTaxesObj.retailer.amount));
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryTaxFeeCurrency', orderCashOnDeliveryTaxesObj.retailer.currency);
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryTaxFee', Number(orderCashOnDeliveryTaxesObj.shopper.amount));
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryTaxFeeCurrency', orderCashOnDeliveryTaxesObj.shopper.currency);
+        }
 
-        order.custom.eswRetailerCurrencyDeliveryDiscountsInfo = !empty(eswRetailerCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswRetailerCurrencyDeliveryDiscountsInfo) : '';
-        order.custom.eswShopperCurrencyDeliveryDiscountsInfo = !empty(eswShopperCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswShopperCurrencyDeliveryDiscountsInfo) : '';
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryDiscountsInfo', !empty(eswRetailerCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswRetailerCurrencyDeliveryDiscountsInfo) : '');
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryDiscountsInfo', !empty(eswShopperCurrencyDeliveryDiscountsInfo) ? JSON.stringify(eswShopperCurrencyDeliveryDiscountsInfo) : '');
 
         let CountryCO = CustomObjectMgr.getCustomObject('ESW_COUNTRIES', obj.deliveryCountryIso);
         if (!empty(CountryCO) && !empty(CountryCO.custom.hubAddress)) {
-            order.custom.eswHubAddress = CountryCO.custom.hubAddress;
-            order.custom.eswHubState = CountryCO.custom.hubAddressState;
-            order.custom.eswHubCity = CountryCO.custom.hubAddressCity;
-            order.custom.eswHubPostalCode = CountryCO.custom.hubAddressPostalCode;
+            this.checkAndSetOrderCustomAttribute(order, 'eswHubAddress', CountryCO.custom.hubAddress);
+            this.checkAndSetOrderCustomAttribute(order, 'eswHubState', CountryCO.custom.hubAddressState);
+            this.checkAndSetOrderCustomAttribute(order, 'eswHubCity', CountryCO.custom.hubAddressCity);
+            this.checkAndSetOrderCustomAttribute(order, 'eswHubPostalCode', CountryCO.custom.hubAddressPostalCode);
         }
 
         if (!empty(order.customer) && !empty(order.customer.profile)) {
-            order.customer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+            this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
             if (!empty(obj.shopperCheckoutExperience.smsMarketingOptIn)) {
-                order.customer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+                this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn);
             }
         } else {
             let existedCustomer = CustomerMgr.getCustomerByLogin(!empty(obj.contactDetails[0].email) ? obj.contactDetails[0].email : obj.contactDetails[1].email);
             if (!empty(existedCustomer) && obj.shopperCheckoutExperience.emailMarketingOptIn === true) {
-                existedCustomer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+                this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
             }
             if (!empty(existedCustomer) && obj.shopperCheckoutExperience.smsMarketingOptIn === true) {
-                existedCustomer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+                this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn);
             }
         }
     },
@@ -216,37 +250,55 @@ const getEswOcHelper = {
     */
     updateEswOrderItemAttributesV3: function (obj, lineItem, cartItem) {
         let discounts = cartItem[0].product.productUnitPriceInfo.discounts;
-        lineItem.custom.eswShopperCurrencyItemPriceInfoBeforeDiscount = (discounts.length > 0) ? Number(discounts[0].beforeDiscount.shopper.amount) : Number(cartItem[0].product.productUnitPriceInfo.price.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemPriceInfoBeforeDiscount = (discounts.length > 0) ? Number(discounts[0].beforeDiscount.retailer.amount) : Number(cartItem[0].product.productUnitPriceInfo.price.retailer.amount);
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemPriceInfoBeforeDiscount', (discounts.length > 0) ? Number(discounts[0].beforeDiscount.shopper.amount) : Number(cartItem[0].product.productUnitPriceInfo.price.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemPriceInfoBeforeDiscount', (discounts.length > 0) ? Number(discounts[0].beforeDiscount.retailer.amount) : Number(cartItem[0].product.productUnitPriceInfo.price.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemAdministration', Number(cartItem[0].charges.administration.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemAdministration', Number(cartItem[0].charges.administration.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDuty', Number(cartItem[0].charges.duty.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDuty', Number(cartItem[0].charges.duty.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDuty', Number(cartItem[0].charges.duty.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswHSCode', cartItem[0].product.hsCode);
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemOtherTaxes', Number(cartItem[0].charges.otherTaxes.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemOtherTaxes', Number(cartItem[0].charges.otherTaxes.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemSubTotal', Number(cartItem[0].charges.subTotal.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemPriceInfo', Number(cartItem[0].product.productUnitPriceInfo.price.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemSubTotal', Number(cartItem[0].charges.subTotal.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemPriceInfo', Number(cartItem[0].product.productUnitPriceInfo.price.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDelivery', Number(cartItem[0].charges.delivery.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDelivery', Number(cartItem[0].charges.delivery.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDeliveryDuty', Number(cartItem[0].charges.deliveryDuty.retailer.amount));
 
-        lineItem.custom.eswRetailerCurrencyItemAdministration = Number(cartItem[0].charges.administration.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemAdministration = Number(cartItem[0].charges.administration.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemDuty = Number(cartItem[0].charges.duty.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemDuty = Number(cartItem[0].charges.duty.shopper.amount);
-        lineItem.custom.eswHSCode = cartItem[0].product.hsCode;
-        lineItem.custom.eswRetailerCurrencyItemOtherTaxes = Number(cartItem[0].charges.otherTaxes.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemOtherTaxes = Number(cartItem[0].charges.otherTaxes.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemSubTotal = Number(cartItem[0].charges.subTotal.retailer.amount);
-        lineItem.custom.eswRetailerCurrencyItemPriceInfo = Number(cartItem[0].product.productUnitPriceInfo.price.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemSubTotal = Number(cartItem[0].charges.subTotal.shopper.amount);
-        lineItem.custom.eswShopperCurrencyItemPriceInfo = Number(cartItem[0].product.productUnitPriceInfo.price.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemDelivery = Number(cartItem[0].charges.delivery.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemDelivery = Number(cartItem[0].charges.delivery.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemDeliveryDuty = Number(cartItem[0].charges.deliveryDuty.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemDeliveryDuty = Number(cartItem[0].charges.deliveryDuty.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemDeliveryTaxes = Number(cartItem[0].charges.deliveryTaxes.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemDeliveryTaxes = Number(cartItem[0].charges.deliveryTaxes.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemUplift = Number(cartItem[0].charges.uplift.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemUplift = Number(cartItem[0].charges.uplift.shopper.amount);
-        lineItem.custom.eswRetailerCurrencyItemTaxes = Number(cartItem[0].charges.taxes.retailer.amount);
-        lineItem.custom.eswShopperCurrencyItemTaxes = Number(cartItem[0].charges.taxes.shopper.amount);
-        lineItem.custom.eswReturnProhibited = cartItem[0].product.isReturnProhibited;
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDeliveryDuty', Number(cartItem[0].charges.deliveryDuty.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDeliveryDuty', Number(cartItem[0].charges.deliveryDuty.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDeliveryTaxes', Number(cartItem[0].charges.deliveryTaxes.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDeliveryTaxes', Number(cartItem[0].charges.deliveryTaxes.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemUplift', Number(cartItem[0].charges.uplift.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemUplift', Number(cartItem[0].charges.uplift.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemTaxes', Number(cartItem[0].charges.taxes.retailer.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemTaxes', Number(cartItem[0].charges.taxes.shopper.amount));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswReturnProhibited', cartItem[0].product.isReturnProhibited);
 
         let shopperLineItemDiscounts = this.getItemDiscountsInfo(cartItem[0].product.productUnitPriceInfo.discounts, 'shopper', 'ProductLevelDiscount');
         let retailerLineItemDiscounts = this.getItemDiscountsInfo(cartItem[0].product.productUnitPriceInfo.discounts, 'retailer', 'ProductLevelDiscount');
-        lineItem.custom.eswShopperCurrencyItemDiscountsInfo = !empty(shopperLineItemDiscounts) ? JSON.stringify(shopperLineItemDiscounts) : '';
-        lineItem.custom.eswRetailerCurrencyItemDiscountsInfo = !empty(retailerLineItemDiscounts) ? JSON.stringify(retailerLineItemDiscounts) : '';
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDiscountsInfo', !empty(shopperLineItemDiscounts) ? JSON.stringify(shopperLineItemDiscounts) : '');
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDiscountsInfo', !empty(retailerLineItemDiscounts) ? JSON.stringify(retailerLineItemDiscounts) : '');
 
+        let itemCashOnDeliveryObj = (!empty(cartItem[0].charges) && !empty(cartItem[0].charges.cashOnDelivery)) ? cartItem[0].charges.cashOnDelivery : '';
+        if (!empty(itemCashOnDeliveryObj)) {
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryFee', Number(itemCashOnDeliveryObj.retailer.amount));
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryFeeCurrency', itemCashOnDeliveryObj.retailer.currency);
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryFee', Number(itemCashOnDeliveryObj.shopper.amount));
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryFeeCurrency', itemCashOnDeliveryObj.shopper.currency);
+        }
+        let itemCashOnDeliveryTaxesObj = (!empty(cartItem[0].charges) && !empty(cartItem[0].charges.cashOnDeliveryTaxes)) ? cartItem[0].charges.cashOnDeliveryTaxes : '';
+        if (!empty(itemCashOnDeliveryTaxesObj)) {
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryTaxFee', Number(itemCashOnDeliveryTaxesObj.retailer.amount));
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryTaxFeeCurrency', itemCashOnDeliveryTaxesObj.retailer.currency);
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFee', Number(itemCashOnDeliveryTaxesObj.shopper.amount));
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFeeCurrency', itemCashOnDeliveryTaxesObj.shopper.currency);
+        }
+        lineItem.custom.eswFulfilmentCountryIso = !empty(cartItem[0].fulfilmentCountryIso) ? cartItem[0].fulfilmentCountryIso : '';
+        lineItem.custom.eswDeliveryOption = !empty(cartItem[0].deliveryOption) ? cartItem[0].deliveryOption : '';
         return {
             ShopperDiscount: [],
             RetailerDiscount: []
@@ -295,40 +347,82 @@ const getEswOcHelper = {
         }
         order.billingAddress.phone = !empty(billingCustomer[0].telephone) ? billingCustomer[0].telephone : shippingCustomer[0].telephone;
     },
+    removeIsSelected: function (addressBook) {
+        let addressList = addressBook.getAddresses();
+        if (!empty(addressList)) {
+            collections.forEach(addressList, function (address) {
+                address.custom.eswIsSelected = false;
+            });
+        }
+    },
+    /**
+     * @param {Object} existingAddress - An existing or new Address
+     * @param {Object} updatedAddress - Address from the OC response
+     * @param {Object} addressBook - The address book of the customer
+     */
+    updateAddress: function (existingAddress, updatedAddress, addressBook) {
+        existingAddress.setFirstName(updatedAddress.firstName);
+        existingAddress.setLastName(updatedAddress.lastName);
+        existingAddress.setAddress1(updatedAddress.address1);
+        existingAddress.setAddress2(updatedAddress.address2);
+        existingAddress.setCity(updatedAddress.city);
+        existingAddress.setCountryCode(updatedAddress.country);
+        existingAddress.setPostalCode(updatedAddress.postalCode);
+        existingAddress.setPhone(updatedAddress.telephone);
+        if (!empty(updatedAddress.region)) {
+            existingAddress.setStateCode(updatedAddress.region);
+        }
+        if ('isDefault' in updatedAddress && updatedAddress.isDefault === true) {
+            addressBook.setPreferredAddress(existingAddress);
+        }
+        if ('isSelected' in updatedAddress) {
+            if (updatedAddress.isSelected) {
+                this.removeIsSelected(addressBook);
+            }
+            existingAddress.custom.eswIsSelected = updatedAddress.isSelected;
+        }
+    },
     /**
     * Save Customer Address in AddressBook
     * @param {Object} contactDetails - contact details from ESW OC response
     * @param {string} customerID - Registered customer Number
+    * @param {boolean} saveAddress - Save Address in AddressBook
     */
-    saveAddressinAddressBook: function (contactDetails, customerID) {
+    saveAddressinAddressBook: function (contactDetails, customerID, saveAddress) {
         try {
-            let addressHelpers = require('*/cartridge/scripts/helpers/addressHelpers');
-            let addressBook = CustomerMgr.getCustomerByCustomerNumber(customerID).getAddressBook();
-            let addressList = addressBook.getAddresses();
-
-            if (!empty(addressList)) {
-                // eslint-disable-next-line no-restricted-syntax, guard-for-in
-                for (let i in addressList) {
-                    if (addressList[i].ID === addressHelpers.generateAddressName(contactDetails[0])) {
-                        return;
+            let addressBook = CustomerMgr.getCustomerByCustomerNumber(customerID).getAddressBook(),
+                addressList = addressBook.getAddresses(),
+                isMultiAdrressEnabled = eswHelper.isEswMultiAddressEnabled();
+            if (!isMultiAdrressEnabled && !saveAddress) {
+                return; // Do not save address in address book
+            }
+            contactDetails.forEach(contact => {
+                let isSaveAddressEnabled = ((!empty(contact.saveToProfile) && contact.saveToProfile && (isMultiAdrressEnabled)));
+                // Skip iteration if saving address is not enabled
+                if (!isSaveAddressEnabled) {
+                    return;
+                }
+                let addressID = !empty(contact.addressId) ? contact.addressId : eswHelper.generateAddressName(contact);
+                let existingAddress = null;
+                if (!empty(addressList)) {
+                    for (let i = 0; i < addressList.length; i++) {
+                        if (addressList[i].ID === addressID) {
+                            existingAddress = addressList[i];
+                            break;
+                        }
                     }
                 }
-            }
-            let newAddress = addressBook.createAddress(addressHelpers.generateAddressName(contactDetails[0]));
-            if (contactDetails[0].contactDetailType.equalsIgnoreCase('IsDelivery')) {
-                newAddress.setFirstName(contactDetails[0].firstName);
-                newAddress.setLastName(contactDetails[0].lastName);
-                newAddress.setAddress1(contactDetails[0].address1);
-                newAddress.setAddress2(contactDetails[0].address2);
-                newAddress.setCity(contactDetails[0].city);
-                newAddress.setCountryCode(contactDetails[0].country);
-                newAddress.setPostalCode(contactDetails[0].postalCode);
-                newAddress.setPhone(contactDetails[0].telephone);
-                if (!empty(contactDetails[0].region)) {
-                    newAddress.setStateCode(contactDetails[0].region);
+                if (!empty(existingAddress)) {
+                    if (!empty(contact.status) && contact.status === 'Edited') {
+                        addressBook.removeAddress(existingAddress);
+                        let newAddress = addressBook.createAddress(eswHelper.generateAddressName(contact));
+                        this.updateAddress(newAddress, contact);
+                    }
+                } else if (contact.contactDetailType.equalsIgnoreCase(Constants.IS_DELIVERY)) {
+                    let newAddress = addressBook.createAddress(addressID);
+                    this.updateAddress(newAddress, contact, addressBook);
                 }
-                addressBook.setPreferredAddress(newAddress);
-            }
+            });
         } catch (error) {
             eswHelper.eswInfoLogger('error on adding new address to customer addressbook' + error);
         }
@@ -338,10 +432,78 @@ const getEswOcHelper = {
     * @param {Object} order - SFCC order object
     * @param {string} eswPaymentAmount - Total shopper currency amount of order
     * @param {string} cardBrand - Delivery Country ISO
+    * @param {Object} ocPayload - Complete order confirmation payload
     */
-    updateEswPaymentAttributes: function (order, eswPaymentAmount, cardBrand) {
-        order.paymentInstruments[0].paymentTransaction.custom.eswPaymentAmount = Number(eswPaymentAmount);
-        order.paymentInstruments[0].paymentTransaction.custom.eswPaymentMethodCardBrand = cardBrand;
+    updateEswPaymentAttributes: function (order, eswPaymentAmount, cardBrand, ocPayload) {
+        let splitPaymentsArr = this.getSplitPaymentDetails(ocPayload);
+        if (!empty(splitPaymentsArr) && splitPaymentsArr.length > 0) {
+            this.updateSplitPaymentInOrder(order, splitPaymentsArr, ocPayload, eswPaymentAmount);
+        } else {
+            if ('eswPaymentAmount' in order.paymentInstruments[0].paymentTransaction.custom && order.paymentInstruments[0].paymentTransaction.custom.eswPaymentAmount) {
+                order.paymentInstruments[0].paymentTransaction.custom.eswPaymentAmount = Number(eswPaymentAmount);
+            }
+            if ('eswPaymentMethodCardBrand' in order.paymentInstruments[0].paymentTransaction.custom && order.paymentInstruments[0].paymentTransaction.custom.eswPaymentMethodCardBrand) {
+                order.paymentInstruments[0].paymentTransaction.custom.eswPaymentMethodCardBrand = cardBrand;
+            }
+        }
+    },
+    /**
+     * Update order payments with split payments
+     * @param {dw.Order} order - DW order
+     * @param {Object} splitPaymentsArr - Split Payment Details
+     * @param {Object} ocPayload - OC Payload
+    * @param {string} eswPaymentAmount - Total shopper currency amount of order
+     * @returns {boolean} - true/false
+     */
+    updateSplitPaymentInOrder: function (order, splitPaymentsArr, ocPayload, eswPaymentAmount) {
+        if (splitPaymentsArr && splitPaymentsArr.length === 0) return false;
+        try {
+            let shopperCurrency = null;
+            let paymentMethod = 'ESW_PAYMENT';
+            let pis = order.getPaymentInstruments().iterator();
+
+            if ('lineItems' in ocPayload) { // OC v3
+                shopperCurrency = ocPayload.checkoutTotal.shopper.currency;
+            } else {
+                shopperCurrency = ocPayload.shopperCurrencyPaymentAmount.substring(0, 3);
+            }
+
+            // Remove previously binded payment instruments
+            while (pis.hasNext()) {
+                order.removePaymentInstrument(pis.next());
+            }
+            // Attach PI availble in OC payload
+            for (let i = 0; i < splitPaymentsArr.length; i++) {
+                let currentPI = splitPaymentsArr[i];
+                let paymentInst = order.createPaymentInstrument(paymentMethod, new Money(Number(currentPI.amountPaid), shopperCurrency));
+                this.checkAndSetOrderCustomAttribute(paymentInst.paymentTransaction, 'eswPaymentMethodCardBrand', (currentPI.methodCardBrand || currentPI.method));
+                this.checkAndSetOrderCustomAttribute(paymentInst.paymentTransaction, 'eswPaymentAmount', Number(eswPaymentAmount));
+                paymentInst.paymentTransaction.setPaymentProcessor(PaymentMgr.getPaymentMethod(paymentMethod).getPaymentProcessor());
+            }
+        } catch (e) {
+            return false;
+        }
+        return true;
+    },
+    /**
+     * Returns all aplit payments from OC payload; v2 and v3
+     * @param {Object} ocPayload - OC complete payload
+     * @returns {Object} - Split Payment Details
+     */
+    getSplitPaymentDetails: function (ocPayload) {
+        let splitPayments = null;
+        if (empty(ocPayload)) {
+            return splitPayments;
+        }
+
+        if (ocPayload && !empty(ocPayload)
+            && ('lineItems' in ocPayload || 'cartItems' in ocPayload)
+            && ocPayload.paymentRecords
+            && ocPayload.paymentRecords.length > 0) {
+            splitPayments = ocPayload.paymentRecords;
+        }
+
+        return splitPayments;
     },
     /**
     * Update ESW Order level custom attibutes for OC V2
@@ -349,64 +511,94 @@ const getEswOcHelper = {
     * @param {Object} order - SFCC order object
     */
     updateEswOrderAttributesV2: function (obj, order) {
-        order.custom.eswShopperCurrencyDeliveryTaxes = Number(obj.charges.shopperCurrencyDeliveryTaxes.substring(3));
-        order.custom.eswRetailerCurrencyDeliveryTaxes = Number(obj.charges.retailerCurrencyDeliveryTaxes.substring(3));
-        order.custom.eswShopperCurrencyDeliveryDuty = Number(obj.charges.shopperCurrencyDeliveryDuty.substring(3));
-        order.custom.eswRetailerCurrencyDeliveryDuty = Number(obj.charges.retailerCurrencyDeliveryDuty.substring(3));
-        order.custom.eswShopperCurrencyDuty = Number(obj.charges.shopperCurrencyDuty.substring(3));
-        order.custom.eswRetailerCurrencyDuty = Number(obj.charges.retailerCurrencyDuty.substring(3));
-        order.custom.eswShopperCurrencyDelivery = Number(obj.charges.shopperCurrencyDelivery.substring(3));
-        order.custom.eswRetailerCurrencyDelivery = Number(obj.charges.retailerCurrencyDelivery.substring(3));
-        order.custom.eswShopperCurrencyTaxes = Number(obj.charges.shopperCurrencyTaxes.substring(3));
-        order.custom.eswRetailerCurrencyTaxes = Number(obj.charges.retailerCurrencyTaxes.substring(3));
-        order.custom.eswShopperCurrencyOtherTaxes = Number(obj.charges.shopperCurrencyOtherTaxes.substring(3));
-        order.custom.eswRetailerCurrencyOtherTaxes = Number(obj.charges.retailerCurrencyOtherTaxes.substring(3));
-        order.custom.eswShopperCurrencyAdministration = Number(obj.charges.shopperCurrencyAdministration.substring(3));
-        order.custom.eswRetailerCurrencyAdministration = Number(obj.charges.retailerCurrencyAdministration.substring(3));
-        order.custom.eswShopperCurrencyUplift = Number(obj.charges.shopperCurrencyUplift.substring(3));
-        order.custom.eswRetailerCurrencyUplift = Number(obj.charges.retailerCurrencyUplift.substring(3));
-        order.custom.eswRetailerCurrencyCode = obj.retailerCurrencyPaymentAmount.substring(0, 3);
-        order.custom.eswShopperCurrencyCode = obj.shopperCurrencyPaymentAmount.substring(0, 3);
-        order.custom.eswOrderNo = obj.eShopWorldOrderNumber;
-        order.custom.eswShopperCurrencyTotal = Number(obj.charges.shopperCurrencyTotal.substring(3));
-        order.custom.eswRetailerCurrencyTotal = Number(obj.charges.retailerCurrencyTotal.substring(3));
-        order.custom.eswShopperCurrencyPaymentAmount = Number(obj.shopperCurrencyPaymentAmount.substring(3));
-        order.custom.eswRetailerCurrencyPaymentAmount = Number(obj.retailerCurrencyPaymentAmount.substring(3));
-        order.custom.eswEmailMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
-        order.custom.eswSMSMarketingOptIn = !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false;
-        order.custom.eswDeliveryOption = obj.deliveryOption.deliveryOption;
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryTaxes', Number(obj.charges.shopperCurrencyDeliveryTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryTaxes', Number(obj.charges.retailerCurrencyDeliveryTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryDuty', Number(obj.charges.shopperCurrencyDeliveryDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryDuty', Number(obj.charges.retailerCurrencyDeliveryDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDuty', Number(obj.charges.shopperCurrencyDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDuty', Number(obj.charges.retailerCurrencyDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDelivery', Number(obj.charges.shopperCurrencyDelivery.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDelivery', Number(obj.charges.retailerCurrencyDelivery.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyTaxes', Number(obj.charges.shopperCurrencyTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTaxes', Number(obj.charges.retailerCurrencyTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyOtherTaxes', Number(obj.charges.shopperCurrencyOtherTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyOtherTaxes', Number(obj.charges.retailerCurrencyOtherTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyAdministration', Number(obj.charges.shopperCurrencyAdministration.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyAdministration', Number(obj.charges.retailerCurrencyAdministration.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyUplift', Number(obj.charges.shopperCurrencyUplift.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyUplift', Number(obj.charges.retailerCurrencyUplift.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyCode', obj.retailerCurrencyPaymentAmount.substring(0, 3));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyCode', obj.shopperCurrencyPaymentAmount.substring(0, 3));
+        this.checkAndSetOrderCustomAttribute(order, 'eswOrderNo', obj.eShopWorldOrderNumber);
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyTotal', Number(obj.charges.shopperCurrencyTotal.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTotal', Number(obj.charges.retailerCurrencyTotal.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyPaymentAmount', Number(obj.shopperCurrencyPaymentAmount.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyPaymentAmount', Number(obj.retailerCurrencyPaymentAmount.substring(3)));
+        this.checkAndSetOrderCustomAttribute(order, 'eswEmailMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
+        this.checkAndSetOrderCustomAttribute(order, 'eswSMSMarketingOptIn', !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false);
+        this.checkAndSetOrderCustomAttribute(order, 'eswDeliveryOption', obj.deliveryOption.deliveryOption);
+        // Storing CoD attributes
+        if (obj.charges && !empty(obj.charges.retailerCurrencyCashOnDelivery)) {
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryFeeCurrency', !empty(obj.charges.retailerCurrencyCashOnDelivery) ? obj.charges.retailerCurrencyCashOnDelivery.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryFee', !empty(obj.charges.retailerCurrencyCashOnDelivery) ? Number(obj.charges.retailerCurrencyCashOnDelivery.substring(3)) : '');
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryFeeCurrency', !empty(obj.charges.shopperCurrencyCashOnDelivery) ? obj.charges.shopperCurrencyCashOnDelivery.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryFee', !empty(obj.charges.shopperCurrencyCashOnDelivery) ? Number(obj.charges.shopperCurrencyCashOnDelivery.substring(3)) : '');
+        }
+        // storing COD Taxes
+        if (obj.charges && !empty(obj.charges.retailerCurrencyCashOnDeliveryTaxes)) {
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryTaxFeeCurrency', !empty(obj.charges.retailerCurrencyCashOnDeliveryTaxes) ? obj.charges.retailerCurrencyCashOnDeliveryTaxes.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCashOnDeliveryTaxFee', !empty(obj.charges.retailerCurrencyCashOnDeliveryTaxes) ? Number(obj.charges.retailerCurrencyCashOnDeliveryTaxes.substring(3)) : '');
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryTaxFeeCurrency', !empty(obj.charges.shopperCurrencyCashOnDeliveryTaxes) ? obj.charges.shopperCurrencyCashOnDeliveryTaxes.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCashOnDeliveryTaxFee', !empty(obj.charges.shopperCurrencyCashOnDeliveryTaxes) ? Number(obj.charges.shopperCurrencyCashOnDeliveryTaxes.substring(3)) : '');
+        }
 
         let shoppercurrencyAmount = Number(obj.shopperCurrencyPaymentAmount.substring(3));
         let retailercurrencyAmount = Number(obj.retailerCurrencyPaymentAmount.substring(3));
 
-        order.custom.eswFxrateOc = (shoppercurrencyAmount / retailercurrencyAmount).toFixed(4);
-        order.custom.eswRetailerCurrencyTotalOrderDiscount = order.custom.eswShopperCurrencyTotalOrderDiscount / order.custom.eswFxrateOc;
+        this.checkAndSetOrderCustomAttribute(order, 'eswFxrateOc', (shoppercurrencyAmount / retailercurrencyAmount).toFixed(Constants.DECIMAL_LENGTH));
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTotalOrderDiscount', order.custom.eswShopperCurrencyTotalOrderDiscount / order.custom.eswFxrateOc);
         if ('shopperCurrencyDeliveryPriceInfo' in obj.deliveryOption) {
-            order.custom.eswShopperCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.shopperCurrencyDeliveryPriceInfo.price.substring(3));
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryPriceInfo', Number(obj.deliveryOption.shopperCurrencyDeliveryPriceInfo.price.substring(3)));
         } else {
-            order.custom.eswShopperCurrencyDeliveryPriceInfo = Number(obj.charges.shopperCurrencyDelivery.substring(3)) + Number(obj.charges.shopperCurrencyDeliveryDuty.substring(3)) + Number(obj.charges.shopperCurrencyDeliveryTaxes.substring(3));
+            this.checkAndSetOrderCustomAttribute(
+                order,
+                'eswShopperCurrencyDeliveryPriceInfo',
+                Number(obj.charges.shopperCurrencyDelivery.substring(3)) +
+                Number(obj.charges.shopperCurrencyDeliveryDuty.substring(3)) +
+                Number(obj.charges.shopperCurrencyDeliveryTaxes.substring(3))
+            );
         }
         if ('retailerCurrencyDeliveryPriceInfo' in obj.deliveryOption) {
-            order.custom.eswRetailerCurrencyDeliveryPriceInfo = Number(obj.deliveryOption.retailerCurrencyDeliveryPriceInfo.price.substring(3));
+            this.checkAndSetOrderCustomAttribute(
+                order,
+                'eswRetailerCurrencyDeliveryPriceInfo',
+                Number(obj.deliveryOption.retailerCurrencyDeliveryPriceInfo.price.substring(3))
+            );
         } else {
-            order.custom.eswRetailerCurrencyDeliveryPriceInfo = Number(obj.charges.retailerCurrencyDelivery.substring(3)) + Number(obj.charges.retailerCurrencyDeliveryDuty.substring(3)) + Number(obj.charges.retailerCurrencyDeliveryTaxes.substring(3));
+            this.checkAndSetOrderCustomAttribute(
+                order,
+                'eswRetailerCurrencyDeliveryPriceInfo',
+                Number(obj.charges.retailerCurrencyDelivery.substring(3)) +
+                Number(obj.charges.retailerCurrencyDeliveryDuty.substring(3)) +
+                Number(obj.charges.retailerCurrencyDeliveryTaxes.substring(3))
+            );
         }
 
-        order.custom.eswPaymentMethod = (obj.paymentMethod && obj.paymentMethod != null) ? obj.paymentMethod : null;
-        order.custom.eswFraudHold = (obj.fraudHold && obj.fraudHold != null) ? obj.fraudHold : null;
+        this.checkAndSetOrderCustomAttribute(order, 'eswPaymentMethod', obj.paymentMethod || null);
+        this.checkAndSetOrderCustomAttribute(order, 'eswFraudHold', obj.fraudHold || null);
 
         if (!empty(order.customer) && !empty(order.customer.profile)) {
-            order.customer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+            this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
             if (!empty(obj.shopperCheckoutExperience.smsMarketingOptIn)) {
-                order.customer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+                this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn);
             }
         } else {
             let existedCustomer = CustomerMgr.getCustomerByLogin(!empty(obj.contactDetails[0].email) ? obj.contactDetails[0].email : obj.contactDetails[1].email);
             if (!empty(existedCustomer) && obj.shopperCheckoutExperience.emailMarketingOptIn === true) {
-                existedCustomer.profile.custom.eswMarketingOptIn = obj.shopperCheckoutExperience.emailMarketingOptIn;
+                this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
             }
             if (!empty(existedCustomer) && obj.shopperCheckoutExperience.smsMarketingOptIn === true) {
-                existedCustomer.profile.custom.eswSMSMarketingOptIn = obj.shopperCheckoutExperience.smsMarketingOptIn;
+                this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn);
             }
         }
     },
@@ -417,34 +609,49 @@ const getEswOcHelper = {
     * @param {Object} cartItem - Found cart object from OC response
     */
     updateEswOrderItemAttributesV2: function (obj, lineItem, cartItem) {
-        lineItem.custom.eswShopperCurrencyItemPriceInfoBeforeDiscount = Number(('beforeDiscount' in cartItem[0].product.shopperCurrencyProductPriceInfo) ? cartItem[0].product.shopperCurrencyProductPriceInfo.beforeDiscount.substring(3) : cartItem[0].product.shopperCurrencyProductPriceInfo.price.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemPriceInfoBeforeDiscount = Number(('beforeDiscount' in cartItem[0].product.retailerCurrencyProductPriceInfo) ? cartItem[0].product.retailerCurrencyProductPriceInfo.beforeDiscount.substring(3) : cartItem[0].product.retailerCurrencyProductPriceInfo.price.substring(3));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemPriceInfoBeforeDiscount', Number(('beforeDiscount' in cartItem[0].product.shopperCurrencyProductPriceInfo) ? cartItem[0].product.shopperCurrencyProductPriceInfo.beforeDiscount.substring(3) : cartItem[0].product.shopperCurrencyProductPriceInfo.price.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemPriceInfoBeforeDiscount', Number(('beforeDiscount' in cartItem[0].product.retailerCurrencyProductPriceInfo) ? cartItem[0].product.retailerCurrencyProductPriceInfo.beforeDiscount.substring(3) : cartItem[0].product.retailerCurrencyProductPriceInfo.price.substring(3)));
 
-        lineItem.custom.eswShopperCurrencyItemDiscountsInfo = Number(('discountAmount' in cartItem[0].product.shopperCurrencyProductPriceInfo) ? cartItem[0].product.shopperCurrencyProductPriceInfo.discountAmount.substring(3) : '');
-        lineItem.custom.eswRetailerCurrencyItemDiscountsInfo = Number(('discountAmount' in cartItem[0].product.retailerCurrencyProductPriceInfo) ? cartItem[0].product.retailerCurrencyProductPriceInfo.discountAmount.substring(3) : '');
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDiscountsInfo', Number(('discountAmount' in cartItem[0].product.shopperCurrencyProductPriceInfo) ? cartItem[0].product.shopperCurrencyProductPriceInfo.discountAmount.substring(3) : '0'));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDiscountsInfo', Number(('discountAmount' in cartItem[0].product.retailerCurrencyProductPriceInfo) ? cartItem[0].product.retailerCurrencyProductPriceInfo.discountAmount.substring(3) : '0'));
 
-        lineItem.custom.eswRetailerCurrencyItemAdministration = Number(cartItem[0].retailerCurrencyItemAdministration.substring(3));
-        lineItem.custom.eswShopperCurrencyItemAdministration = Number(cartItem[0].shopperCurrencyItemAdministration.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemDuty = Number(cartItem[0].retailerCurrencyItemDuty.substring(3));
-        lineItem.custom.eswShopperCurrencyItemDuty = Number(cartItem[0].shopperCurrencyItemDuty.substring(3));
-        lineItem.custom.eswHSCode = cartItem[0].product.hsCode;
-        lineItem.custom.eswRetailerCurrencyItemOtherTaxes = Number(cartItem[0].retailerCurrencyItemOtherTaxes.substring(3));
-        lineItem.custom.eswShopperCurrencyItemOtherTaxes = Number(cartItem[0].shopperCurrencyItemOtherTaxes.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemSubTotal = Number(cartItem[0].retailerCurrencyItemSubTotal.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemPriceInfo = Number(cartItem[0].product.retailerCurrencyProductPriceInfo.price.substring(3));
-        lineItem.custom.eswShopperCurrencyItemSubTotal = Number(cartItem[0].shopperCurrencyItemSubTotal.substring(3));
-        lineItem.custom.eswShopperCurrencyItemPriceInfo = Number(cartItem[0].product.shopperCurrencyProductPriceInfo.price.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemDelivery = Number(cartItem[0].retailerCurrencyItemDelivery.substring(3));
-        lineItem.custom.eswShopperCurrencyItemDelivery = Number(cartItem[0].shopperCurrencyItemDelivery.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemDeliveryDuty = Number(cartItem[0].retailerCurrencyItemDeliveryDuty.substring(3));
-        lineItem.custom.eswShopperCurrencyItemDeliveryDuty = Number(cartItem[0].shopperCurrencyItemDeliveryDuty.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemDeliveryTaxes = Number(cartItem[0].retailerCurrencyItemDeliveryTaxes.substring(3));
-        lineItem.custom.eswShopperCurrencyItemDeliveryTaxes = Number(cartItem[0].shopperCurrencyItemDeliveryTaxes.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemUplift = Number(cartItem[0].retailerCurrencyItemUplift.substring(3));
-        lineItem.custom.eswShopperCurrencyItemUplift = Number(cartItem[0].shopperCurrencyItemUplift.substring(3));
-        lineItem.custom.eswRetailerCurrencyItemTaxes = Number(cartItem[0].retailerCurrencyItemTaxes.substring(3));
-        lineItem.custom.eswShopperCurrencyItemTaxes = Number(cartItem[0].shopperCurrencyItemTaxes.substring(3));
-        lineItem.custom.eswReturnProhibited = cartItem[0].product.isReturnProhibited;
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemAdministration', Number(cartItem[0].retailerCurrencyItemAdministration.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemAdministration', Number(cartItem[0].shopperCurrencyItemAdministration.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDuty', Number(cartItem[0].retailerCurrencyItemDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDuty', Number(cartItem[0].shopperCurrencyItemDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswHSCode', cartItem[0].product.hsCode);
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemOtherTaxes', Number(cartItem[0].retailerCurrencyItemOtherTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemOtherTaxes', Number(cartItem[0].shopperCurrencyItemOtherTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemSubTotal', Number(cartItem[0].retailerCurrencyItemSubTotal.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemPriceInfo', Number(cartItem[0].product.retailerCurrencyProductPriceInfo.price.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemSubTotal', Number(cartItem[0].shopperCurrencyItemSubTotal.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemPriceInfo', Number(cartItem[0].product.shopperCurrencyProductPriceInfo.price.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDelivery', Number(cartItem[0].retailerCurrencyItemDelivery.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDelivery', Number(cartItem[0].shopperCurrencyItemDelivery.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDeliveryDuty', Number(cartItem[0].retailerCurrencyItemDeliveryDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDeliveryDuty', Number(cartItem[0].shopperCurrencyItemDeliveryDuty.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemDeliveryTaxes', Number(cartItem[0].retailerCurrencyItemDeliveryTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemDeliveryTaxes', Number(cartItem[0].shopperCurrencyItemDeliveryTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemUplift', Number(cartItem[0].retailerCurrencyItemUplift.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemUplift', Number(cartItem[0].shopperCurrencyItemUplift.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCurrencyItemTaxes', Number(cartItem[0].retailerCurrencyItemTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCurrencyItemTaxes', Number(cartItem[0].shopperCurrencyItemTaxes.substring(3)));
+        this.checkAndSetOrderCustomAttribute(lineItem, 'eswReturnProhibited', cartItem[0].product.isReturnProhibited);
+        // Storing CoD attributes
+        if (!empty(cartItem[0].retailerCurrencyItemCashOnDelivery)) {
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryFeeCurrency', !empty(cartItem[0].retailerCurrencyItemCashOnDelivery) ? cartItem[0].retailerCurrencyItemCashOnDelivery.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryFee', !empty(cartItem[0].retailerCurrencyItemCashOnDelivery) ? Number(cartItem[0].retailerCurrencyItemCashOnDelivery.substring(3)) : 0);
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryFeeCurrency', !empty(cartItem[0].shopperCurrencyItemCashOnDelivery) ? cartItem[0].shopperCurrencyItemCashOnDelivery.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryFee', !empty(cartItem[0].shopperCurrencyItemCashOnDelivery) ? Number(cartItem[0].shopperCurrencyItemCashOnDelivery.substring(3)) : 0);
+        }
+        // Storing CoD Tax attributes
+        if (!empty(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes)) {
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryTaxFeeCurrency', !empty(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes) ? cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswRetailerCashOnDeliveryTaxFee', !empty(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes) ? Number(cartItem[0].retailerCurrencyItemCashOnDeliveryTaxes.substring(3)) : 0);
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFeeCurrency', !empty(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes) ? cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes.substring(0, 3) : '');
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFee', !empty(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes) ? Number(cartItem[0].shopperCurrencyItemCashOnDeliveryTaxes.substring(3)) : 0);
+        }
+        lineItem.custom.eswFulfilmentCountryIso = !empty(cartItem[0].fulfilmentCountryIso) ? cartItem[0].fulfilmentCountryIso : '';
     },
     /**
     * Update ESW Order Item level custom attibutes for OC V2
@@ -476,12 +683,41 @@ const getEswOcHelper = {
     updateOrderLevelAttrV3: function (obj, order) {
         let eswShopperCurrencyOrderDiscountsInfo = (!empty(obj.cartDiscountPriceInfo) && !empty(obj.cartDiscountPriceInfo.discounts)) ? JSON.stringify(this.getItemDiscountsInfo(obj.cartDiscountPriceInfo.discounts, 'shopper', 'OrderLevelDiscount')) : '';
         let eswRetailerCurrencyOrderDiscountsInfo = (!empty(obj.cartDiscountPriceInfo) && !empty(obj.cartDiscountPriceInfo.discounts)) ? JSON.stringify(this.getItemDiscountsInfo(obj.cartDiscountPriceInfo.discounts, 'retailer', 'OrderLevelDiscount')) : '';
-        order.custom.eswShopperCurrencyOrderDiscountsInfo = eswShopperCurrencyOrderDiscountsInfo;
-        order.custom.eswRetailerCurrencyOrderDiscountsInfo = eswRetailerCurrencyOrderDiscountsInfo;
+        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyOrderDiscountsInfo', eswShopperCurrencyOrderDiscountsInfo);
+        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyOrderDiscountsInfo', eswRetailerCurrencyOrderDiscountsInfo);
         return {
             eswShopperCurrencyOrderDiscountsInfo: eswShopperCurrencyOrderDiscountsInfo,
             eswRetailerCurrencyOrderDiscountsInfo: eswRetailerCurrencyOrderDiscountsInfo
         };
+    },
+    /**
+     * Process order confirmation for Konbini orders, function must be wrap in Transaction
+     * @param {Object} ocPayload - Order confirmation payload for v2 and v3
+     * @param {dw.order} dwOrder - SFCC Order Object
+     * @param {string} totalCheckoutAmount - Total shopper currency amount of order
+     * @param {string} paymentCardBrand - Payment Card Brand
+     * @returns {boolean} - true/false
+     */
+    processKonbiniOrderConfirmation: function (ocPayload, dwOrder, totalCheckoutAmount, paymentCardBrand) {
+        let isKonbiniOrder = false;
+        if (empty(ocPayload)) {
+            return false;
+        }
+
+        if ('cartItems' in ocPayload) { // OC response for v2
+            isKonbiniOrder = !empty(ocPayload.paymentIsOverCounter) && ocPayload.paymentIsOverCounter;
+        } else {  // OC response for v3
+            isKonbiniOrder = !empty(ocPayload.paymentDetails) && ocPayload.paymentDetails.isOverCounter;
+        }
+
+        if (isKonbiniOrder) {
+            dwOrder.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+            dwOrder.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+            dwOrder.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+            dwOrder.custom.eswOverTheCounterPayloadJson = JSON.stringify(ocPayload);
+            this.updateEswPaymentAttributes(dwOrder, totalCheckoutAmount, paymentCardBrand, ocPayload);
+        }
+        return isKonbiniOrder;
     }
 };
 

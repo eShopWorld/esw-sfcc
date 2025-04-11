@@ -100,7 +100,7 @@ function execute(args) {
                 Logger.info('Order cancelled successfully for order: {0}', order.orderNo);
             } else {
                 let errorMsg = JSON.parse(result.errorMessage);
-                if (!empty(errorMsg) && errorMsg[0].code !== 800) {
+                if (!empty(errorMsg) && !empty(errorMsg[0]) && errorMsg[0].code !== 800) {
                     Transaction.wrap(function () { // eslint-disable-line no-loop-func
                         order.custom.eswOrderCancellationMessage = errorMsg[0].message;
                         order.custom.eswOrderCancellationRetryCount += retryCount;

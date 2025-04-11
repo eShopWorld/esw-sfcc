@@ -117,9 +117,9 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
-            <attribute-definition attribute-id="isProductFeedSupported">
-                <display-name xml:lang="x-default">Is Product Feed Supported?</display-name>
-                <description xml:lang="x-default">If checked, then product feeds for this country will be generated.</description>
+            <attribute-definition attribute-id="isLocalizedShoppingFeedSupported">
+                <display-name xml:lang="x-default">Is Localized Shopping Feed Supported?</display-name>
+                <description xml:lang="x-default">If checked, then Localized Shopping feeds for this country will be generated.</description>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
@@ -169,6 +169,23 @@
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
             </attribute-definition>
+            <attribute-definition attribute-id="eswSynchronizePkgModel">
+                <display-name xml:lang="x-default">Synchronize Package Model</display-name>
+                <type>enum-of-string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <value-definitions>
+                    <value-definition>
+                        <display xml:lang="x-default">Synchronize SFCC shipment with ESW</display>
+                        <value>sfccToEsw</value>
+                    </value-definition>
+                    <value-definition>
+                        <display xml:lang="x-default">Synchronize ESW Package/ASN with SFCC</display>
+                        <value>eswToSfcc</value>
+                    </value-definition>
+                </value-definitions>
+            </attribute-definition>
         </attribute-definitions>
         <group-definitions>
             <attribute-group group-id="esw_countries">
@@ -180,7 +197,7 @@
                 <attribute attribute-id="baseCurrencyCode"/>
                 <attribute attribute-id="isSupportedByESW"/>
                 <attribute attribute-id="isFixedPriceModel"/>
-                <attribute attribute-id="isProductFeedSupported"/>
+                <attribute attribute-id="isLocalizedShoppingFeedSupported"/>
             </attribute-group>
             <attribute-group group-id="eswHubAddress">
                 <display-name xml:lang="x-default">ESW HUB Address</display-name>
@@ -188,6 +205,10 @@
                 <attribute attribute-id="hubAddressState"/>
                 <attribute attribute-id="hubAddressCity"/>
                 <attribute attribute-id="hubAddressPostalCode"/>
+            </attribute-group>
+            <attribute-group group-id="eswPackage">
+                <display-name xml:lang="x-default">ESW Package Configuration</display-name>
+                <attribute attribute-id="eswSynchronizePkgModel"/>
             </attribute-group>
         </group-definitions>
     </custom-type>
@@ -230,4 +251,62 @@
             </attribute-group>
         </group-definitions>
     </custom-type>
+
+    <custom-type type-id="ESW_INTEGRATION_MONITORING">
+        <display-name xml:lang="x-default">ESW Integration Monitoring</display-name>
+        <description xml:lang="x-default">This custom object type holds ESW integration monitoring data</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>site</storage-scope>
+        <key-definition attribute-id="Report">
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="configReport">
+                <display-name xml:lang="x-default">ESW Integration Monitoring JSON Report</display-name>
+                <description xml:lang="x-default">JSON report will be stored here for internal use</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="Integration_Monitoring_Report">
+                <display-name xml:lang="x-default">ESW Integration Monitoring Report</display-name>
+                <attribute attribute-id="configReport"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+
+    <custom-type type-id="ESW_JWKS">
+        <display-name xml:lang="x-default">ESW JWKS</display-name>
+        <description xml:lang="x-default">This custom object type holds JWT validation keys coming from ESW.</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>organization</storage-scope>
+        <key-definition attribute-id="eswJwks">
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="validationKeys">
+                <display-name xml:lang="x-default">JWT Validation Keys</display-name>
+                <description xml:lang="x-default">The field will hold validation keys from JWT.</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="eswJwks">
+                <display-name xml:lang="x-default">ESW JWKS</display-name>
+                <attribute attribute-id="creationDate" system="true"/>
+                <attribute attribute-id="eswJwks"/>
+                <attribute attribute-id="lastModified" system="true"/>
+                <attribute attribute-id="validationKeys"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+
 </metadata>

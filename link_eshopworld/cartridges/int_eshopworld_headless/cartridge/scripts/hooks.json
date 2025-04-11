@@ -1,0 +1,56 @@
+{
+   "hooks": [
+		{
+            "name": "dw.order.calculate",
+            "script": "./cart/calculate.js"
+        },
+   		{
+			"name": "dw.ocapi.shop.product.beforeGET",
+			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
+		},
+	   	{
+			"name": "dw.ocapi.shop.product.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/pdpPriceHook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.product_search.beforeGET",
+			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.product_search.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/plpPriceHook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.beforePOST",
+			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.beforePOST",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.afterPOST",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.order.modifyPOSTResponse",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.modifyPOSTResponse",
+			"script": "./ocapi/shop/hooks/basketHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.beforePATCH",
+			"script": "./ocapi/shop/hooks/basketHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.modifyPATCHResponse",
+			"script": "./ocapi/shop/hooks/basketHooks.js"
+		},
+		{
+			"name":"dw.ocapi.shop.order.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		}
+	]
+}

@@ -32,6 +32,7 @@ function getCheckoutSamplePayload() {
                         "discounts": []
                     },
                     "imageUrl": "https://path/to/url.com",
+                    "productUrl": "https://path/to/url.com",
                     "color": "string",
                     "size": "string",
                     "isNonStandardCatalogItem": 'boolean',
@@ -144,6 +145,10 @@ function getServicesMock() {
             },
             type: 'service'
         },
+        'EswGetJwksService': {
+            payload: {},
+            type: 'service'
+        },
         'EswCheckoutV2Service.SFRA': {
             payload: getCheckoutSamplePayload(),
             type: 'service'
@@ -170,7 +175,7 @@ function getServicesMock() {
             },
             type: 'service'
         },
-        'EswOrderAPIV2Service': {
+        EswOrderAPIV2Service: {
             payload: {
                 requestBody: JSON.stringify({
                     activityStatus: 'string',
@@ -212,6 +217,27 @@ function getServicesMock() {
                 requestBody: getCatalogServicePayload()
             },
             type: 'service'
+        },
+        EswOcapiBasketService: {
+            payload: {
+                bearerToken: 'fake_bearer_token',
+                requestBody: []
+            },
+            type: 'service'
+        },
+        EswOcapiAuthService: {
+            payload: {
+                bearerToken: 'fake_bearer_token',
+                requestBody: []
+            },
+            type: 'service'
+        },
+        EswOcapiOrderService: {
+            payload: {
+                bearerToken: 'fake_bearer_token',
+                requestBody: []
+            },
+            type: 'service'
         }
     };
 }
@@ -228,7 +254,7 @@ function execute(args) {
     try {
         let eswDiagnosticData = {
             sfccArchitectVersion: Resource.msg('global.version.number', 'version', 'SG'),
-            eswCartridgeVersion: Resource.msg('esw.cartridges.version.number', 'int_eshopworld_core', '3.8.2')
+            eswCartridgeVersion: Resource.msg('esw.cartridges.version.number', 'esw', '4.2.1')
         };
         let servicesMockObj = getServicesMock();
         let keys = Object.keys(servicesMockObj);
@@ -262,13 +288,23 @@ function execute(args) {
                 }
                 serviceResponse = isUsingService ? eswHealthCheckHelper.getServiceRes(serviceName, serviceData) : null;
                 if (!empty(serviceResponse)) {
-                    responseLog = {
-                        serviceName: isServiceEnabled.serviceName,
-                        isOk: !eswHealthCheckHelper.serviceHasError(serviceResponse.getError()),
-                        errorCode: serviceResponse.getError(),
-                        errorMessage: serviceResponse.getErrorMessage(),
-                        isServiceInUse: isUsingService
-                    };
+                    if (serviceName.toLowerCase().indexOf('ocapi') === -1) {
+                        responseLog = {
+                            serviceName: isServiceEnabled.serviceName,
+                            isOk: !eswHealthCheckHelper.serviceHasError(serviceResponse.getError()),
+                            errorCode: serviceResponse.getError(),
+                            errorMessage: serviceResponse.getErrorMessage(),
+                            isServiceInUse: isUsingService
+                        };
+                    } else {
+                        responseLog = {
+                            serviceName: isServiceEnabled.serviceName,
+                            isOk: empty(serviceResponse.errorMessage),
+                            errorCode: this.isOk ? 'N/A' : serviceResponse.errorMessage,
+                            errorMessage: this.isOk ? 'N/A' : serviceResponse.errorMessage,
+                            isServiceInUse: isUsingService
+                        };
+                    }
                 }
             } else {
                 serviceResponse = eswHealthCheckHelper.callHttp(serviceData.httpMethod, serviceData.url);

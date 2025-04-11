@@ -3,15 +3,14 @@ const Transaction = require('dw/system/Transaction');
 
 const OCAPIHelper = require('*/cartridge/scripts/helper/eswOCAPIHelperHL');
 const eswServiceHelperV3 = require('*/cartridge/scripts/helper/serviceHelperV3');
-const eswPwaHelper = require('*/cartridge/scripts/helper/eswPwaCoreHelper');
 const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 // eslint-disable-next-line no-unused-vars
 exports.modifyGETResponse = function (Promotion, doc) {
     if (eswCoreHelper.getEShopWorldModuleEnabled()) {
         let locale = request.httpParameters.get('locale')[0],
-            selectedCountryDetail = eswPwaHelper.getCountryDetailByParam(request.httpParameters),
-            selectedCountryLocalizeObj = eswPwaHelper.getCountryLocalizeObj(selectedCountryDetail);
+            selectedCountryDetail = eswCoreHelper.getCountryDetailByParam(request.httpParameters),
+            selectedCountryLocalizeObj = eswCoreHelper.getCountryLocalizeObj(selectedCountryDetail);
     //  eslint-disable-next-line no-param-reassign
         doc.calloutMsg[locale] = eswServiceHelperV3.convertPromotionMessage(doc.calloutMsg[locale], selectedCountryDetail, selectedCountryLocalizeObj);
     }
@@ -26,8 +25,8 @@ exports.modifyPOSTResponse = function (basket, doc) {
 exports.afterPOST = function (basket) {
     let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
     let countryParam = request.httpParameters;
-    let selectedCountryDetail = eswPwaHelper.getCountryDetailByParam(countryParam);
-    let selectedCountryLocalizeObj = eswPwaHelper.getCountryLocalizeObj(selectedCountryDetail);
+    let selectedCountryDetail = eswCoreHelper.getCountryDetailByParam(countryParam);
+    let selectedCountryLocalizeObj = eswCoreHelper.getCountryLocalizeObj(selectedCountryDetail);
     var subtotal;
     Transaction.wrap(function () {
         basketCalculationHelpers.calculateTotals(basket);
@@ -40,5 +39,10 @@ exports.afterPOST = function (basket) {
         basketCalculationHelpers.calculateTotals(basket);
         eswCoreHelper.removeThresholdPromo(basket);
     });
+    return new Status(Status.OK);
+};
+
+exports.afterDELETE = function (basket) {
+    OCAPIHelper.basketModifyBasketAfterCouponDelete(basket);
     return new Status(Status.OK);
 };

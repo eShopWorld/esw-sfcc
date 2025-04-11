@@ -2,13 +2,12 @@ const Status = require('dw/system/Status');
 const Transaction = require('dw/system/Transaction');
 
 const OCAPIHelper = require('*/cartridge/scripts/helper/eswOCAPIHelperHL');
-const eswPwaHelper = require('*/cartridge/scripts/helper/eswPwaCoreHelper');
 const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 exports.afterPATCH = function (basket) {
     let countryParam = empty(request.httpParameters.get('locale')) && !empty(basket) ? basket.custom.eswShopperCurrency : request.httpParameters;
-    let selectedCountryDetail = eswPwaHelper.getCountryDetailByParam(countryParam);
-    let selectedCountryLocalizeObj = eswPwaHelper.getCountryLocalizeObj(selectedCountryDetail);
+    let selectedCountryDetail = eswCoreHelper.getCountryDetailByParam(countryParam);
+    let selectedCountryLocalizeObj = eswCoreHelper.getCountryLocalizeObj(selectedCountryDetail);
     let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
     Transaction.wrap(function () {
         if (!selectedCountryDetail.isFixedPriceModel) {
@@ -16,6 +15,8 @@ exports.afterPATCH = function (basket) {
             OCAPIHelper.adjustThresholdDiscounts(basket, cartTotals, selectedCountryLocalizeObj);
             basketCalculationHelpers.calculateTotals(basket);
             eswCoreHelper.removeThresholdPromo(basket);
+        } else {
+            basketCalculationHelpers.calculateTotals(basket);
         }
     });
     return new Status(Status.OK);

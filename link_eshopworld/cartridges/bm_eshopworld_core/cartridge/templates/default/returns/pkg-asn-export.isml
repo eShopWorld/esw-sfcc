@@ -1,0 +1,96 @@
+<isset name="bmOrdersHelper" scope="page" value="${require('~/cartridge/scripts/helpers/eswBmOrdersHelper.js')}" />
+<isset value="${require('*/cartridge/scripts/util/Constants')}" name="Constants" scope="page" />
+<isdecorate template="application/ESWMenuFrame">
+    <isinclude template="util/modules" />
+    <isinclude template="returns/returns-search-form" />
+    <isif condition="${!pdict.orders.empty}">
+        <form action="${dw.web.URLUtils.https('EShopWorldBM-ExportOrderShipment')}" method="GET"
+            name="AdvProductSyncFrm" id="productGridForm">
+            <table class="esw-product-table">
+                <tr>
+                    <td class="table_header w e s">
+                        <a href="javascript:void(0)" class="tableheader disabled selectAllCheckbox">
+                            ${Resource.msg('esw.bm.SelectAll', 'eswbm', null)}
+                        </a>
+                    </td>
+                    <td class="table_header w e s">${Resource.msg('label.order.number', 'eswbm', null)}</td>
+                    <td class="table_header w e s">${Resource.msg('label.order.date', 'eswbm', null)}</td>
+                    <td class="table_header w e s">${Resource.msg('esw.bm.LastModified', 'eswbm', null)}</td>
+                    <td class="table_header w e s">${Resource.msg('label.order.export.status', 'eswbm', null)}</td>
+                    <td class="table_header w e s">${Resource.msg('label.order.export.status.message', 'eswbm', null)}
+                    </td>
+                </tr>
+                <input type="hidden" name="pageSize" value="${pdict.orders.pageSize}" />
+                <isloop items="${pdict.orders.pageElements}" var="order" status="orderIndex">
+                    <isset scope="page" name="orderExportStatus"
+                        value="${bmOrdersHelper.getOrderExportStatus(order)}" />
+                    <tr class="esw-products-list">
+                        <td class="table_detail middle e s center">
+                            <input type="checkbox" id="orderCheckbox-${orderIndex.count}"
+                                name="orderCheckbox-${orderIndex.count}" value="${order.orderNo}"
+                                class="order-checkbox" />
+                        </td>
+                        <td class="table_detail middle e s left">
+                            <a class="table_detail_link detail_Link_underLink" rel="noopener"
+                                href="${dw.web.URLUtils.https('ViewOrder-FindByUUID', 'OrderUUID', order.getUUID())}"
+                                target="_blank">
+                                ${order.orderNo}
+                            </a>
+                        </td>
+                        <td class="table_detail middle e s left">
+                            <isprint value="${new Date(order.creationDate)}" style="DATE_SHORT" />
+                            <isprint value="${new Date(order.creationDate)}" style="DATE_TIME" />
+                        </td>
+                        <td class="table_detail middle e s left">
+                            <isprint value="${new Date(order.lastModified)}" style="DATE_SHORT" />
+                            <isprint value="${new Date(order.lastModified)}" style="DATE_TIME" />
+                        </td>
+                        <td class="table_detail middle e s left">
+                            ${orderExportStatus.statusText}
+                        </td>
+                        <td class="table_detail middle e s left tbl-error">
+                            <div class="clip-txt alert alert-${orderExportStatus.statusType}">
+                                ${orderExportStatus.statusMessage}
+                                <isif
+                                    condition="${orderExportStatus.statusType === 'danger' && !empty(orderExportStatus.responseAsText)}">
+                                    <div class="btn btn-primary tooltip">
+                                        <div class="left width-600">
+                                            <h3>Error Detail:</h3>
+                                            <p class="error-msg json-txt">
+                                                <code>${orderExportStatus.responseAsText}</code>
+                                                <i></i>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </isif>
+                            </div>
+                        </td>
+                    </tr>
+                </isloop>
+                <tr class="action-btns">
+                    <td colspan="6">
+                        <button type="submit" value="true" name="SyncAll" class="button SyncAll">
+                            ${Resource.msg('paginginformation.export.all', 'eswbm', null)}
+                        </button>
+
+                        <button disabled type="submit" value="true" name="SyncSlected" class="button SyncSlected">
+                            ${Resource.msg('paginginformation.export.selected', 'eswbm', null)}
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="6">
+                        <div class="search-result-options">
+                            <iseswpagingbar
+                                pageurl="${URLUtils.https('EShopWorldBM-PkgAsnExport', 'q', pdict.q, 'exportStatus', pdict.exportStatus, 'SortingDirection', pdict
+                                         .sortingDirection, pdict.submitFromForm, '', 'orderNumbersList', pdict.orderNumbersList)}"
+                                pagingmodel="${pdict.orders}" />
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    <iselse/>
+        <isinclude template="/returns/esw-no-result-found" />
+    </isif>
+</isdecorate>

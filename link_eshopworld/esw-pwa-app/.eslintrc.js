@@ -18,6 +18,7 @@ module.exports = {
         'overrides/app/request-processor.js',
         'overrides/app/pages/my-new-route/index.jsx',
         'overrides/app/pages/home/index.jsx',
-        'overrides/app/main.jsx'
+        'overrides/app/main.jsx',
+        'overrides/app/static/*'
     ]
 }

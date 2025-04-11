@@ -19,8 +19,8 @@ import {
 } from '@salesforce/retail-react-app/app/constants'
 
 // original value is 25
-DEFAULT_LIMIT_VALUES[0] = 30
-DEFAULT_SEARCH_PARAMS.limit = 30
+DEFAULT_LIMIT_VALUES[0] = 3
+DEFAULT_SEARCH_PARAMS.limit = 3
 
 export const CUSTOM_HOME_TITLE = '🎉 Hello Extensible React Template!'
 

@@ -13,7 +13,7 @@
         <table class="esw-product-table">
             <tr>
                 <td class="table_header w e s">
-                    <a onclick="selectAllProducts();" href="javascript:void(0)" class="tableheader disabled">
+                    <a onclick="selectAllProducts();" href="javascript:void(0)" class="tableheader disabled selectAllCheckbox">
                         ${Resource.msg('esw.bm.SelectAll', 'eswbm', null)}
                     </a>
                 </td>
@@ -27,34 +27,34 @@
             </tr>
             <input type="hidden" name="pageSize" value="${pdict.productsList.pageSize}">
             <isloop items="${pdict.productsList.pageElements}" var="product" status="productIndex">
-                <isset name="internallyValidProductRes" value="${eswCatalogHelper.isValidProduct(product.product)}" scope="page" />
+                <isset name="internallyValidProductRes" value="${eswCatalogHelper.isValidProduct(product)}" scope="page" />
                 <tr class="esw-products-list">
-                    <td class="table_detail middle e s left">
-                        <input type="checkbox" class="select-Product" id="${product.product.ID}" name="product${productIndex.count}" value="${product.product.ID}" <isif condition="${eswCatalogHelper.isValidProduct(product.product).isError}">disabled</isif>>
+                    <td class="table_detail middle e s center">
+                        <input type="checkbox" class="select-Product" id="${product.ID}" name="product${productIndex.count}" value="${product.ID}" <isif condition="${eswCatalogHelper.isValidProduct(product).isError}">disabled</isif>>
                     </td>
                     <td class="table_detail middle e s left">
                         <a class="table_detail_link detail_Link_underLink"
-                            href="${dw.web.URLUtils.https('ViewProduct_52-Edit', 'ProductID', product.product.UUID)}"
+                            href="${dw.web.URLUtils.https('ViewProduct_52-Edit', 'ProductID', product.UUID)}"
                             target="_blank">
-                            <i>${product.product.ID}</i>
+                            <i>${product.ID}</i>
                         </a>
                     </td>
                     <td class="table_detail middle e s left">
                         <a class="table_detail_link detail_Link_underLink"
-                            href="${dw.web.URLUtils.https('ViewProduct_52-Edit', 'ProductID', product.product.UUID)}"
+                            href="${dw.web.URLUtils.https('ViewProduct_52-Edit', 'ProductID', product.UUID)}"
                             target="_blank">
-                            <i>${product.product.name}</i>
+                            <i>${product.name}</i>
                         </a>
                     </td>
                     <td class="table_detail middle e s left">
-                        <isprint value="${new Date(product.product.lastModified)}"
+                        <isprint value="${new Date(product.lastModified)}"
                             style="DATE_SHORT" />
-                        <isprint value="${new Date(product.product.lastModified)}"
+                        <isprint value="${new Date(product.lastModified)}"
                             style="DATE_TIME" />
                     </td>
                     <isif condition="${eswHelper.isEswCatalogApiMethod()}">
                         <td class="table_detail middle e s left">
-                            ${eswSyncHelper.getProductSyncStatus(product.product)}
+                            ${eswSyncHelper.getProductSyncStatus(product)}
                         </td>
                         <td class="table_detail middle e s left tbl-error">
                             <isinclude template="common/esw-bm-product-sync-message" />
@@ -70,7 +70,7 @@
                             ${Resource.msg('paginginformation.sync.all', 'eswbm', null)}
                         </button>
 
-                        <button type="submit" value="true" name="SyncSlected" class="button SyncSlected">
+                        <button disabled type="submit" value="true" name="SyncSlected" class="button SyncSlected">
                             ${Resource.msg('paginginformation.sync.selected', 'eswbm', null)}
                         </button>
                     </td>

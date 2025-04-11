@@ -21,10 +21,11 @@ const fallback = <Skeleton height="75vh" width="100%" />
 const Home = loadable(() => import('./pages/home'), {fallback})
 const MyNewRoute = loadable(() => import('./pages/my-new-route'))
 
-// ESW Custom Routes
+// ESW Customization
 import EswExampleContentDetails from './pages/esw-example-content-details'
 import Cart from './pages/cart'
-// End ESW Custom Routes
+import EswEmbeddedCheckout from './pages/esw-embedded-checkout'
+// End ESW Customization
 
 const routes = [
     {
@@ -43,6 +44,11 @@ const routes = [
     {
         path: '/cart',
         component: Cart,
+        exact: true
+    },
+    {
+        path: '/esw-checkout',
+        component: EswEmbeddedCheckout,
         exact: true
     },
     ..._routes

@@ -1,5 +1,4 @@
 /* eslint-disable eqeqeq */
-/* eslint-disable no-param-reassign */
 
 import {getEswShopperCurrencyConfigByKey} from './esw-helpers'
 

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useState, useRef} from 'react'
 import PropTypes from 'prop-types'
 import {
     eswAppInit,
@@ -15,8 +15,18 @@ import {useShopperBasketsMutation} from '@salesforce/commerce-sdk-react'
 import {EswGeoIpModel} from '../geo-ip'
 import {useToast} from '@salesforce/retail-react-app/app/hooks/use-toast'
 import {useIntl} from 'react-intl'
+import {useCustomerId, useCustomerBaskets} from '@salesforce/commerce-sdk-react'
+import {isServer} from '@salesforce/retail-react-app/app/utils/utils'
 
 export const EswInit = (props) => {
+    const customerId = useCustomerId()
+    const {data: basketsData} = useCustomerBaskets(
+        {parameters: {customerId}},
+        {
+            enabled: !!customerId && !isServer
+        }
+    )
+    const hasTriggered = useRef(false)
     const {locale, site} = props
     const {formatMessage} = useIntl()
     const showToast = useToast()
@@ -25,12 +35,11 @@ export const EswInit = (props) => {
     const [eswGeoIpBody, setEswGeoIpBody] = useState(null)
     const [eswGeoIpLocation, setEswGeoIpLocation] = useState(null)
     const addItemToBasketMutation = useShopperBasketsMutation('addItemToBasket')
+    const createBasketMutation = useShopperBasketsMutation('createBasket')
     const applyPromoCodeMutation = useShopperBasketsMutation('addCouponToBasket')
     const updateBasket = useShopperBasketsMutation('updateBasket')
+    const removeItemBasketMutation = useShopperBasketsMutation('removeItemFromBasket')
     useEffect(() => {
-        const eswFirstVisit = isFirstVisit()
-        const eswShopperCountry = getShopperCountry()
-        const eswShopperLocale = getLocaleByCountry(eswShopperCountry, site)
         const eswClientLastOrderId = localStorage.getItem('esw.clientLastOrderId')
         // Update basket currency
         const updateBasketCurrency = async (basketId) => {
@@ -40,41 +49,86 @@ export const EswInit = (props) => {
                 body: {c_eswShopperCurrency: eswShopperCurrency}
             })
         }
+        const createBasket = async () => {
+            const data = await createBasketMutation.mutateAsync({
+                body: {}
+            })
+            return data
+        }
+        if (hasTriggered.current || !basketsData) return
+        hasTriggered.current = true
         // Rebuild cart if any
-        setTimeout(() => {
-            getAbandonmentCartHelper(eswClientLastOrderId, locale)
-                .then((response) => response.json())
-                .then(async (data) => {
-                    let basketId = data.basketId
-                    updateBasketCurrency(basketId)
+        if (eswClientLastOrderId && basketsData) {
+            const rebuildCart = async () => {
+                if (eswClientLastOrderId && basketsData) {
+                    let dataResponse
+                    // If there are no baskets, create a new one
+                    if (basketsData?.total === 0) {
+                        dataResponse = await createBasket()
+                    }
                     try {
+                        // Call getAbandonmentCartHelper after basket creation (if needed)
+                        const response = await getAbandonmentCartHelper(
+                            eswClientLastOrderId,
+                            locale
+                        )
+                        const data = await response.json()
+
+                        const basketId =
+                            basketsData?.baskets?.[0]?.basketId || dataResponse?.basketId
+                        let removeLineItems = data.removeLineItems
+
+                        // Update basket currency
+                        updateBasketCurrency(basketId)
+
                         let couponCodes = data.couponCodes
                         let productItems = data.orderLineItems.products
-                        if (couponCodes || productItems) {
-                            if (couponCodes && couponCodes.length > 0) {
-                                for (const couponCode of couponCodes) {
-                                    await applyPromoCodeMutation.mutateAsync({
+                        let basketProductItems = data.basketItems.products
+
+                        // Handle items and promotions
+                        if (!removeLineItems) {
+                            if (couponCodes || productItems) {
+                                if (couponCodes && couponCodes.length > 0) {
+                                    for (const couponCode of couponCodes) {
+                                        await applyPromoCodeMutation.mutateAsync({
+                                            parameters: {basketId: basketId},
+                                            body: couponCode
+                                        })
+                                    }
+                                }
+                                if (productItems && productItems.length > 0) {
+                                    await addItemToBasketMutation.mutateAsync({
                                         parameters: {basketId: basketId},
-                                        body: couponCode
+                                        body: productItems
                                     })
                                 }
                             }
-                            if (productItems && productItems.length > 0) {
-                                await addItemToBasketMutation.mutateAsync({
-                                    parameters: {basketId: basketId},
-                                    body: productItems
+                        } else {
+                            // Remove items from the basket if needed
+                            basketProductItems.forEach(async (element) => {
+                                await removeItemBasketMutation.mutateAsync({
+                                    parameters: {basketId: basketId, itemId: element.lineItemId}
                                 })
-                            }
-                            localStorage.removeItem('esw.clientLastOrderId')
+                            })
                         }
+                        // Clean up after successful cart rebuild
+                        localStorage.removeItem('esw.clientLastOrderId')
                     } catch (error) {
                         showToast({
                             title: formatMessage(API_ERROR_MESSAGE),
                             status: 'error'
                         })
                     }
-                })
-        }, 2000)
+                }
+            }
+            // Trigger the cart rebuild process
+            rebuildCart()
+        }
+    }, [basketsData])
+    useEffect(() => {
+        const eswFirstVisit = isFirstVisit()
+        const eswShopperCountry = getShopperCountry()
+        const eswShopperLocale = getLocaleByCountry(eswShopperCountry, site)
         // Getting Esw Configs
         eswAppInit(locale)
         // Getting geo ip alert info

@@ -11,7 +11,7 @@
     <description xml:lang="x-default">ESW</description>
     <icon>icons/esw-icon.gif</icon>
   </menuitem>
-  <menuaction id="esw_catalog_id01" menupath="esw_id01" position="999" site="true">
+  <menuaction id="esw_catalog_id01" menupath="esw_id01" position="800" site="true">
     <name xml:lang="x-default">Catalog</name>
     <short_description xml:lang="x-default">Catalog</short_description>
     <description xml:lang="x-default">All catalog related ESW operations</description>
@@ -29,5 +29,71 @@
       <parameter name="mainmenuname" value="ESW"/>
     </parameters>
     <icon>icons/esw-icon.gif</icon>
+  </menuaction>
+  <menuaction id="esw_retailer_configuration_menu" menupath="esw_id01" position="999" site="true">
+        <name xml:lang="x-default">Retailer Configuration</name>
+        <short_description xml:lang="x-default">ESW retailer Configuration operations</short_description>
+        <description xml:lang="x-default">ESW retailer Configuration operations</description>
+        <!-- no icon specified -->
+        <exec pipeline="EShopWorldBM" node="RetailerConfiguration" />
+        <sub-pipelines>
+          <pipeline name="EShopWorldBM-RetailerConfiguration" />
+          <pipeline name="EShopWorldBM-SavePostedConfig" />
+        </sub-pipelines>
+         <parameters>
+            <parameter name="menuname" value="RetailerConfiguration" />
+            <parameter name="menupath" value="esw_id01"/>
+            <parameter name="mainmenuname" value="ESW"/>
+        </parameters>
+        <icon>icons/esw-icon.gif</icon>
+  </menuaction>
+  <menuaction id="esw_integration_id01" menupath="esw_id01" position="9999" site="true">
+    <name xml:lang="x-default">Integration Monitoring</name>
+    <short_description xml:lang="x-default">Integration Monitoring</short_description>
+    <description xml:lang="x-default">Integration Monitoring Reprts</description>
+    <exec pipeline="EShopWorldBM" node="LoadReports"/>
+    <sub-pipelines>
+      <pipeline name="EShopWorldBM-LoadReports" />
+    </sub-pipelines>
+    <parameters>
+      <parameter name="menuname" value="LoadReports"/>
+      <parameter name="menupath" value="esw_id01"/>
+      <parameter name="mainmenuname" value="ESW"/>
+    </parameters>
+    <icon>icons/esw-icon.gif</icon>
+  </menuaction>
+  <menuaction id="esw_returns_menu" menupath="esw_id01" position="801" site="true">
+        <name xml:lang="x-default">Returns</name>
+        <short_description xml:lang="x-default">ESW returns related operations</short_description>
+        <description xml:lang="x-default">ESW returns related operations</description>
+        <!-- no icon specified -->
+        <exec pipeline="EShopWorldBM" node="PkgAsnExport" />
+        <sub-pipelines>
+          <pipeline name="EShopWorldBM-ReturnsConfig" />
+          <pipeline name="EShopWorldBM-PkgAsnExport" />
+          <pipeline name="EShopWorldBM-ExportOrderShipment" />
+        </sub-pipelines>
+         <parameters>
+            <parameter name="menuname" value="Returns" />
+            <parameter name="menupath" value="esw_id01"/>
+            <parameter name="mainmenuname" value="ESW"/>
+        </parameters>
+        <icon>icons/esw-icon.gif</icon>
+  </menuaction>
+  <menuaction id="esw_packages_menu" menupath="esw_id01" position="802" site="true">
+        <name xml:lang="x-default">Packages</name>
+        <short_description xml:lang="x-default">ESW Packages configurations operations</short_description>
+        <description xml:lang="x-default">ESW Packages configurations operations</description>
+        <!-- no icon specified -->
+        <exec pipeline="EShopWorldBM" node="PackageConfigurations" />
+        <sub-pipelines>
+          <pipeline name="EShopWorldBM-PackageConfigurations" />
+        </sub-pipelines>
+         <parameters>
+            <parameter name="menuname" value="PackageConfigurations" />
+            <parameter name="menupath" value="esw_id01"/>
+            <parameter name="mainmenuname" value="ESW"/>
+        </parameters>
+        <icon>icons/esw-icon.gif</icon>
   </menuaction>
 </extensions>

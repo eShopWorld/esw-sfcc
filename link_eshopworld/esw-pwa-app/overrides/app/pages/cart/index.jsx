@@ -1,11 +1,10 @@
-/* eslint-disable */
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import React, {useState} from 'react'
+import React, {useState, useMemo} from 'react'
 import {FormattedMessage, useIntl} from 'react-intl'
 
 // Chakra Components
@@ -20,13 +19,18 @@ import {
 } from '@salesforce/retail-react-app/app/components/shared/ui'
 
 // Project Components
+// ESW Custom Imports
+import CartCta from './partials/cart-cta'
+// End ESW Custom Imports
 import CartSecondaryButtonGroup from '@salesforce/retail-react-app/app/pages/cart/partials/cart-secondary-button-group'
 import CartSkeleton from '@salesforce/retail-react-app/app/pages/cart/partials/cart-skeleton'
 import CartTitle from '@salesforce/retail-react-app/app/pages/cart/partials/cart-title'
 import ConfirmationModal from '@salesforce/retail-react-app/app/components/confirmation-modal'
 import EmptyCart from '@salesforce/retail-react-app/app/pages/cart/partials/empty-cart'
-import OrderSummary from '@salesforce/retail-react-app/app/components/order-summary'
+import OrderSummary from '../../components/order-summary'
+import ProductItem from '../../components/product-item'
 import ProductViewModal from '@salesforce/retail-react-app/app/components/product-view-modal'
+import BundleProductViewModal from '@salesforce/retail-react-app/app/components/product-view-modal/bundle'
 import RecommendedProducts from '@salesforce/retail-react-app/app/components/recommended-products'
 
 // Hooks
@@ -40,7 +44,8 @@ import {
     EINSTEIN_RECOMMENDERS,
     TOAST_ACTION_VIEW_WISHLIST,
     TOAST_MESSAGE_ADDED_TO_WISHLIST,
-    TOAST_MESSAGE_REMOVED_ITEM_FROM_CART
+    TOAST_MESSAGE_REMOVED_ITEM_FROM_CART,
+    TOAST_MESSAGE_ALREADY_IN_WISHLIST
 } from '@salesforce/retail-react-app/app/constants'
 import {REMOVE_CART_ITEM_CONFIRMATION_DIALOG_CONFIG} from '@salesforce/retail-react-app/app/pages/cart/partials/cart-secondary-button-group'
 
@@ -54,36 +59,24 @@ import {
     useShopperCustomersMutation
 } from '@salesforce/commerce-sdk-react'
 import {useCurrentCustomer} from '@salesforce/retail-react-app/app/hooks/use-current-customer'
+import UnavailableProductConfirmationModal from '@salesforce/retail-react-app/app/components/unavailable-product-confirmation-modal'
+import {getUpdateBundleChildArray} from '@salesforce/retail-react-app/app/utils/product-utils'
 
-// ESW customization
-import useMultiSite from '@salesforce/retail-react-app/app/hooks/use-multi-site'
-import ProductItem from '../../components/product-item'
-import CartCta from './partials/cart-cta'
-import { getCountryCodeByLocale } from '../../esw/esw-helpers'
-// End ESW customization
-
+const DEBOUNCE_WAIT = 750
 const Cart = () => {
-    // ESW customization
-    const intl = useIntl()
-    const [locale] = useState(intl.locale)
-    const {site} = useMultiSite()
-    const eswCurrentSiteCurrency = getCountryCodeByLocale(locale, site).actualCurrency
-    // End ESW customization
-    
     const {data: basket, isLoading} = useCurrentBasket()
-
     const productIds = basket?.productItems?.map(({productId}) => productId).join(',') ?? ''
-    const {data: products} = useProducts(
+    const {data: products, isLoading: isProductsLoading} = useProducts(
         {
             parameters: {
                 ids: productIds,
-                allImages: true
+                allImages: true,
+                perPricebook: true
             }
         },
         {
             enabled: Boolean(productIds),
             select: (result) => {
-                // Convert array into key/value object with key is the product id
                 return result?.data?.reduce((result, item) => {
                     const key = item.id
                     result[key] = item
@@ -92,19 +85,91 @@ const Cart = () => {
             }
         }
     )
+
     const {data: customer} = useCurrentCustomer()
     const {customerId, isRegistered} = customer
 
-    /** ***************Basket Mutation************************/
+    /***************** Product Bundles ************************/
+    const bundleChildVariantIds = []
+    basket?.productItems?.forEach((productItem) => {
+        productItem?.bundledProductItems?.forEach((childProduct) => {
+            bundleChildVariantIds.push(childProduct.productId)
+        })
+    })
+
+    const {data: bundleChildProductData} = useProducts(
+        {
+            parameters: {
+                ids: bundleChildVariantIds?.join(','),
+                allImages: false,
+                expand: ['availability', 'variations'],
+                select: '(data.(id,inventory))'
+            }
+        },
+        {
+            enabled: bundleChildVariantIds?.length > 0,
+            keepPreviousData: true,
+            select: (result) => {
+                return result?.data?.reduce((result, item) => {
+                    const key = item.id
+                    result[key] = item
+                    return result
+                }, {})
+            }
+        }
+    )
+
+    // We use the `products` object to reference products by itemId instead of productId
+    // Since with product bundles, even though the parent productId is the same,
+    // variant selection of the bundle children can be different,
+    // and require unique references to each product bundle
+    const productsByItemId = useMemo(() => {
+        const updateProductsByItemId = {}
+        basket?.productItems?.forEach((productItem) => {
+            let currentProduct = products?.[productItem?.productId]
+
+            // calculate inventory for product bundles based on availability of children
+            if (productItem?.bundledProductItems && bundleChildProductData) {
+                let lowestStockLevel =
+                    currentProduct?.inventory?.stockLevel ?? Number.MAX_SAFE_INTEGER
+                let productWithLowestInventory = ''
+                productItem?.bundledProductItems.forEach((bundleChild) => {
+                    const bundleChildStockLevel =
+                        bundleChildProductData?.[bundleChild.productId]?.inventory?.stockLevel ??
+                        Number.MAX_SAFE_INTEGER
+                    lowestStockLevel = Math.min(lowestStockLevel, bundleChildStockLevel)
+                    if (lowestStockLevel === bundleChildStockLevel)
+                        productWithLowestInventory = bundleChild.productName
+                })
+
+                if (currentProduct?.inventory) {
+                    currentProduct = {
+                        ...currentProduct,
+                        inventory: {
+                            ...currentProduct.inventory,
+                            stockLevel: lowestStockLevel,
+                            lowestStockLevelProductName: productWithLowestInventory
+                        }
+                    }
+                }
+            }
+            updateProductsByItemId[productItem.itemId] = currentProduct
+        })
+        return updateProductsByItemId
+    }, [basket, products, bundleChildProductData])
+
+    /*****************Basket Mutation************************/
     const updateItemInBasketMutation = useShopperBasketsMutation('updateItemInBasket')
+    const updateItemsInBasketMutation = useShopperBasketsMutation('updateItemsInBasket')
     const removeItemFromBasketMutation = useShopperBasketsMutation('removeItemFromBasket')
     const updateShippingMethodForShipmentsMutation = useShopperBasketsMutation(
         'updateShippingMethodForShipment'
     )
-    /** ***************Basket Mutation************************/
+    /*****************Basket Mutation************************/
 
     const [selectedItem, setSelectedItem] = useState(undefined)
     const [localQuantity, setLocalQuantity] = useState({})
+    const [localIsGiftItems, setLocalIsGiftItems] = useState({})
     const [isCartItemLoading, setCartItemLoading] = useState(false)
 
     const {isOpen, onOpen, onClose} = useDisclosure()
@@ -113,7 +178,7 @@ const Cart = () => {
     const navigate = useNavigation()
     const modalProps = useDisclosure()
 
-    /** ***************** Shipping Methods for basket shipment *******************/
+    /******************* Shipping Methods for basket shipment *******************/
     // do this action only if the basket shipping method is not defined
     // we need to fetch the shippment methods to get the default value before we can add it to the basket
     useShippingMethodsForShipment(
@@ -143,16 +208,16 @@ const Cart = () => {
         }
     )
 
-    /** *********************** Error handling ***********************/
+    /************************* Error handling ***********************/
     const showError = () => {
         toast({
             title: formatMessage(API_ERROR_MESSAGE),
             status: 'error'
         })
     }
-    /** *********************** Error handling ***********************/
+    /************************* Error handling ***********************/
 
-    /** ************** Wishlist ****************/
+    /**************** Wishlist ****************/
     const {data: wishlist} = useWishList()
 
     const createCustomerProductListItem = useShopperCustomersMutation(
@@ -163,41 +228,58 @@ const Cart = () => {
             if (!customerId || !wishlist) {
                 return
             }
-            await createCustomerProductListItem.mutateAsync({
-                parameters: {
-                    listId: wishlist.id,
-                    customerId
-                },
-                body: {
-                    // NOTE: APi does not respect quantity, it always adds 1
-                    quantity: product.quantity,
-                    productId: product.productId,
-                    public: false,
-                    priority: 1,
-                    type: 'product'
-                }
-            })
-            toast({
-                title: formatMessage(TOAST_MESSAGE_ADDED_TO_WISHLIST, {quantity: 1}),
-                status: 'success',
-                action: (
-                    // it would be better if we could use <Button as={Link}>
-                    // but unfortunately the Link component is not compatible
-                    // with Chakra Toast, since the ToastManager is rendered via portal
-                    // and the toast doesn't have access to intl provider, which is a
-                    // requirement of the Link component.
-                    <Button variant="link" onClick={() => navigate('/account/wishlist')}>
-                        {formatMessage(TOAST_ACTION_VIEW_WISHLIST)}
-                    </Button>
-                )
-            })
+
+            const isItemInWishlist = wishlist?.customerProductListItems?.find(
+                (i) => i.productId === product?.id
+            )
+
+            if (!isItemInWishlist) {
+                await createCustomerProductListItem.mutateAsync({
+                    parameters: {
+                        listId: wishlist.id,
+                        customerId
+                    },
+                    body: {
+                        // NOTE: APi does not respect quantity, it always adds 1
+                        quantity: product.quantity,
+                        productId: product.productId,
+                        public: false,
+                        priority: 1,
+                        type: 'product'
+                    }
+                })
+                toast({
+                    title: formatMessage(TOAST_MESSAGE_ADDED_TO_WISHLIST, {quantity: 1}),
+                    status: 'success',
+                    action: (
+                        // it would be better if we could use <Button as={Link}>
+                        // but unfortunately the Link component is not compatible
+                        // with Chakra Toast, since the ToastManager is rendered via portal
+                        // and the toast doesn't have access to intl provider, which is a
+                        // requirement of the Link component.
+                        <Button variant="link" onClick={() => navigate('/account/wishlist')}>
+                            {formatMessage(TOAST_ACTION_VIEW_WISHLIST)}
+                        </Button>
+                    )
+                })
+            } else {
+                toast({
+                    title: formatMessage(TOAST_MESSAGE_ALREADY_IN_WISHLIST),
+                    status: 'info',
+                    action: (
+                        <Button variant="link" onClick={() => navigate('/account/wishlist')}>
+                            {formatMessage(TOAST_ACTION_VIEW_WISHLIST)}
+                        </Button>
+                    )
+                })
+            }
         } catch {
             showError()
         }
     }
-    /** ************** Wishlist ****************/
+    /**************** Wishlist ****************/
 
-    /** *************************** Update Cart **************************/
+    /***************************** Update Cart **************************/
     const handleUpdateCart = async (variant, quantity) => {
         // close the modal before handle the change
         onClose()
@@ -247,12 +329,100 @@ const Cart = () => {
         } finally {
             setCartItemLoading(false)
             setSelectedItem(undefined)
-            window.location.reload()
         }
     }
-    /** *************************** Update Cart **************************/
 
-    /** *************************** Update quantity **************************/
+    const handleUpdateBundle = async (bundle, bundleQuantity, childProducts) => {
+        // close the modal before handle the change
+        onClose()
+
+        try {
+            setCartItemLoading(true)
+            const itemsToBeUpdated = getUpdateBundleChildArray(bundle, childProducts)
+
+            // We only update the parent bundle when the quantity changes
+            // Since top level bundles don't have variants
+            if (bundle.quantity !== bundleQuantity) {
+                itemsToBeUpdated.unshift({
+                    itemId: bundle.itemId,
+                    productId: bundle.productId,
+                    quantity: bundleQuantity
+                })
+            }
+
+            if (itemsToBeUpdated.length) {
+                await updateItemsInBasketMutation.mutateAsync({
+                    method: 'PATCH',
+                    parameters: {
+                        basketId: basket.basketId
+                    },
+                    body: itemsToBeUpdated
+                })
+            }
+        } catch {
+            showError()
+        } finally {
+            setCartItemLoading(false)
+            setSelectedItem(undefined)
+        }
+    }
+
+    const handleIsAGiftChange = async (product, checked) => {
+        try {
+            const previousVal = localIsGiftItems[product.itemId]
+            setLocalIsGiftItems({
+                ...localIsGiftItems,
+                [product.itemId]: checked
+            })
+            setCartItemLoading(true)
+            setSelectedItem(product)
+            await updateItemInBasketMutation.mutateAsync(
+                {
+                    parameters: {basketId: basket?.basketId, itemId: product.itemId},
+                    body: {
+                        productId: product.id,
+                        quantity: parseInt(product.quantity),
+                        gift: checked
+                    }
+                },
+                {
+                    onSettled: () => {
+                        // reset the state
+                        setCartItemLoading(false)
+                        setSelectedItem(undefined)
+                    },
+                    onSuccess: () => {
+                        setLocalIsGiftItems({...localIsGiftItems, [product.itemId]: undefined})
+                    },
+                    onError: () => {
+                        // reset the quantity to the previous value
+                        setLocalIsGiftItems({...localIsGiftItems, [product.itemId]: previousVal})
+                        showError()
+                    }
+                }
+            )
+        } catch (e) {
+            showError()
+        } finally {
+            setCartItemLoading(false)
+            setSelectedItem(undefined)
+        }
+    }
+
+    const handleUnavailableProducts = async (unavailableProductIds) => {
+        const productItems = basket?.productItems?.filter((item) =>
+            unavailableProductIds?.includes(item.productId)
+        )
+
+        await Promise.all(
+            productItems.map(async (item) => {
+                await handleRemoveItem(item)
+            })
+        )
+    }
+    /***************************** Update Cart **************************/
+
+    /***************************** Update quantity **************************/
     const changeItemQuantity = debounce(async (quantity, product) => {
         // This local state allows the dropdown to show the desired quantity
         // while the API call to update it is happening.
@@ -277,7 +447,6 @@ const Cart = () => {
                 },
                 onSuccess: () => {
                     setLocalQuantity({...localQuantity, [product.itemId]: undefined})
-                    window.location.reload()
                 },
                 onError: () => {
                     // reset the quantity to the previous value
@@ -286,10 +455,10 @@ const Cart = () => {
                 }
             }
         )
-    }, 750)
+    }, DEBOUNCE_WAIT)
 
     const handleChangeItemQuantity = async (product, value) => {
-        const {stockLevel} = products[product.productId].inventory
+        const stockLevel = productsByItemId?.[product.itemId]?.inventory?.stockLevel ?? 1
 
         // Handle removing of the items when 0 is selected.
         if (value === 0) {
@@ -319,9 +488,9 @@ const Cart = () => {
 
         return true
     }
-    /** *************************** Update quantity **************************/
+    /***************************** Update quantity **************************/
 
-    /** *************************** Remove Item from basket **************************/
+    /***************************** Remove Item from basket **************************/
     const handleRemoveItem = async (product) => {
         setSelectedItem(product)
         setCartItemLoading(true)
@@ -348,7 +517,7 @@ const Cart = () => {
         )
     }
 
-    /** ******* Rendering  UI **********/
+    /********* Rendering  UI **********/
     if (isLoading) {
         return <CartSkeleton />
     }
@@ -357,7 +526,7 @@ const Cart = () => {
         return <EmptyCart isRegistered={isRegistered} />
     }
     return (
-        <Box background="gray.50" flex="1" data-testid="sf-cart-container" style={{visibility: (basket.currency === eswCurrentSiteCurrency) ? 'visible' : 'hidden'}}>
+        <Box background="gray.50" flex="1" data-testid="sf-cart-container">
             <Container
                 maxWidth="container.xl"
                 px={[4, 6, 6, 4]}
@@ -377,10 +546,18 @@ const Cart = () => {
                                     {basket.productItems?.map((productItem, idx) => {
                                         return (
                                             <ProductItem
-                                                key={productItem.productId}
+                                                key={productItem.itemId}
                                                 index={idx}
                                                 secondaryActions={
                                                     <CartSecondaryButtonGroup
+                                                        isAGift={
+                                                            localIsGiftItems[productItem.itemId]
+                                                                ? localIsGiftItems[
+                                                                      productItem.itemId
+                                                                  ]
+                                                                : productItem.gift
+                                                        }
+                                                        onIsAGiftChange={handleIsAGiftChange}
                                                         onAddToWishlistClick={handleAddToWishlist}
                                                         onEditClick={(product) => {
                                                             setSelectedItem(product)
@@ -391,8 +568,11 @@ const Cart = () => {
                                                 }
                                                 product={{
                                                     ...productItem,
-                                                    ...(products &&
-                                                        products[productItem.productId]),
+                                                    ...(productsByItemId &&
+                                                        productsByItemId[productItem.itemId]),
+                                                    isProductUnavailable: !isProductsLoading
+                                                        ? !productsByItemId?.[productItem.itemId]
+                                                        : undefined,
                                                     price: productItem.price,
                                                     quantity: localQuantity[productItem.itemId]
                                                         ? localQuantity[productItem.itemId]
@@ -412,7 +592,7 @@ const Cart = () => {
                                     })}
                                 </Stack>
                                 <Box>
-                                    {isOpen && (
+                                    {isOpen && !selectedItem.bundledProductItems && (
                                         <ProductViewModal
                                             isOpen={isOpen}
                                             onOpen={onOpen}
@@ -420,6 +600,17 @@ const Cart = () => {
                                             product={selectedItem}
                                             updateCart={(variant, quantity) =>
                                                 handleUpdateCart(variant, quantity)
+                                            }
+                                        />
+                                    )}
+                                    {isOpen && selectedItem.bundledProductItems && (
+                                        <BundleProductViewModal
+                                            isOpen={isOpen}
+                                            onOpen={onOpen}
+                                            onClose={onClose}
+                                            product={selectedItem}
+                                            updateCart={(product, quantity, childProducts) =>
+                                                handleUpdateBundle(product, quantity, childProducts)
                                             }
                                         />
                                     )}
@@ -433,7 +624,9 @@ const Cart = () => {
                                         basket={basket}
                                     />
                                     <Box display={{base: 'none', lg: 'block'}}>
+                                        {/* Esw Modification */}
                                         <CartCta />
+                                        {/* End Modification */}
                                     </Box>
                                 </Stack>
                             </GridItem>
@@ -479,9 +672,10 @@ const Cart = () => {
                 display={{base: 'block', lg: 'none'}}
                 align="center"
             >
+                {/* Esw Modification */}
                 <CartCta />
+                {/* End Modification */}
             </Box>
-
             <ConfirmationModal
                 {...REMOVE_CART_ITEM_CONFIRMATION_DIALOG_CONFIG}
                 onPrimaryAction={() => {
@@ -489,6 +683,11 @@ const Cart = () => {
                 }}
                 onAlternateAction={() => {}}
                 {...modalProps}
+            />
+
+            <UnavailableProductConfirmationModal
+                productItems={basket?.productItems}
+                handleUnavailableProducts={handleUnavailableProducts}
             />
         </Box>
     )

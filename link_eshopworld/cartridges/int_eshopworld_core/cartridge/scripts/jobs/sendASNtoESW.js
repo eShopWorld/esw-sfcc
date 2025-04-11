@@ -75,11 +75,11 @@ const asnUtils = {
      *
      * @param {Object} shipment - The order shipment to transmit data for
      * @param {Object} orderShopperCurrency - The order shopper currency
+     * @param {number} lineItemCtnr - The line item counter
      * @returns {Object} - The request object piece representing the product line items
      */
-    getPackageItems: function (shipment, orderShopperCurrency) {
+    getPackageItems: function (shipment, orderShopperCurrency, lineItemCtnr) {
         let packageItems = [];
-        let lineItemCtnr = 1;
         let productLineItems = shipment.productLineItems.iterator();
 
         while (productLineItems.hasNext()) {
@@ -107,24 +107,26 @@ const asnUtils = {
             packageItems.push(itemObj);
         }
 
-        return packageItems;
+        return { packageItems, lineItemCtnr };
     },
     /**
      * Helper to prepare the ASN request object
      *
      * @param {dw.order.Order} order The order to transmit data for
      * @param {Object} shipment - The tracking number and shipment info to use
+     * @param {number} lineItemCtnr - The line item counter
      * @returns {Object} The request object to send to Esw Package API
      */
-    prepareAdvancedShippingNotification: function (order, shipment) {
+    prepareAdvancedShippingNotification: function (order, shipment, lineItemCtnr) {
+        let packageItemsResult = this.getPackageItems(shipment, order.custom.eswShopperCurrencyCode, lineItemCtnr);
         let requestObj = {
             brandCode: Site.getCustomPreferenceValue('eswRetailerBrandCode'),
             orderReference: order.orderNo,
-            packageReference: (shipment.trackingNumber) ? shipment.trackingNumber : order.orderNo,
+            packageReference: !empty(shipment.trackingNumber) ? shipment.trackingNumber : shipment.ID,
             parentOrderReference: order.orderNo,
             consignee: this.getConsigneeInfo(shipment, order.customerEmail),
             shippingInfo: this.getShippingInfo(order),
-            packageItems: this.getPackageItems(shipment, order.custom.eswShopperCurrencyCode),
+            packageItems: packageItemsResult.packageItems,
             weight: this.getWeightInfo(order),
             dimensions: this.getDimensionInfo(order),
             serviceLevel: order.custom.eswDeliveryOption,
@@ -143,15 +145,17 @@ const asnUtils = {
             palletId: '',
             metadata: {}
         };
-        return requestObj;
+        return { requestObj, lineItemCtnr: packageItemsResult.lineItemCtnr };
     },
     /**
      * Sends the Advanced Shipping Notification to eShopworld
      *
      * @param {dw.order.Order} order The order to transmit data for
+     * @param {Object} shipment The shipment info to send
+     * @param {number} lineItemCtnr - The line item counter
      * @returns {Array<Object>} Results of each tracking number exported.
      */
-    sendASNForPackage: function (order) {
+    sendASNForPackage: function (order, shipment, lineItemCtnr) {
         try {
             let eswServices = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
                 eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
@@ -171,13 +175,14 @@ const asnUtils = {
                 return new Status(Status.ERROR);
             }
 
-            let requestBody = this.prepareAdvancedShippingNotification(order, order.defaultShipment);
+            let shipmentParameter = !empty(shipment) ? shipment : order.defaultShipment;
+            let requestBodyResult = this.prepareAdvancedShippingNotification(order, shipmentParameter, lineItemCtnr);
 
             let response = asnService.call({
                 eswOAuthToken: JSON.parse(oAuthResult.object).access_token,
-                requestBody: JSON.stringify(requestBody)
+                requestBody: JSON.stringify(requestBodyResult.requestObj)
             });
-            return response;
+            return { response, lineItemCtnr: requestBodyResult.lineItemCtnr };
         } catch (e) {
             Logger.error('ASN service call error: {0}', e.message);
             return new Status(Status.ERROR);
@@ -186,39 +191,99 @@ const asnUtils = {
 };
 
 /**
+ * Checks if ASN (Advanced Shipping Notice) export is enabled for the country associated with the order.
+ * @param {dw.order.Order} order - The order object to check.
+ * @returns {boolean} - Returns true if ASN export is enabled for the country, false otherwise.
+ */
+function isAsnExportEnabledForCountry(order) {
+    try {
+        let CustomObjectMgr = require('dw/object/CustomObjectMgr');
+        let shippingAddress = order.defaultShipment.shippingAddress;
+        let CountryCO = CustomObjectMgr.getCustomObject('ESW_COUNTRIES', shippingAddress.countryCode);
+        if (!empty(CountryCO) && !empty(CountryCO.custom)) {
+            let eswSynchronizePkgModel = Object.prototype.hasOwnProperty.call(CountryCO.custom, 'eswSynchronizePkgModel') ? CountryCO.custom.eswSynchronizePkgModel.value : 'sfccToEsw';
+            return (eswSynchronizePkgModel === 'sfccToEsw');
+        }
+    } catch (error) {
+        Logger.error('Error while fetching order country info error {0} {1}', error.message, error.stack);
+    }
+    return false;
+}
+
+/**
  * Script file for executing Package Feed and
  * Send Advanced Shipping Notification of shipped orders to ESW
  * @return {boolean} - returns execute result
  */
 function execute() {
     let orders = OrderMgr.searchOrders(
-        'shippingStatus = {0} AND (custom.eswShopperCurrencyCode != null) AND (custom.eswReceivedASN = null OR custom.eswReceivedASN = false)',
+        'shippingStatus = {0} AND (custom.eswShopperCurrencyCode != null) AND (custom.eswReceivedASN = null OR custom.eswReceivedASN = false) AND (custom.eswCreateOutboundShipment = null OR custom.eswCreateOutboundShipment = false)',
         'creationDate desc',
         dw.order.Order.SHIPPING_STATUS_SHIPPED
     );
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    let order;
+    let result;
+    let isAsnExportEnabledOnCountry = false;
     try {
-        let order;
         while (orders.hasNext()) {
             order = orders.next();
+            isAsnExportEnabledOnCountry = isAsnExportEnabledForCountry(order);
             if (!empty(order.orderNo)) {
-                let result = asnUtils.sendASNForPackage(order);
-                if (result && result.status === 'OK') {
-                    let responseObj = JSON.parse(result.object);
-                    if (responseObj.outcome.equalsIgnoreCase('PackageCreated')) {
-                        Transaction.begin();
-                        order.custom.eswPackageReference = responseObj.package.eShopPackageReference.toString();
-                        order.custom.eswTrackingURL = responseObj.package.trackingUrl;
-                        order.custom.eswReceivedASN = true;
-                        Transaction.commit();
-                        Logger.info('ASN successfully transmitted for order: {0}', order.orderNo);
-                    } else {
-                        Logger.error('ASN package not created for order: {0} - {1} - Bad Request.', order.orderNo, responseObj.outcome);
+                let lineItemCtnr = 1;
+                if (eswHelper.isEswSplitShipmentEnabled() && order.shipments.length > 1) {
+                    let packageJsonPayload = [];
+                    let shipmentsItr = order.getShipments().iterator();
+                    while (shipmentsItr.hasNext()) {
+                        let shipment = shipmentsItr.next();
+                        result = asnUtils.sendASNForPackage(order, shipment, lineItemCtnr);
+                        lineItemCtnr = result.lineItemCtnr;
+                        if (result.response && result.response.status === 'OK') {
+                            let responseObj = JSON.parse(result.response.object);
+                            if (responseObj.outcome && !empty(responseObj.outcome) && responseObj.outcome.toLowerCase() === 'packagecreated') {
+                                Transaction.begin();
+                                if (!empty(order.custom.eswPackageJSON)) {
+                                    packageJsonPayload = JSON.parse(order.custom.eswPackageJSON);
+                                }
+                                for (let i = 0; i < responseObj.package.packageItems.length; i++) {
+                                    packageJsonPayload.push({
+                                        productLineItem: responseObj.package.packageItems[i].productCode,
+                                        quantity: responseObj.package.packageItems[i].quantity,
+                                        carrierReference: responseObj.package.carrierReference,
+                                        trackingUrl: responseObj.package.trackingUrl
+                                    });
+                                }
+                                order.custom.eswPackageJSON = JSON.stringify(packageJsonPayload);
+                                order.custom.eswReceivedASN = !shipmentsItr.hasNext(); // set to true only if all shipments are processed successfully
+                                Transaction.commit();
+                                Logger.info('ASN successfully transmitted for order: {0} - Shipment {1}', order.orderNo, shipment.ID);
+                            } else {
+                                Logger.error('ASN package not created for order: {0} - Shipment {1} - {2} - Bad Request.', order.orderNo, shipment.ID, responseObj.outcome);
+                            }
+                        } else {
+                            Logger.error('ASN transmission failed for order: {0} - Shipment {1} - {2}.', order.orderNo, shipment.ID, result.response.errorMessage);
+                        }
                     }
-                } else {
-                    Logger.error('ASN transmission failed for order: {0}: {1}', order.orderNo, result.errorMessage);
+                } else if (isAsnExportEnabledOnCountry) {
+                    result = asnUtils.sendASNForPackage(order, null, lineItemCtnr);
+                    if (result && result.response.status === 'OK') {
+                        let responseObj = JSON.parse(result.response.object);
+                        if (responseObj.outcome && !empty(responseObj.outcome) && responseObj.outcome.toLowerCase() === 'packagecreated') {
+                            Transaction.begin();
+                            order.custom.eswPackageReference = responseObj.package.eShopPackageReference.toString();
+                            order.custom.eswTrackingURL = responseObj.package.trackingUrl;
+                            order.custom.eswReceivedASN = true;
+                            Transaction.commit();
+                            Logger.info('ASN successfully transmitted for order: {0}', order.orderNo);
+                        }
+                    } else {
+                        Logger.error('ASN transmission failed for order: {0}: {1}', order.orderNo, result.response.errorMessage);
+                    }
                 }
+            } else if (!isAsnExportEnabledForCountry(order)) {
+                Logger.error('ASN can not be transmitted for order {0} as ASN Exports are not enabled for this country', order.orderNo);
             } else {
-                Logger.error('ASN can not be transmitted for order {0} as default shipment tracking number for this order is empty.', order.orderNo);
+                Logger.error('ASN can not be transmitted for order {0} as default shipment tracking number for this order.', order.orderNo);
             }
         }
         return new Status(Status.OK);
@@ -228,4 +293,7 @@ function execute() {
     }
 }
 
-exports.execute = execute;
+module.exports = {
+    execute: execute,
+    getSendASNtoESWUtils: asnUtils
+};

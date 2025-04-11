@@ -2,406 +2,525 @@
 .esw-wrapper .esw-left-menu ul,
 .esw-wrapper .esw-left-menu ul li,
 .esw-wrapper .esw-left-menu a {
-    list-style: none;
-    text-decoration: none;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  list-style: none;
+  text-decoration: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .esw-wrapper {
-    width: 100%;
-    padding: 0 20px;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.esw-report-header {
+  height: 50px;
+  text-align: left;
+}
+
+.input-container {
+  text-align: right;
 }
 
 .synced {
-    color: green;
+  color: green;
 }
 
 .unsynced {
-    color: red;
+  color: red;
 }
 
 .esw-wrapper .esw-left-menu {
-    background: #036277;
-    width: 20%;
-    height: 80vh;
+  background: #036277;
+  width: 20%;
+  height: 80vh;
 }
 
 .esw-wrapper .esw-left-menu .esw-branding {
-    margin-bottom: 30px;
-    text-align: center;
-    padding-top: 20px;
+  margin-bottom: 30px;
+  text-align: center;
+  padding-top: 20px;
 }
 
 td.bordered {
-    border: 1px solid #ededed;
+  border: 1px solid #ededed;
 }
 
 .esw-wrapper .esw-left-menu .esw-branding img {
-    display: block;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    margin: 0 auto;
+  display: block;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 0 auto;
 }
 
 .esw-wrapper .esw-left-menu .esw-branding h3 {
-    color: #ffffff;
-    margin: 10px 0 5px;
+  color: #ffffff;
+  margin: 10px 0 5px;
 }
 
 .esw-wrapper .esw-left-menu .esw-branding p {
-    color: rgb(206, 240, 253);
-    font-size: 14px;
+  color: rgb(206, 240, 253);
+  font-size: 14px;
 }
 
 .esw-wrapper .esw-left-menu ul li a {
-    display: block;
-    padding: 13px 30px;
-    border-bottom: 1px solid #10558d;
-    color: rgb(241, 237, 237);
-    font-size: 16px;
-    position: relative;
+  display: block;
+  padding: 13px 30px;
+  border-bottom: 1px solid #10558d;
+  color: rgb(241, 237, 237);
+  font-size: 16px;
+  position: relative;
 }
 
 .esw-wrapper .esw-left-menu ul li a .icon {
-    color: #dee4ec;
-    width: 30px;
-    display: inline-block;
+  color: #dee4ec;
+  width: 30px;
+  display: inline-block;
 }
-
 
 .esw-wrapper .esw-left-menu ul li a:hover,
 .esw-wrapper .esw-left-menu ul li a.active {
-    color: #ffffff;
-    background: #00758D;
+  color: #ffffff;
+  background: #00758d;
 }
 
 .esw-wrapper .esw-left-menu ul li a:hover .icon,
 .esw-wrapper .esw-left-menu ul li a.active .icon {
-    color: #ffffff;
+  color: #ffffff;
 }
 
 .esw-wrapper .esw-left-menu ul li a:hover:before,
 .esw-wrapper .esw-left-menu ul li a.active:before {
-    display: block;
+  display: block;
 }
 
 .esw-right-area {
-    width: 80%;
-    padding-left: 10px;
+  width: 80%;
+  padding-left: 10px;
 }
 
 .esw-product-table,
 .esw-form-table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .esw-product-table tr td:first-child {
-    border-left: 1px solid #eee;
-    width: 85px;
+  border-left: 1px solid #eee;
+  width: 85px;
 }
 
 .esw-tbl-action-btns {
-    width: 100%;
+  width: 100%;
 }
 
 #bm_content_column {
-    padding-bottom: 0;
-    margin: 0;
-    padding-left: 0;
-    padding-right: 0;
+  padding-bottom: 0;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .esw-product-table tr.esw-products-list:hover,
 .esw-form-table tr:hover {
-    background-color: #eee;
+  background-color: #eee;
 }
 
 tr.action-btns td {
-    padding: 6px 0;
+  padding: 6px 0;
 }
 
 .esw-bm-select {
-    width: 100%;
-    border-radius: 5px;
-    border: 2px solid #eee;
-    height: calc(1.875rem + (1px * 2));
+  width: 100%;
+  border-radius: 5px;
+  border: 2px solid #eee;
+  height: calc(1.875rem + (1px * 2));
 }
 
 .esw-bm-textarea {
-    font-family: "Salesforce Sans", Arial, sans-serif;
-    color: #16325c;
-    background-color: #fff;
-    border: 1px solid #dddbda;
-    border-radius: 0.25rem;
-    display: inline-block;
-    padding: 0 1rem 0 0.75rem;
-    line-height: 1.875rem;
-    width: 100%;
-    min-height: 6em;
-    resize: vertical;
+  font-family: "Salesforce Sans", Arial, sans-serif;
+  color: #16325c;
+  background-color: #fff;
+  border: 1px solid #dddbda;
+  border-radius: 0.25rem;
+  display: inline-block;
+  padding: 0 1rem 0 0.75rem;
+  line-height: 1.875rem;
+  width: 100%;
+  min-height: 6em;
+  resize: vertical;
 }
 
 input.esw-bm-input-text {
-    width: 100%;
-    border-radius: 5px;
-    border: 2px solid #eee;
-    height: calc(1.875rem + (1px * 2));
-    padding: 0 12px !important;
+  width: 100%;
+  border-radius: 5px;
+  border: 2px solid #eee;
+  height: calc(1.875rem + (1px * 2));
+  padding: 0 12px !important;
 }
 
 .esw-pkg-form-table th {
-    width: 33.33%;
+  width: 33.33%;
 }
 
 .esw-form-table td {
-    padding: 14px 26px;
+  padding: 14px 26px;
 }
 
 .esw-form-table tr {
-    border-top: 2px solid #EEEEEE;
-    border-bottom: 2px solid #EEEEEE;
+  border-top: 2px solid #eeeeee;
+  border-bottom: 2px solid #eeeeee;
 }
 
 .full-width {
-    width: 100%;
+  width: 100%;
 }
 
 .esw-frm-submit-btn {
-    padding: 0 1rem;
-    text-align: center;
-    vertical-align: middle;
-    border: 1px solid #dddbda;
-    transition: border .15s linear;
-    border-color: #dddbda;
-    display: inline-block;
-    transition: color .05s linear, background-color .05s linear;
-    border-radius: 0.25rem;
-    background-color: #fff;
-    color: #0070d2;
-    font-weight: 400;
-    line-height: 1.875rem;
-    text-decoration: none;
-    white-space: nowrap;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    cursor: pointer;
+  padding: 0 1rem;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid #dddbda;
+  transition: border 0.15s linear;
+  border-color: #dddbda;
+  display: inline-block;
+  transition: color 0.05s linear, background-color 0.05s linear;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  color: #0070d2;
+  font-weight: 400;
+  line-height: 1.875rem;
+  text-decoration: none;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  cursor: pointer;
 }
 
 .esw-v-seperatpr {
-    height: 20px;
+  height: 20px;
 }
 
 .table_detail {
-    height: 50px;
+  height: 50px;
 }
 
 #esw-overlay {
-    position: fixed;
-    top: 0;
-    z-index: 100;
-    width: 100%;
-    height: 100%;
-    display: none;
-    background: rgba(0, 0, 0, 0.6);
+  position: fixed;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  display: none;
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .cv-spinner {
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px #ddd solid;
-    border-top: 4px #2e93e6 solid;
-    border-radius: 50%;
-    animation: sp-anime 0.8s infinite linear;
+  width: 40px;
+  height: 40px;
+  border: 4px #ddd solid;
+  border-top: 4px #2e93e6 solid;
+  border-radius: 50%;
+  animation: sp-anime 0.8s infinite linear;
 }
 
 @keyframes sp-anime {
-    100% {
-        transform: rotate(360deg);
-    }
+  100% {
+    transform: rotate(360deg);
+  }
 }
-
-
 
 /* The esw-snackbar - position it at the bottom and in the middle of the screen */
 #esw-snackbar {
-    visibility: hidden;
-    /* Hidden by default. Visible on click */
-    min-width: 250px;
-    /* Set a default minimum width */
-    margin-left: -125px;
-    /* Divide value of min-width by 2 */
-    background-color: #04844B;
-    /* Black background color */
-    color: #fff;
-    /* White text color */
-    text-align: center;
-    /* Centered text */
-    border-radius: 6px;
-    /* Rounded borders */
-    padding: 16px;
-    /* Padding */
-    position: fixed;
-    /* Sit on top of the screen */
-    z-index: 9999;
-    /* Add a z-index if needed */
-    left: 50%;
-    /* Center the esw-snackbar */
-    top: 70px;
-    /* 30px from the bottom */
+  visibility: hidden;
+  /* Hidden by default. Visible on click */
+  min-width: 250px;
+  /* Set a default minimum width */
+  margin-left: -125px;
+  /* Divide value of min-width by 2 */
+  background-color: #04844b;
+  /* Black background color */
+  color: #fff;
+  /* White text color */
+  text-align: center;
+  /* Centered text */
+  border-radius: 6px;
+  /* Rounded borders */
+  padding: 16px;
+  /* Padding */
+  position: fixed;
+  /* Sit on top of the screen */
+  z-index: 9999;
+  /* Add a z-index if needed */
+  left: 50%;
+  /* Center the esw-snackbar */
+  top: 70px;
+  /* 30px from the bottom */
 }
 
 /* Show the esw-snackbar when clicking on a button (class added with JavaScript) */
 #esw-snackbar.show {
-    visibility: visible;
-    /* Show the esw-snackbar */
-    /* Add animation: Take 0.5 seconds to fade in and out the esw-snackbar.
+  visibility: visible;
+  /* Show the esw-snackbar */
+  /* Add animation: Take 0.5 seconds to fade in and out the esw-snackbar.
     However, delay the fade out process for 2.5 seconds */
-    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
-    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
 }
 
 /* Animations to fade the esw-snackbar in and out */
 @-webkit-keyframes fadein {
-    from {
-        top: 0;
-        opacity: 0;
-    }
+  from {
+    top: 0;
+    opacity: 0;
+  }
 
-    to {
-        top: 70px;
-        opacity: 1;
-    }
+  to {
+    top: 70px;
+    opacity: 1;
+  }
 }
 
 @keyframes fadein {
-    from {
-        top: 0;
-        opacity: 0;
-    }
+  from {
+    top: 0;
+    opacity: 0;
+  }
 
-    to {
-        top: 70px;
-        opacity: 1;
-    }
+  to {
+    top: 70px;
+    opacity: 1;
+  }
 }
 
 @-webkit-keyframes fadeout {
-    from {
-        top: 70px;
-        opacity: 1;
-    }
+  from {
+    top: 70px;
+    opacity: 1;
+  }
 
-    to {
-        top: 0;
-        opacity: 0;
-    }
+  to {
+    top: 0;
+    opacity: 0;
+  }
 }
 
 @keyframes fadeout {
-    from {
-        top: 70px;
-        opacity: 1;
-    }
+  from {
+    top: 70px;
+    opacity: 1;
+  }
 
-    to {
-        top: 0;
-        opacity: 0;
-    }
+  to {
+    top: 0;
+    opacity: 0;
+  }
 }
 
 .alert-warning {
-    color: #664d03;
-    background-color: #fff3cd;
-    border-color: #ffecb5;
+  color: #664d03;
+  background-color: #fff3cd;
+  border-color: #ffecb5;
 }
 
 .alert-danger {
-    color: #664d03;
-    background-color: #F8D7DA;
-    border-color: #ffecb5;
+  color: #664d03;
+  background-color: #f8d7da;
+  border-color: #ffecb5;
 }
 
 .alert-success {
-    color: #0f5132;
-    background-color: #d1e7dd;
-    border-color: #badbcc;
+  color: #0f5132;
+  background-color: #d1e7dd;
+  border-color: #badbcc;
 }
 
 .alert-info {
-    color: #0f5132;
-    background-color: #CFF4FC;
-    border-color: #badbcc;
+  color: #0f5132;
+  background-color: #cff4fc;
+  border-color: #badbcc;
 }
 
 .alert {
-    position: relative;
-    padding: 1rem 1rem 1rem 34px;
-    border: 1px solid transparent;
-    border-top-color: transparent;
-    border-right-color: transparent;
-    border-bottom-color: transparent;
-    border-left-color: transparent;
-    border-radius: .25rem;
+  position: relative;
+  padding: 1rem 1rem 1rem 34px;
+  border: 1px solid transparent;
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  border-radius: 0.25rem;
 }
 
 .alert-warning:before {
-    content: "\f06a";
+  content: "\f06a";
 }
 
 .alert-success:before {
-    content: "\f058";
+  content: "\f058";
 }
 
 .alert-info:before {
-    content: "\f05a";
+  content: "\f05a";
 }
 
 .alert-danger:before {
-    content: "\f071";
+  content: "\f071";
 }
 
 .alert:before {
-    font-family: FontAwesome;
-    top: 50%;
-    bottom: 0;
-    margin: auto 0;
-    padding-right: 12px;
-    position: absolute;
-    opacity: 0.5;
-    transform: translateY(-65%);
-    font-size: 25px;
-    left: 6px;
+  font-family: FontAwesome;
+  top: 50%;
+  bottom: 0;
+  margin: auto 0;
+  padding-right: 12px;
+  position: absolute;
+  opacity: 0.5;
+  transform: translateY(-65%);
+  font-size: 25px;
+  left: 6px;
 }
 
 .esw-menu {
-    border: 1px groove #00758D;
+  border: 1px groove #00758d;
 }
 
 .esw-menu .icon {
-    float: right;
+  float: right;
 }
 
-.esw-menu>a {
-    background-color: #004b5a !important;
+.esw-menu > a {
+  background-color: #004b5a !important;
 }
 
 .esw-pg-not-found {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 50%;
+  font-weight: bold;
+}
+
+.json-txt-lg {
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.no-hover:hover {
+  color: inherit !important;
+  background-color: inherit !important;
+}
+
+.mt-6 {
+  margin-top: 6px;
+}
+.mb-6 {
+  margin-bottom: 6px;
+}
     position: fixed;
     top: 50%;
     transform: translateY(-50%);
     left: 50%;
     font-weight: bold;
+}
+
+.esw-menu:not(.selected) .esw-submenu {
+    display: none;
+}
+
+li:not(.selected) span.icon::before {
+    font-family: "FontAwesome";
+    content: "\f107";
+    font-weight: 900;
+}
+
+li.selected span.icon::before {
+    font-family: "FontAwesome";
+    content: "\f106";
+    font-weight: 900;
+}
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    background-color: #eee;
+}
+
+input[type="checkbox"]:checked {
+    background-color: #007BFF;
+}
+
+.display-none {
+    display: none;
+}
+
+.selected-search-method{
+    background-color: #f5f5f5 !important;
+    color: #00629b !important;
+    font-weight: bold !important;
+}
+
+.json-txt {
+    white-space: pre-line;
+}
+
+.width-600{min-width: 600px !important;}
+
+.esw-dynamic-table.esw-pkg-conf-tbl th, .esw-dynamic-table.esw-pkg-conf-tbl td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+.esw-dynamic-table.esw-pkg-conf-tbl th {
+  background-color: #f2f2f2;
+  text-align: left;
+}
+
+.permanent-tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.permanentTooltip {
+  visibility: visible;
+  width: 230px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  right: 68px;
+  margin-left: -100px;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+.permanentTooltip::after {
+  content: "";
+  position: absolute;
+  top: 35%;
+  right: -10px;
+  margin-left: 85px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #555 transparent;
+  rotate: 90deg;
+}
+
+.permanent-tooltip-container:hover .permanentTooltip {
+  visibility: visible;
+  opacity: 1;
 }

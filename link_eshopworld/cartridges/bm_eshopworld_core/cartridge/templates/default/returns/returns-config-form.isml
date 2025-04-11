@@ -1,0 +1,5 @@
+<isdecorate template="application/ESWMenuFrame">
+    <isinclude template="util/modules" />
+    <isset value="${true}" name="isReturnForm" scope="page" />
+    <isinclude template="/common/esw-site-pref-form" />
+</isdecorate>

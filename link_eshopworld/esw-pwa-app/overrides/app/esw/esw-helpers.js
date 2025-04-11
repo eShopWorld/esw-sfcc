@@ -1,5 +1,5 @@
 /* eslint-disable no-useless-escape */
-/* eslint-disable no-param-reassign */
+
 'use strict'
 
 import {getCountry} from './esw-geo-location-helper'
@@ -15,6 +15,15 @@ const storeBmConfigs = (locale) => {
                 'esw.shopperPricingConfigs',
                 JSON.stringify(data.shopperPricingConfigs)
             )
+            if (
+                data.eswBmConfigs &&
+                Object.prototype.hasOwnProperty.call(data.eswBmConfigs, 'eswNativeShippingEnabled')
+            ) {
+                localStorage.setItem(
+                    'esw.eswNativeShippingEnabled',
+                    JSON.stringify(data.eswBmConfigs.eswNativeShippingEnabled)
+                )
+            }
         })
         .catch((error) => error)
 }
@@ -25,6 +34,14 @@ const storeBmConfigs = (locale) => {
  */
 export const getEswConfigByKey = (configKey) =>
     JSON.parse(localStorage.getItem('esw.configs'))[configKey]
+
+/**
+ * Get configuration value from access_token localStorage
+ * @param {string} configKey - Configuration json key in esw.configs
+ * @returns {string} - Correspondent key from access_token localStorage
+ */
+export const getEswSiteAccessTokenByKey = (configKey) =>
+    localStorage.getItem('access_token_' + configKey)
 /**
  * Get shopper currency config from local storage
  * @param {string} configKey - bm config key

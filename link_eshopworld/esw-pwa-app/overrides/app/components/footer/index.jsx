@@ -31,20 +31,23 @@ import {getPathWithLocale} from '@salesforce/retail-react-app/app/utils/url'
 import LocaleText from '@salesforce/retail-react-app/app/components/locale-text'
 import useMultiSite from '@salesforce/retail-react-app/app/hooks/use-multi-site'
 import styled from '@emotion/styled'
+import {STORE_LOCATOR_IS_ENABLED} from '@salesforce/retail-react-app/app/constants'
+import { useHistory } from 'react-router'
+const [StylesProvider, useStyles] = createStylesContext('Footer')
 
 // ESW Custom Imports
 import {EswInit} from '../../esw/components/esw-init'
 // End ESW Custom Imports
 
-const [StylesProvider, useStyles] = createStylesContext('Footer')
 const Footer = ({...otherProps}) => {
     const styles = useMultiStyleConfig('Footer')
     const intl = useIntl()
     const [locale, setLocale] = useState(intl.locale)
     const {site, buildUrl} = useMultiSite()
     const {l10n} = site
+    const history = useHistory()
     const supportedLocaleIds = l10n?.supportedLocales.map((locale) => locale.id)
-    const showLocaleSelector = supportedLocaleIds?.length > 1
+    const showLocaleSelector = supportedLocaleIds?.length > 1 && history.location.pathname.split('/').pop() !== 'esw-checkout'
 
     // NOTE: this is a workaround to fix hydration error, by making sure that the `option.selected` property is set.
     // For some reason, adding some styles prop (to the option element) prevented `selected` from being set.
@@ -53,10 +56,29 @@ const Footer = ({...otherProps}) => {
         // Targeting the child element
         option: styles.localeDropdownOption
     })
+    const makeOurCompanyLinks = () => {
+        const links = []
+        if (STORE_LOCATOR_IS_ENABLED)
+            links.push({
+                href: '/store-locator',
+                text: intl.formatMessage({
+                    id: 'footer.link.store_locator',
+                    defaultMessage: 'Store Locator'
+                })
+            })
+        links.push({
+            href: '/',
+            text: intl.formatMessage({
+                id: 'footer.link.about_us',
+                defaultMessage: 'About Us'
+            })
+        })
+        return links
+    }
 
     return (
         <Box as="footer" {...styles.container} {...otherProps}>
-            <Box {...styles.content}>
+            <Box {...styles.content} as="section">
                 <StylesProvider value={styles}>
                     <HideOnMobile>
                         <SimpleGrid columns={4} spacing={3}>
@@ -109,22 +131,7 @@ const Footer = ({...otherProps}) => {
                                     id: 'footer.column.our_company',
                                     defaultMessage: 'Our Company'
                                 })}
-                                links={[
-                                    {
-                                        href: '/',
-                                        text: intl.formatMessage({
-                                            id: 'footer.link.store_locator',
-                                            defaultMessage: 'Store Locator'
-                                        })
-                                    },
-                                    {
-                                        href: '/',
-                                        text: intl.formatMessage({
-                                            id: 'footer.link.about_us',
-                                            defaultMessage: 'About Us'
-                                        })
-                                    }
-                                ]}
+                                links={makeOurCompanyLinks()}
                             />
                             <Box>
                                 <Subscribe />
@@ -204,7 +211,7 @@ const Subscribe = ({...otherProps}) => {
     const intl = useIntl()
     return (
         <Box {...styles.subscribe} {...otherProps}>
-            <Heading {...styles.subscribeHeading}>
+            <Heading as="h1" {...styles.subscribeHeading}>
                 {intl.formatMessage({
                     id: 'footer.subscribe.heading.first_to_know',
                     defaultMessage: 'Be the first to know'

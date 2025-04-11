@@ -4,22 +4,64 @@ const Transaction = require('dw/system/Transaction');
 const logger = require('dw/system/Logger');
 const OrderMgr = require('dw/order/OrderMgr');
 const Order = require('dw/order/Order');
+const Constants = require('*/cartridge/scripts/util/Constants');
+const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
 const eswOrderProcessHelper = {
     /**
      * Mark an order as return and add return response
      * @param {Object} reqBodyJson - request object
+     * @param {string} requestType - the type of request
      * @return {Object} - JSON response
      */
-    markOrderAsReturn: function (reqBodyJson) {
+    markOrderAsReturn: function (reqBodyJson, requestType) {
         try {
             let reqObj = reqBodyJson;
             let order = OrderMgr.getOrder(reqObj.ReturnOrder.BrandOrderReference);
             let rmaJSON = [];
-            let Constants = require('*/cartridge/scripts/util/Constants');
             Transaction.wrap(function () {
+                let isStoreReturn = false;
+                if (requestType === 'logistics-return-order-retailer') {
+                    isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === eswCoreHelper.getEswReturnOrderStatus();
+                } else {
+                    isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === Constants.PROCESSED;
+                }
                 // eslint-disable-next-line no-param-reassign
-                if (reqObj.ReturnOrder.ReturnOrderStatus === Constants.PROCESSED) {
+                if (isStoreReturn) {
+                    if (!empty(order.custom.eswRmaJson)) {
+                        rmaJSON = JSON.parse(order.custom.eswRmaJson);
+                    }
+                    rmaJSON.push(reqObj);
+                    order.custom.eswRmaJson = JSON.stringify(rmaJSON);
+                    order.custom.eswIsReturned = true;
+                }
+            });
+            return {
+                ResponseCode: 200,
+                ResponseText: 'Order processed successfuly'
+            };
+        } catch (e) {
+            logger.error('ESW Order Return Error: {0}', e.message);
+            logger.error('Order return payload: {0}', JSON.stringify(reqBodyJson));
+            return {
+                ResponseCode: 400,
+                ResponseText: 'Error: Internal Error'
+            };
+        }
+    },
+    /**
+    * Mark an order as return for V3 and add return response
+    * @param {Object} reqBodyJson - request object
+    * @return {Object} - JSON response
+    */
+    markOrderAsReturnV3: function (reqBodyJson) {
+        try {
+            let reqObj = reqBodyJson;
+            let order = OrderMgr.getOrder(reqObj.ReturnOrder.BrandOrderReference);
+            let rmaJSON = [];
+            Transaction.wrap(function () {
+                // eslint-disable-next-line no-param-reassign, eqeqeq
+                if (reqObj.ReturnOrder.ReturnOrderStatus == eswCoreHelper.getEswReturnOrderStatus()) {
                     if (!empty(order.custom.eswRmaJson)) {
                         rmaJSON = JSON.parse(order.custom.eswRmaJson);
                     }
@@ -81,10 +123,15 @@ const eswOrderProcessHelper = {
      */
     cancelAnOrder: function (reqBodyJson) {
         try {
+            let order;
             // cancel order check
-            let order = OrderMgr.getOrder(reqBodyJson.Request.BrandOrderReference);
+            if (eswCoreHelper.isEswEnabledEmbeddedCheckout()) {
+                order = OrderMgr.searchOrder('orderNo={0} OR custom.eswBasketUuid={0}', reqBodyJson.Request.BrandOrderReference);
+            } else {
+                order = OrderMgr.getOrder(reqBodyJson.Request.BrandOrderReference);
+            }
             let cancelOrderJsonPayload = [];
-            if (order.status.value !== Order.ORDER_STATUS_CANCELLED) {
+            if (order && order.status.value !== Order.ORDER_STATUS_CANCELLED) {
                 let isPartialOrderCancelled = reqBodyJson.Request && 'LineItemId' in reqBodyJson.Request;
                 Transaction.wrap(function () {
                     if (!isPartialOrderCancelled) {
@@ -113,6 +160,43 @@ const eswOrderProcessHelper = {
                 ResponseText: 'Error: Internal error'
             };
         }
+    },
+    /**
+     * process payment status of order
+     * @param {Object} reqBodyJson - request object
+     * @return {Object} - JSON response
+     */
+    processKonbiniPayment: function (reqBodyJson) {
+        try {
+            let eswOverTheCounterPayloadJson = [];
+            let order = OrderMgr.getOrder(reqBodyJson.BrandOrderReference);
+
+            Transaction.wrap(function () {
+                if (reqBodyJson.HoldStatus === Constants.NOHOLD) {
+                    order.setExportStatus(Order.EXPORT_STATUS_READY);
+                    order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+
+                    if ('eswOverTheCounterPayloadJson' in order.custom && !empty(order.custom.eswOverTheCounterPayloadJson)) {
+                        eswOverTheCounterPayloadJson.push(JSON.parse(order.custom.eswOverTheCounterPayloadJson));
+                    }
+
+                    eswOverTheCounterPayloadJson.push(reqBodyJson);
+                    order.custom.eswOverTheCounterPayloadJson = JSON.stringify(eswOverTheCounterPayloadJson);
+                }
+            });
+        } catch (e) {
+            logger.error('ESW Order Konbini payment failed Error: {0}', e.message);
+            return {
+                ResponseCode: '400',
+                ResponseText: 'Error: Internal error'
+            };
+        }
+
+        return {
+            ResponseCode: '200',
+            ResponseText: 'Successfully processed Konbini payment'
+        };
     }
 };
 

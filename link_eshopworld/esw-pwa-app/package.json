@@ -3,41 +3,41 @@
   "version": "0.0.1",
   "license": "See license in LICENSE",
   "engines": {
-    "node": "^16.0.0 || ^18.0.0",
-    "npm": "^7.0.0 || ^8.0.0 || ^9.0.0"
+    "node": "^18.0.0 || ^20.0.0",
+    "npm": "^9.0.0 || ^10.0.0"
   },
   "ccExtensibility": {
     "extends": "@salesforce/retail-react-app",
     "overridesDir": "overrides"
   },
   "devDependencies": {
-    "@salesforce/retail-react-app": "2.1.1"
+    "@salesforce/retail-react-app": "5.0.0"
   },
   "scripts": {
-    "analyze-build": "cross-env MOBIFY_ANALYZE=true npm run build",
+    "lint": "pwa-kit-dev lint \"**/*.{js,jsx}\"",
+    "push": "npm run build && pwa-kit-dev push",
+    "test": "pwa-kit-dev test",
     "build": "npm run build-translations && pwa-kit-dev build",
-    "build-translations": "npm run extract-default-translations && npm run compile-translations",
+    "start": "npm cache clean -f && cross-env NODE_ICU_DATA=node_modules/full-icu pwa-kit-dev start",
+    "format": "pwa-kit-dev format \"**/*.{js,jsx}\"",
+    "lint:fix": "npm run lint -- --fix",
+    "tail-logs": "pwa-kit-dev tail-logs",
+    "postinstall": "npm run compile-translations && npm run compile-translations:pseudo",
+    "analyze-build": "cross-env MOBIFY_ANALYZE=true npm run build",
+    "start:inspect": "npm run start -- --inspect",
+    "test:lighthouse": "cross-env NODE_ENV=production lhci autorun --config=tests/lighthouserc.js",
+    "save-credentials": "pwa-kit-dev save-credentials",
+    "build-translations": "npm run extract-default-translations && npm run compile-translations && npm run compile-translations:pseudo",
+    "start:pseudolocale": "npm run extract-default-translations && npm run compile-translations:pseudo && cross-env USE_PSEUDOLOCALE=true npm run start",
+    "test:max-file-size": "npm run build && bundlesize",
     "compile-translations": "node ./node_modules/@salesforce/retail-react-app/scripts/translations/compile-folder.js translations",
     "compile-translations:pseudo": "node ./node_modules/@salesforce/retail-react-app/scripts/translations/compile-pseudo.js translations/en-US.json",
-    "extract-default-translations": "node ./node_modules/@salesforce/retail-react-app/scripts/translations/extract-default-messages.js en-US",
-    "format": "pwa-kit-dev format \"**/*.{js,jsx}\"",
-    "lint": "pwa-kit-dev lint \"**/*.{js,jsx}\"",
-    "lint:fix": "npm run lint -- --fix",
-    "postinstall": "npm run compile-translations && npm run compile-translations:pseudo",
-    "push": "npm run build && pwa-kit-dev push",
-    "save-credentials": "pwa-kit-dev save-credentials",
-    "start": "npm cache clean -f && cross-env NODE_ICU_DATA=node_modules/full-icu pwa-kit-dev start",
-    "start:inspect": "npm run start -- --inspect",
-    "start:pseudolocale": "npm run extract-default-translations && npm run compile-translations:pseudo && cross-env USE_PSEUDOLOCALE=true npm run start",
-    "tail-logs": "pwa-kit-dev tail-logs",
-    "test": "pwa-kit-dev test",
-    "test:lighthouse": "cross-env NODE_ENV=production lhci autorun --config=tests/lighthouserc.js",
-    "test:max-file-size": "npm run build && bundlesize"
+    "extract-default-translations": "node ./node_modules/@salesforce/retail-react-app/scripts/translations/extract-default-messages.js en-US en-GB"
   },
   "bundlesize": [
     {
       "path": "build/main.js",
-      "maxSize": "42 kB"
+      "maxSize": "44 kB"
     },
     {
       "path": "build/vendor.js",

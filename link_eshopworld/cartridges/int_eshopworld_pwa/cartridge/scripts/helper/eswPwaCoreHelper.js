@@ -7,69 +7,12 @@ const ContentMgr = require('dw/content/ContentMgr');
 const Resource = require('dw/web/Resource');
 
 const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-const eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
 const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
 const eswTimeZoneHelper = require('*/cartridge/scripts/helper/eswTimeZoneHelper');
 
 const PwaCoreHelper = {
-    /**
-     * get country part from locale
-     * @param {*} locale - country locale, eg: en-IE, IE
-     * @returns {string} - country code from locale
-     */
-    getLocaleCountry: function (locale) {
-        let countryCode = locale;
-        if (locale.indexOf('-') !== -1) {
-            let localeArr = locale.split('-');
-            if (localeArr.length > 1) {
-                countryCode = localeArr[1];
-            }
-        }
-        return countryCode;
-    },
     getPwaUrl: function () {
         return Site.getCustomPreferenceValue('eswPwaUrl');
-    },
-    /**
-     * Return contry detail by local in httpParam or country id (IE, CA) string
-     * @param {*} httpParams - httpParam or country id (IE, CA) string
-     * @returns {Object} - getSelectedCountryDetail function
-     */
-    getCountryDetailByParam: function (httpParams) {
-        if (empty(httpParams)) {
-            return null;
-        }
-        let locale = httpParams;
-        try {
-            locale = httpParams.get('locale')[0];
-        } catch (e) {
-            locale = httpParams;
-        }
-        let loclaeCountryDetail = this.getLocaleCountry(locale);
-        let countryDetail = eswCoreHelper.getSelectedCountryDetail(loclaeCountryDetail);
-        return countryDetail;
-    },
-    /**
-     * Get localize country object for getMoneyObject function
-     * @param {Object} selectedCountryDetail - object of selected country
-     * @returns {Object} - localize object
-     */
-    getCountryLocalizeObj: function (selectedCountryDetail) {
-        let selectedFxRate = eswCoreHelper.getESWCurrencyFXRate(selectedCountryDetail.defaultCurrencyCode, selectedCountryDetail.countryCode);
-        let selectedCountryAdjustments = eswCoreHelper.getESWCountryAdjustments(selectedCountryDetail.countryCode);
-        let localizeObj = {
-            currencyCode: selectedCountryDetail.defaultCurrencyCode,
-            countryCode: selectedCountryDetail.countryCode,
-            applyRoundingModel: !selectedCountryDetail.isFixedPriceModel && eswCoreHelper.isEswRoundingsEnabled(),
-            applyCountryAdjustments: true, // !selectedCountryDetail.isFixedPriceModel
-            selectedFxRate: selectedFxRate[0],
-            selectedCountryAdjustments: selectedCountryAdjustments[0],
-            isFixedPriceModel: selectedCountryDetail.isFixedPriceModel
-        };
-        let selectedRoundingRule = eswPricingHelper.getESWRoundingModel(localizeObj);
-        localizeObj.selectedRoundingRule = selectedRoundingRule[0];
-        localizeObj.selectedCountry = localizeObj;
-        return localizeObj;
     },
     /**
      * Change product prices from basket line item, this function should be used whenever need to change product price
@@ -82,7 +25,7 @@ const PwaCoreHelper = {
         let isOrderableBasket = true;
         for (let i = 0; i < basketLineItems.length; i++) {
             let productItem = basketLineItems[i];
-            if (!selectedCountryLocalizeObj.isFixedPriceModel) {
+            if (!selectedCountryLocalizeObj.isFixedPriceModel && !empty(productItem.price)) {
                 productItem.price = eswCoreHelper.getMoneyObject(productItem.price.toString(), false, false, false, selectedCountryLocalizeObj).value;
                 productItem.basePrice = eswCoreHelper.getMoneyObject(productItem.basePrice.toString(), false, false, false, selectedCountryLocalizeObj).value;
                 productItem.priceAfterItemDiscount = eswCoreHelper.getMoneyObject(productItem.priceAfterItemDiscount.toString(), false, false, false, selectedCountryLocalizeObj).value;
@@ -116,7 +59,12 @@ const PwaCoreHelper = {
                 contentBody = content.custom ? content.custom.body.markup : '';
             }
         } catch (e) {
-            contentBody = Resource.msg('warning.product.not.returnable', 'esw', null);
+            contentBody = null;
+        }
+        if (empty(contentBody)) {
+            if (contentAssetId === 'esw-display-return-prohibited-message') {
+                contentBody = Resource.msg('warning.product.not.returnable', 'esw', null);
+            }
         }
         return contentBody;
     },
@@ -136,7 +84,7 @@ const PwaCoreHelper = {
         for (let i = 0; i < allEswCountries.length; i++) {
             let currentEswCountry = allEswCountries[i];
             if (allowedLocalesArr.indexOf(currentEswCountry.locale) !== -1) {
-                let preferedCurrency = currentEswCountry.isFixedPriceModel ? currentEswCountry.defaultCurrencyCode : eswCoreHelper.getBaseCurrency();
+                let preferedCurrency = currentEswCountry.isFixedPriceModel ? currentEswCountry.defaultCurrencyCode : eswCoreHelper.getBaseCurrencyPreference();
                 let siteConfigLocale = currentEswCountry.locale.replace('_', '-');
                 if (supportedCurrencies.indexOf(preferedCurrency) === -1) {
                     supportedCurrencies.push(preferedCurrency);
@@ -259,7 +207,7 @@ const PwaCoreHelper = {
      * @param {obj} docBasket - basket object
      * @returns {number} grandTotal - grand order total
      */
-    getGrandTotal: function (currentBasket, selectedCountryDetail, docBasket) {
+    getGrandTotal: function (currentBasket, selectedCountryDetail) {
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
         let localizeObj = {
             localizeCountryObj: {
@@ -271,7 +219,7 @@ const PwaCoreHelper = {
         };
         let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
         let grandTotal = eswHelperHL.getFinalOrderTotalsObject(currentBasket, localizeObj, conversionPrefs).value;
-        grandTotal = !empty(grandTotal) ? grandTotal + docBasket.shippingTotal : null;
+        grandTotal = !empty(grandTotal) ? grandTotal : null;
         return grandTotal;
     }
 };

@@ -1,4 +1,6 @@
-/* eslint-disable */
+/* eslint-disable no-shadow */
+/* eslint-disable valid-jsdoc */
+/* eslint-disable no-use-before-define */
 /*
  * Copyright (c) 2021, salesforce.com, inc.
  * All rights reserved.
@@ -7,20 +9,19 @@
  */
 
 import {getConfig} from '@salesforce/pwa-kit-runtime/utils/ssr-config'
-import {absoluteUrl} from '@salesforce/retail-react-app/app/utils/url'
 import {getSupportedCountries} from '../esw/esw-services'
 
 /**
  * This functions takes an url and returns a site object,
  * an error will be thrown if no url is passed in or no site is found
- * @param {string} url
+ * @param {string} url - URL
  * @returns {Object} site - a site object
  */
 export const resolveSiteFromUrl = (url) => {
     if (!url) {
         throw new Error('URL is required to find a site object.')
     }
-    const {pathname, search} = new URL(absoluteUrl(url))
+    const {pathname, search} = getPathnameAndSearch(url)
     const path = `${pathname}${search}`
     let site
 
@@ -62,16 +63,18 @@ export const getDefaultSite = () => {
 }
 
 /**
- * ESW customized function to return the list of sites that has included their respective aliases
+ * Return the list of sites that has included their respective aliases
  * @return {array} sites - list of sites including their aliases
  */
 export const getSites = () => {
     let sitesFromConfig = getConfig().app
 
+    /* ESW INIT */
     // sites.js from the BM
     getSupportedCountries()
         .then((response) => response.json())
         .then((data) => (sitesFromConfig.sites = data.allowedCountries))
+    /* End ESW INIT */
 
     let {sites = [], siteAliases = {}} = sitesFromConfig || {}
 
@@ -90,7 +93,7 @@ export const getSites = () => {
 
 /**
  * Given a site reference, return the site object
- * @param siteRef - site reference to look for the site object
+ * @param {string} siteRef - site reference to look for the site object
  * @returns {Object | undefined} found site object or default site object
  */
 export const getSiteByReference = (siteRef) => {
@@ -111,7 +114,7 @@ export const getSiteByReference = (siteRef) => {
  * @returns {{siteRef: string, localeRef: string}} - site and locale reference (it could either be id or alias)
  */
 export const getParamsFromPath = (path) => {
-    const {pathname, search} = new URL(absoluteUrl(path))
+    const {pathname, search} = getPathnameAndSearch(path)
 
     const config = getConfig()
     const {pathMatcher, searchMatcherForSite, searchMatcherForLocale} = getConfigMatcher(config)
@@ -169,7 +172,7 @@ export const getConfigMatcher = (config) => {
     // prettier-ignore
     const searchPatternForSite = `site=(?<site>${sites.join('|')})`
     // prettier-ignore
-     
+    // eslint-disable-next-line
     const pathPattern = `(?:\/(?<site>${sites.join('|')}))?(?:\/(?<locale>${locales.join("|")}))?(?!\\w)`
     // prettier-ignore
     const searchPatternForLocale = `locale=(?<locale>${locales.join('|')})`
@@ -228,4 +231,16 @@ export const resolveLocaleFromUrl = (url) => {
     return supportedLocales.find(
         (locale) => locale.alias === defaultLocale || locale.id === defaultLocale
     )
+}
+
+/**
+ * Extract pathname and search params from a given url
+ * @private
+ * @param url
+ * @returns {{search: (string|string), pathname: string}}
+ */
+function getPathnameAndSearch(url) {
+    // since url is a partial url, we pass in a dummy domain to create a validate url to pass into URL constructor
+    const {pathname, search} = new URL(url, 'https://www.some-domain.com')
+    return {pathname, search}
 }

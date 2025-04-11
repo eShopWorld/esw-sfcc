@@ -23,16 +23,6 @@
                 }
             },
             {
-                "@type-id": "custom.ESW_RetailerCatalogAPI",
-                "timeout-in-seconds": "180000",
-                "description": "This job synch catalog between SFCC & ESW Via Rest API",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswCatalogAPI.js",
-                "function": "execute",
-                "parameters": {
-                    "parameters": []
-                }
-            },
-            {
                 "@type-id": "custom.ESW_ExecutePackageFeed",
                 "timeout-in-seconds": "180000",
                 "description": "This job syncs Retailer Package Information with ESW Package service.",
@@ -40,6 +30,31 @@
                 "function": "execute",
                 "parameters": {
                     "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_GetASN",
+                "timeout-in-seconds": "180000",
+                "description": "Get Package ASN info from ESW.\n*** Search is restricted to a maximum of 3 days ***",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/getASNFromESW.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": [
+                        {
+                            "@name": "startDate",
+                            "@type": "date-string",
+                            "@required":"false",
+                            "@target-type":"date",
+                            "description": "Start date (Search is restricted to a maximum of 3 days)"
+                        },
+                        {
+                          "@name": "endDate",
+                          "@type": "date-string",
+                          "@required":"false",
+                          "@target-type":"date",
+                          "description": "End date (Search is restricted to a maximum of 30 days)"
+                        }
+                      ]
                 }
             },
             {
@@ -83,16 +98,6 @@
                 "timeout-in-seconds": "180000",
                 "description": "This job cancel orders in SFCC which are cancelled in ESW",
                 "module": "int_eshopworld_core/cartridge/scripts/jobs/EswToSfccOrderCancellation.js",
-                "function": "execute",
-                "parameters": {
-                    "parameters": []
-                }
-            },
-            {
-                "@type-id": "custom.ESW_orderReturns",
-                "timeout-in-seconds": "180000",
-                "description": "This job returns orders in esw which are returned in sfcc",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/ESWOrderReturns.js",
                 "function": "execute",
                 "parameters": {
                     "parameters": []
@@ -148,9 +153,9 @@
                 }
             },
             {
-                "@type-id": "custom.ESW_LocalizedProductFeed",
-                "description": "This job is used to create price feeds for different marketplaces.",
-                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeProductFeed.js",
+                "@type-id": "custom.ESW_LocalizedShoppingFeed",
+                "description": "This job is used to create price feeds for different localized shoppings.",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/GenerateLocalizeShoppingFeed.js",
                 "transactional": "false",
                 "function": "execute",
                 "@supports-organization-context": false,
@@ -161,7 +166,7 @@
                             "@type": "string",
                             "@required": "true",
                             "description": "Define IMPEX directory path here.",
-                            "default-value": "Impex/src/product-feeds"
+                            "default-value": "Impex/src/localized-shopping-feeds"
                         }
                     ]
                 }
@@ -208,6 +213,26 @@
                 "timeout-in-seconds": "180000",
                 "description": "This job go through all market placed orders and export them to ESW",
                 "module": "int_eshopworld_core/cartridge/scripts/jobs/eswExportMarketPlaceOrders.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_RetailerOutboundShippment",
+                "timeout-in-seconds": "180000",
+                "description": "This job is responsible for outbond shipment from retailer to ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswRetailerOutboundShippment.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                "@type-id": "custom.ESW_GetJWKSJob",
+                "timeout-in-seconds": "180000",
+                "description": "This job fetches JWKS from ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswGetJWKS.js",
                 "function": "execute",
                 "parameters": {
                     "parameters": []

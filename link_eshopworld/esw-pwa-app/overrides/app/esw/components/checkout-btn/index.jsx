@@ -7,7 +7,14 @@ import {useCurrentBasket} from '@salesforce/retail-react-app/app/hooks/use-curre
 import {LockIcon} from '@salesforce/retail-react-app/app/components/icons'
 import useMultiSite from '@salesforce/retail-react-app/app/hooks/use-multi-site'
 import useNavigation from '@salesforce/retail-react-app/app/hooks/use-navigation'
-import {generateDomLoader, getEswConfigByKey, removeDomLoader} from '../../esw-helpers'
+import {
+    generateDomLoader,
+    getEswConfigByKey,
+    getEswSiteAccessTokenByKey,
+    removeDomLoader,
+    getCookie
+} from '../../esw-helpers'
+import {useShopperBasketsMutation} from '@salesforce/commerce-sdk-react'
 import {useToast} from '@salesforce/retail-react-app/app/hooks/use-toast'
 import {API_ERROR_MESSAGE} from '@salesforce/retail-react-app/app/constants'
 
@@ -19,6 +26,7 @@ export const EswCheckoutBtn = (props) => {
     const {variant, basketIdParam, checkOrderAble} = props
     const {usid} = useUsid()
     const {mutateAsync: createOrder} = useShopperOrdersMutation('createOrder')
+    const {mutateAsync: updateBasket} = useShopperBasketsMutation('updateBasket')
     const {data: basket} = useCurrentBasket()
     const showToast = useToast()
     const {formatMessage} = useIntl()
@@ -33,19 +41,34 @@ export const EswCheckoutBtn = (props) => {
         if (locale.isSupportedByESW) {
             try {
                 spinner = generateDomLoader()
-                const order = await createOrder({
-                    // We send the SLAS usid via this header. This is required by ECOM to map
-                    // Einstein events sent via the API with the finishOrder event fired by ECOM
-                    // when an Order transitions from Created to New status.
-                    // Without this, various order conversion metrics will not appear on reports and dashboards
-                    headers: {_sfdc_customer_id: usid},
-                    body: {
-                        basketId:
-                            basketIdParam && basketIdParam.length > 0
-                                ? basketIdParam
-                                : basket.basketId
-                    }
-                })
+                let accessToken = getEswSiteAccessTokenByKey(site?.id)
+                let order
+                if (getEswConfigByKey('isEswEnabledEmbeddedCheckout') && accessToken) {
+                    order = await updateBasket({
+                        parameters: {
+                            basketId:
+                                basketIdParam && basketIdParam.length > 0
+                                    ? basketIdParam
+                                    : basket.basketId,
+                            dwsid: document.cookie
+                        },
+                        body: {c_eswPreOrderRequest: accessToken}
+                    })
+                } else {
+                    order = await createOrder({
+                        // We send the SLAS usid via this header. This is required by ECOM to map
+                        // Einstein events sent via the API with the finishOrder event fired by ECOM
+                        // when an Order transitions from Created to New status.
+                        // Without this, various order conversion metrics will not appear on reports and dashboards
+                        headers: {_sfdc_customer_id: usid},
+                        body: {
+                            basketId:
+                                basketIdParam && basketIdParam.length > 0
+                                    ? basketIdParam
+                                    : basket.basketId
+                        }
+                    })
+                }
                 if (
                     !order ||
                     !order.c_eswPreOrderResponse ||

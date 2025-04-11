@@ -55,13 +55,6 @@
                 <parameters/>
             </step>
         </flow>
-        <flow>
-            <context site-id="RefArch"/>
-            <step step-id="executeCatalogAPI" type="custom.ESW_RetailerCatalogAPI" enforce-restart="false">
-                <description>This job step Retailer catalog with ESW Catalog using REST API</description>
-                <parameters/>
-            </step>
-        </flow>
         <rules/>
         <triggers>
             <run-once enabled="false">
@@ -79,6 +72,16 @@
             <step step-id="sendASNtoESW" type="custom.ESW_ExecutePackageFeed" enforce-restart="false">
                 <description>Send Advanced Shipping Notification to ESW through ESW Package API v4.</description>
                 <parameters/>
+            </step>
+        </flow>
+        <flow>
+            <context site-id="RefArch"/>
+            <step step-id="getASNFromESW" type="custom.ESW_GetASN" enforce-restart="false">
+                <description>Get Package ASN info from ESW.&#xA;*** Search is restricted to a maximum of 3 days ***</description>
+                <parameters>
+                    <parameter name="startDate"></parameter>
+                    <parameter name="endDate"></parameter>
+                </parameters>
             </step>
         </flow>
         <rules/>
@@ -183,13 +186,6 @@
                 <parameters/>
             </step>
         </flow>
-        <flow>
-            <context site-id="RefArch"/>
-            <step step-id="orderReturn" type="custom.ESW_orderReturns" enforce-restart="false">
-                <description>This job step is responsbile for order returns .</description>
-                <parameters/>
-            </step>
-        </flow>
         <rules/>
         <triggers>
             <run-once enabled="false">
@@ -231,15 +227,15 @@
             </run-once>
         </triggers>
     </job>
-    <job job-id="eswLocalizedProductFeed" priority="0">
+    <job job-id="eswLocalizedShoppingFeed" priority="0">
         <description/>
         <parameters/>
         <flow>
             <context site-id="RefArch"/>
-            <step step-id="eswLocalizedProductFeed" type="custom.ESW_LocalizedProductFeed" enforce-restart="false">
-                <description>This job is used to create price feeds for different marketplaces</description>
+            <step step-id="eswLocalizedShoppingFeed" type="custom.ESW_LocalizedShoppingFeed" enforce-restart="false">
+                <description>This job is used to create price feeds for different ShoppingFeed</description>
                 <parameters>
-                    <parameter name="impexDirPath">Impex/src/product-feeds</parameter>
+                    <parameter name="impexDirPath">Impex/src/shopping-feeds</parameter>
                 </parameters>
             </step>
         </flow>
@@ -281,6 +277,64 @@
                         <weekday>Saturday</weekday>
                         <weekday>Monday</weekday>
                     </day-of-week>
+                </recurrence>
+            </run-recurring>
+        </triggers>
+    </job>
+    <job job-id="eswRetailerOutboundShippment" priority="0">
+        <description/>
+        <parameters/>
+        <flow>
+            <context site-id="RefArch"/>
+            <step step-id="ESW_RetailerOutboundShippment" type="custom.ESW_RetailerOutboundShippment" enforce-restart="false">
+                <description/>
+                <parameters/>
+            </step>
+        </flow>
+        <rules>
+            <on-running runtime-threshold="60m" enabled="false">
+                <mark-job-as-hanging/>
+            </on-running>
+        </rules>
+        <triggers>
+            <run-recurring enabled="true">
+                <recurrence>
+                    <date-from>2018-07-10Z</date-from>
+                    <start-time>04:00:00.000Z</start-time>
+                    <interval>1d</interval>
+                    <day-of-week>
+                        <weekday>Thursday</weekday>
+                        <weekday>Wednesday</weekday>
+                        <weekday>Friday</weekday>
+                        <weekday>Tuesday</weekday>
+                        <weekday>Sunday</weekday>
+                        <weekday>Saturday</weekday>
+                        <weekday>Monday</weekday>
+                    </day-of-week>
+                </recurrence>
+            </run-recurring>
+        </triggers>
+    </job>
+    <job job-id="eswGetJwksJob" priority="0">
+        <description>Job to fetch JWKS from ESW</description>
+        <flow>
+            <context site-id="RefArch" />
+            <step step-id="ESW_GetJWKS" type="custom.ESW_GetJWKSJob" enforce-restart="false">
+                <description>Fetch JWKS from ESW</description>
+                <parameters/>
+            </step>
+        </flow>
+        <rules>
+            <on-running runtime-threshold="30m" enabled="true">
+                <mark-job-as-hanging />
+            </on-running>
+        </rules>
+        <triggers>
+            <run-recurring enabled="true">
+                <recurrence>
+                    <date-from>2018-07-10Z</date-from>
+                    <start-time>03:00:00.000Z</start-time>
+                    <interval>1d</interval>
                 </recurrence>
             </run-recurring>
         </triggers>

@@ -30,14 +30,25 @@
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
 
-    <service-credential service-credential-id="EswOrderAPIV2Credentials">
-        <url>https://order-transaction-api-{brandID}.sandbox.eshopworld.com/api/v2/Order/{brandOrderReference}/OrderActivity</url>
+    <service-credential service-credential-id="EswCheckoutV3Credentials.SFRA">
+        <url>https://checkout-api-{brandID}.sandbox.eshopworld.com/api/v3/PreOrder</url>
         <user-id/>
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
 
-    <service-credential service-credential-id="EswCheckoutV3Credentials.SFRA">
-        <url>https://checkout-api-{brandID}.sandbox.eshopworld.com/api/v3/PreOrder</url>
+    <service-credential service-credential-id="EswGetAsnPackageCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="ESWOrderCreationCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+    <service-credential service-credential-id="EswGetJwksServiceCredentials">
+        <url></url>
         <user-id/>
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
@@ -72,7 +83,7 @@
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>EswOAuthCredentials</credential-id>
     </service>
-    
+
     <service service-id="EswPriceFeedService">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
@@ -106,17 +117,6 @@
         <credential-id>EswPackageV4Credentials</credential-id>
     </service>
 
-    <service service-id="EswOrderAPIV2Service">
-        <service-type>HTTP</service-type>
-        <enabled>true</enabled>
-        <log-prefix>ESW-OrderAPI</log-prefix>
-        <comm-log-enabled>true</comm-log-enabled>
-        <force-prd-enabled>true</force-prd-enabled>
-        <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
-        <credential-id>EswOrderAPIV2Credentials</credential-id>
-    </service>
-
     <service service-id="EswCheckoutV3Service.SFRA">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
@@ -137,5 +137,37 @@
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>ESWCatalogAPICrendentials</credential-id>
+    </service>
+
+    <service service-id="EswGetAsnPackage">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESWCatalogService</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswGetAsnPackageCredentials</credential-id>
+    </service>
+   <service service-id="ESWOrderCreation">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESWOrderCreation</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>ESWOrderCreationCredentials</credential-id>
+    </service>
+
+    <service service-id="EswGetJwksService">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESWCatalogService</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswGetJwksServiceCredentials</credential-id>
     </service>
 </services>

@@ -2,7 +2,10 @@
 
 $(document).ready(function () {
     let enableCatalogMethodField = 'select#isEswCatalogFeatureEnabled';
-    let relventFields = JSON.parse($('#eswCatalogReleventFields').val());
+    let relventFields = { sftpFields: [], apiFields: [] };
+    if (typeof $('#eswCatalogReleventFields').val() !== 'undefined') {
+        relventFields = JSON.parse($('#eswCatalogReleventFields').val());
+    }
     let sftpFields = relventFields.sftpFields.map(function (el) {
         return 'tr.esw-field-' + el;
     });
@@ -10,6 +13,15 @@ $(document).ready(function () {
         return 'tr.esw-field-' + el;
     });
     let allFields = apiFields.concat(sftpFields);
+
+    // Export button should be enable when atleast one order is selected
+    $('input.select-Product, a.selectAllCheckbox').on('click', function () {
+        if ($('input.select-Product:checked').length === 0) {
+            $('button.SyncSlected').attr('disabled', true);
+        } else {
+            $('button.SyncSlected').attr('disabled', false);
+        }
+    });
 
     /**
      * Show/hide catalog method

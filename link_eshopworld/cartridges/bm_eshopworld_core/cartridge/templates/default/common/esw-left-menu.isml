@@ -2,37 +2,108 @@
 <div class="esw-branding">
     <img src="${dw.web.URLUtils.staticURL('/icons/esw-icon.gif')}" alt="branding picture">
     <h3>&nbsp;</h3>
-    <p>DTC eCommerce Experts</p>
+    <p>
+        ${Resource.msg('bm.esw.cartridge.slogan', 'eswbm', null)} <br />
+        <small>${Resource.msg('esw.cartridges.version.label', 'esw', null) + Resource.msg('esw.cartridges.version.number', 'esw', null)}</small>
+    </p>
 </div>
 <div class="esw-menu-items">
     <ul>
-        <li class="esw-menu">
-            <a class="disabled active" href="javascript:void(0)">
-                Catalog <span class="icon"><i class="fa fa-angle-down"></i></span>
+        <iscomment>Catalog menu</iscomment>
+        <li
+            class="esw-menu ${['Start', 'Search', 'CatalogConfig'].indexOf(pdict.currentController) !== -1 ? 'selected' : ''}">
+            <a class="disabled" href="javascript:void(0)">
+                ${Resource.msg('menu.catalog', 'eswbm', null)} <span class="icon"></span>
             </a>
-            <ul class="esw-submenu">
+            <ul class="esw-submenu" style="${pdict.currentController === 'LoadReports' || pdict.currentController === 'RetailerConfiguration' ? 'display: none;' : ''}">
                 <isif condition="${eswHelper.isEswCatalogApiMethod()}">
                     <li>
-                        <a class="<isif condition=" ${pdict.currentController === 'Start' || pdict.currentController === 'Search'}">active
-                </isif>"
-                href="${dw.web.URLUtils.https('EShopWorldBM-Start', 'showList', true)}">
-                <span class="item">${Resource.msg('esw.bm.products', 'eswbm', null)}</span>
-                </a>
+                        <a class="${['Start', 'Search'].indexOf(pdict.currentController) !== -1 ? 'active' : ''}"
+                            href="${dw.web.URLUtils.https('EShopWorldBM-Start', 'showList', true)}">
+                            <span class="item">${Resource.msg('esw.bm.products', 'eswbm', null)}</span>
+                        </a>
+                    </li>
+                </isif>
+                <li>
+                    <a class="${['CatalogConfig'].indexOf(pdict.currentController) !== -1 ? 'active' : ''}"
+                        href="${dw.web.URLUtils.https('EShopWorldBM-CatalogConfig')}">
+                        <span class="item">${Resource.msg('menu.catalog_integration_settings', 'eswbm', null)}</span>
+                    </a>
+                </li>
+            </ul>
         </li>
-        </isif>
-        <li>
-            <a class="<isif condition=" ${pdict.currentController === 'CatalogConfig'}">active</isif>"
-                href="${dw.web.URLUtils.https('EShopWorldBM-CatalogConfig')}">
-                <span class="item">${Resource.msg('menu.catalog_integration_settings', 'eswbm', null)}</span>
+        <iscomment>End Catalog menu</iscomment>
+        <iscomment>Returns Menu</iscomment>
+        <li
+            class="esw-menu ${['ReturnsConfig', 'PkgAsnExport'].indexOf(pdict.currentController) !== -1 ? 'selected' : ''}">
+            <a class="disabled" href="javascript:void(0)">
+                ${Resource.msg('menu.returns', 'eswbm', null)} <span class="icon"></span>
             </a>
+            <ul class="esw-submenu"  style="${pdict.currentController === 'LoadReports' || pdict.currentController === 'RetailerConfiguration' ? 'display: none;' : ''}">
+                <li>
+                    <a class="${pdict.currentController === 'PkgAsnExport' ? 'active' : ''}"
+                        href="${dw.web.URLUtils.https('EShopWorldBM-PkgAsnExport')}">
+                        <span class="item">${Resource.msg('menu.pkg_asn_export', 'eswbm', null)}</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="${pdict.currentController === 'ReturnsConfig' ? 'active' : ''}"
+                        href="${dw.web.URLUtils.https('EShopWorldBM-ReturnsConfig')}">
+                        <span class="item">${Resource.msg('menu.returns_configurations', 'eswbm', null)}</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <iscomment>General Configurations Menu</iscomment>
+        <li
+            class="esw-menu ${pdict.currentController === 'RetailerConfiguration' ? 'selected' : ''}">
+            <a class="disabled active" href="javascript:void(0)">
+                ${Resource.msg('menu.configurations', 'eswbm', null)} <span class="icon"></span>
+            </a>
+            <ul class="esw-submenu" style="${pdict.currentController !== 'RetailerConfiguration' ? 'display: none;' : ''}">
+                <li>
+                    <a class="${pdict.currentController === 'RetailerConfiguration' ? 'active' : ''}"
+                        href="${dw.web.URLUtils.https('EShopWorldBM-RetailerConfiguration')}">
+                        <span class="item">${Resource.msg('menu.retailer_configurations', 'eswbm', null)}</span>
+                    </a>
+                </li>
+            </ul>
         </li>
     </ul>
-    </li>
-    <li class="esw-menu">
-        <a href="https://know.eshopworld.com/space/AE/176947412/Salesforce+Commerce+Cloud" target="_blank">
-            <iscomment> <span class="icon"><i class="fas fa-question-circle"></i></span> </iscomment>
-            <span class="item">${Resource.msg('esw.bm.esw_cartridge_docs', 'eswbm', null)}</span>
-        </a>
-    </li>
+    <ul>
+        <li class="esw-menu">
+            <a class="disabled active" href="javascript:void(0)">
+                ${Resource.msg('menu.integrationMonitoring', 'eswbm', null)} <span class="icon"></span>
+            </a>
+            <ul class="esw-submenu"
+                style="${['LoadReports'].indexOf(pdict.currentController) === -1 ? 'display: none;' : ''}">
+                <a class="<isif condition=" ${['LoadReports'].indexOf(pdict.currentController) === -1}">active</isif>"
+                    href="${dw.web.URLUtils.https('EShopWorldBM-LoadReports')}">
+                    <span class="item">${Resource.msg('menu.report_integration_settings', 'eswbm', null)}</span>
+                </a>
+            </ul>
+        </li>
+        <iscomment>End Integration monitoring Menu</iscomment>
+        <iscomment>Package Menu</iscomment>
+        <li class="esw-menu">
+            <a class="disabled active" href="javascript:void(0)">
+                ${Resource.msg('menu.packages', 'eswbm', null)} <span class="icon"></span>
+            </a>
+            <ul class="esw-submenu" style="${pdict.currentController !== 'Package' ? 'display: none;' : ''}">
+                <a class="<isif condition=" ${pdict.currentController === 'Package'}">active</isif>"
+                    href="${dw.web.URLUtils.https('EShopWorldBM-PackageConfigurations')}">
+                    <span class="item">${Resource.msg('menu.packageCinfigurations', 'eswbm', null)}</span>
+                </a>
+            </ul>
+        </li>
+        <iscomment>End Package Menu</iscomment>
+        <iscomment>ESW Cartridge Docs</iscomment>
+        <li class="esw-menu">
+            <a href="https://know.eshopworld.com/space/AE/176947412/Salesforce+Commerce+Cloud" target="_blank">
+                <iscomment> <span class="icon"><i class="fas fa-question-circle"></i></span> </iscomment>
+                <span class="item">${Resource.msg('esw.bm.esw_cartridge_docs', 'eswbm', null)}</span>
+            </a>
+        </li>
+        <iscomment>End ESW Cartridge Docs</iscomment>
     </ul>
 </div>

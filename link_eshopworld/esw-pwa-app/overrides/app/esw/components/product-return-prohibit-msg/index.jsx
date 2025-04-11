@@ -7,7 +7,7 @@ export const EswReturnProhibitMsg = (props) => {
     return (
         <>
             {product && product.c_eswReturnProhibited ? (
-                <Alert marginBottom={4} status="warning">
+                <Alert status="warning">
                     <AlertIcon />
                     <div dangerouslySetInnerHTML={{__html: product.c_eswReturnProhibitedMsg}} />
                 </Alert>

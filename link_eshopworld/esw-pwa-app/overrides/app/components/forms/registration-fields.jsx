@@ -27,7 +27,6 @@ const RegistrationFields = ({form, prefix = ''}) => {
     const firstNameVal = parsed.firstName || ''
     const lastNameVal = parsed.lastName || ''
     // End Esw Customization
-
     return (
         <Stack spacing={5}>
             <Field {...fields.firstName} defaultValue={firstNameVal} />

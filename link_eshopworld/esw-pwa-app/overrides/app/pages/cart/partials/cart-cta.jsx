@@ -13,8 +13,9 @@ import {
     VisaIcon
 } from '@salesforce/retail-react-app/app/components/icons'
 
-// EsW Customization
+// ESW Custom Imports
 import {EswCheckoutBtn} from '../../../esw/components/checkout-btn'
+// End ESW Custom Imports
 
 const CartCta = () => {
     return (
