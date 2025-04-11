@@ -20,7 +20,8 @@
     "watch": "sgmf-scripts --watch",
     "validate": "npm run lint && npm run test",
     "cover": " nyc --reporter=html --reporter=lcov --reporter=text-summary --reporter=cobertura sgmf-scripts --cover 'test/unit/**/*.js'",
-    "cover:report": "npm run cover report"
+    "cover:report": "npm run cover report",
+    "test:logs": "cd test/logs && node index.js"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
     "@babel/preset-env": "^7.11.0",
     "@tridnguyen/config": "^2.3.1",
     "allure-commandline": "^2.13.0",
+    "axios": "^1.7.7",
     "babel-core": "^6.26.3",
     "babel-eslint": "^10.0.3",
     "babel-loader": "^8.1.0",
@@ -75,8 +77,10 @@
     "chai": "^4.3.0",
     "chai-http": "^4.3.0",
     "cleave.js": "^1.6.0",
+    "dotenv": "^16.4.5",
     "flag-icon-css": "^2.9.0",
     "font-awesome": "^4.7.0",
+    "form-data": "^4.0.1",
     "jquery": "^3.5.1",
     "sgmf-scripts": "^2.4.2"
   },

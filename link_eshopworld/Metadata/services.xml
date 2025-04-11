@@ -42,6 +42,17 @@
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
 
+    <service-credential service-credential-id="ESWOrderCreationCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+    <service-credential service-credential-id="EswGetJwksServiceCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
     <service-profile service-profile-id="ESWSFTPProfile">
         <timeout-millis>110000</timeout-millis>
         <rate-limit-enabled>false</rate-limit-enabled>
@@ -137,5 +148,26 @@
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>EswGetAsnPackageCredentials</credential-id>
+    </service>
+   <service service-id="ESWOrderCreation">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESWOrderCreation</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>ESWOrderCreationCredentials</credential-id>
+    </service>
+
+    <service service-id="EswGetJwksService">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>ESWCatalogService</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswGetJwksServiceCredentials</credential-id>
     </service>
 </services>

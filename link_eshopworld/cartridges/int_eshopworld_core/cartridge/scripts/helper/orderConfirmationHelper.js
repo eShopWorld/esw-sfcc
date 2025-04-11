@@ -397,7 +397,7 @@ const getEswOcHelper = {
                 return; // Do not save address in address book
             }
             contactDetails.forEach(contact => {
-                let isSaveAddressEnabled = (!empty(contact.saveToProfile) && contact.saveToProfile) || (isMultiAdrressEnabled && saveAddress);
+                let isSaveAddressEnabled = ((!empty(contact.saveToProfile) && contact.saveToProfile && (isMultiAdrressEnabled)));
                 // Skip iteration if saving address is not enabled
                 if (!isSaveAddressEnabled) {
                     return;

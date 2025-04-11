@@ -77,6 +77,9 @@ const eswHealthCheckHelper = {
                 case 'EswPriceFeedV4Service':
                     serviceResponse = eswCoreService.getPricingAdvisorService().call(serviceTestJson.payload);
                     break;
+                case 'EswGetJwksService':
+                    serviceResponse = eswCoreService.getJwksFromEswService().call(serviceTestJson.payload);
+                    break;
                 case 'ESWCatalogService':
                     serviceResponse = eswCoreService.getCatalogService().call(serviceTestJson.payload);
                     break;

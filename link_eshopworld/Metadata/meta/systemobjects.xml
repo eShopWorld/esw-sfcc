@@ -437,6 +437,13 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswBasketUuid">
+                <display-name xml:lang="x-default">ESW Basket UUID</display-name>
+                <description xml:lang="x-default">Order created from basket UUID</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
             <attribute-definition attribute-id="eswOverTheCounterPayloadJson">
                 <display-name xml:lang="x-default">Esw Over the Counter Payload Json</display-name>
                 <type>text</type>
@@ -1794,6 +1801,33 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
+             <attribute-definition attribute-id="eswCheckoutIframeScriptPath">
+                <display-name xml:lang="x-default">ESW SPARK Script Path</display-name>
+                <description xml:lang="x-default">The iFrame script path to be included in the header</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswCheckoutIframeCookieName">
+                <display-name xml:lang="x-default">ESW SPARK Cookie Name</display-name>
+                <description xml:lang="x-default">The iFrame cookie name setup in SPARK</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <default-value>Checkout</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswOcapiClientId">
+                <display-name xml:lang="x-default">ESW SFCC OCAPI Client ID</display-name>
+                <description xml:lang="x-default">SFCC OCAPI client ID to be use for basket and order related operations in case of embedded checkout</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <default-value>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswHeadlessSiteUrl">
+                <display-name xml:lang="x-default">ESW HEADLESS SITE URL</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="ESW Localized Shopping Feed Configuration">
@@ -1892,6 +1926,13 @@ Example: &#13;
                 <display-name xml:lang="x-default">ESW Returns Configuration</display-name>
                 <attribute attribute-id="eswCheckoutOnlyPackagesExport"/>
                 <attribute attribute-id="eswReturnOrderStatus"/>
+            </attribute-group>
+            <attribute-group group-id="ESW SPARK Integration Configuration">
+                <display-name xml:lang="x-default">ESW SPARK Integration Configuration</display-name>
+                <attribute attribute-id="eswCheckoutIframeScriptPath"/>
+                <attribute attribute-id="eswCheckoutIframeCookieName"/>
+                <attribute attribute-id="eswOcapiClientId"/>
+                <attribute attribute-id="eswHeadlessSiteUrl"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

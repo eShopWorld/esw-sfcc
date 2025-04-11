@@ -12,6 +12,7 @@ const URLUtils = require('dw/web/URLUtils');
 const logger = require('dw/system/Logger');
 
 /* Script Modules */
+const Constants = require('*/cartridge/scripts/util/Constants');
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
 
 
@@ -179,11 +180,23 @@ server.get('GetEswAppResources', function (req, res, next) {
  * This is the preorder request which is generating at time of redirection from cart page to ESW checkout
  */
 server.get('PreOrderRequest', function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
     let BasketMgr = require('dw/order/BasketMgr');
-    let currentBasket = BasketMgr.getCurrentBasket();
+    let Transaction = require('dw/system/Transaction');
+    let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+    let currentBasket = null;
+
+    eswHelper.setEnableMultipleFxRatesCurrency(req);
 
     let isAjax = Object.hasOwnProperty.call(request.httpHeaders, 'x-requested-with');
+
+    let shopperBasket = BasketMgr.getCurrentBasket();
+    if (shopperBasket) {
+        Transaction.wrap(function () {
+            basketCalculationHelpers.calculateTotals(shopperBasket);
+        });
+        // Get basket after update all totlas
+        currentBasket = BasketMgr.getCurrentBasket();
+    }
 
     if (currentBasket) {
         delete session.privacy.restrictedProductID;
@@ -208,7 +221,11 @@ server.get('PreOrderRequest', function (req, res, next) {
     let result;
     try {
         let preOrderrequestHelper = require('*/cartridge/scripts/helper/preOrderRequestHelper');
-        result = preOrderrequestHelper.handlePreOrderRequestV2();
+        if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+            result = eswHelper.generatePreOrderUsingBasket();
+        } else {
+            result = preOrderrequestHelper.handlePreOrderRequestV2();
+        }
         if (result.status === 'REDIRECT') {
             res.json({
                 redirectURL: URLUtils.https('Checkout-Begin').toString()
@@ -218,6 +235,11 @@ server.get('PreOrderRequest', function (req, res, next) {
         if (result.status === 'ERROR' || empty(result.object)) {
             logger.error('ESW Service Error: {0}', result.errorMessage);
             session.privacy.eswfail = true;
+            if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                res.json({
+                    error: 'CHECKOUT_FAILED'
+                });
+            }
             if (isAjax) {
                 res.json({
                     redirectURL: URLUtils.https('Cart-Show').toString()
@@ -235,7 +257,9 @@ server.get('PreOrderRequest', function (req, res, next) {
             delete session.privacy.guestCheckout;
             if (isAjax) {
                 res.json({
-                    redirectURL: redirectURL
+                    redirectURL: eswHelper.isEswEnabledEmbeddedCheckout() ?
+                     URLUtils.https('EShopWorld-EswEmbeddedCheckout', Constants.EMBEDDED_CHECKOUT_QUERY_PARAM, redirectURL).toString() :
+                     redirectURL
                 });
             } else {
                 res.redirect(redirectURL);
@@ -245,6 +269,11 @@ server.get('PreOrderRequest', function (req, res, next) {
         logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
         session.privacy.eswfail = true;
         if (isAjax) {
+            if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                res.json({
+                    error: 'CHECKOUT_FAILED'
+                });
+            }
             res.json({
                 redirectURL: URLUtils.https('Cart-Show').toString()
             });

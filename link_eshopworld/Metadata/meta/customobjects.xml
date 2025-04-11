@@ -206,7 +206,7 @@
                 <attribute attribute-id="hubAddressCity"/>
                 <attribute attribute-id="hubAddressPostalCode"/>
             </attribute-group>
-             <attribute-group group-id="eswPackage">
+            <attribute-group group-id="eswPackage">
                 <display-name xml:lang="x-default">ESW Package Configuration</display-name>
                 <attribute attribute-id="eswSynchronizePkgModel"/>
             </attribute-group>
@@ -258,19 +258,19 @@
         <staging-mode>no-staging</staging-mode>
         <storage-scope>site</storage-scope>
         <key-definition attribute-id="Report">
-             <type>string</type>
+            <type>string</type>
             <min-length>0</min-length>
         </key-definition>
         <attribute-definitions>
-        <attribute-definition attribute-id="configReport">
-            <display-name xml:lang="x-default">ESW Integration Monitoring JSON Report</display-name>
-            <description xml:lang="x-default">JSON report will be stored here for internal use</description>
-            <type>text</type>
-            <localizable-flag>false</localizable-flag>
-            <mandatory-flag>false</mandatory-flag>
-            <externally-managed-flag>false</externally-managed-flag>
-        </attribute-definition>
-    </attribute-definitions>
+            <attribute-definition attribute-id="configReport">
+                <display-name xml:lang="x-default">ESW Integration Monitoring JSON Report</display-name>
+                <description xml:lang="x-default">JSON report will be stored here for internal use</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </attribute-definitions>
         <group-definitions>
             <attribute-group group-id="Integration_Monitoring_Report">
                 <display-name xml:lang="x-default">ESW Integration Monitoring Report</display-name>
@@ -278,4 +278,35 @@
             </attribute-group>
         </group-definitions>
     </custom-type>
+
+    <custom-type type-id="ESW_JWKS">
+        <display-name xml:lang="x-default">ESW JWKS</display-name>
+        <description xml:lang="x-default">This custom object type holds JWT validation keys coming from ESW.</description>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>organization</storage-scope>
+        <key-definition attribute-id="eswJwks">
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="validationKeys">
+                <display-name xml:lang="x-default">JWT Validation Keys</display-name>
+                <description xml:lang="x-default">The field will hold validation keys from JWT.</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="eswJwks">
+                <display-name xml:lang="x-default">ESW JWKS</display-name>
+                <attribute attribute-id="creationDate" system="true"/>
+                <attribute attribute-id="eswJwks"/>
+                <attribute attribute-id="lastModified" system="true"/>
+                <attribute attribute-id="validationKeys"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+
 </metadata>

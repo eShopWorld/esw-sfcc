@@ -227,6 +227,16 @@
                 "parameters": {
                     "parameters": []
                 }
+            },
+            {
+                "@type-id": "custom.ESW_GetJWKSJob",
+                "timeout-in-seconds": "180000",
+                "description": "This job fetches JWKS from ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/eswGetJWKS.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
             }
         ]
     }

@@ -1,0 +1,19 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+<iscontent type="text/html" charset="UTF-8" compact="true" />
+<isdecorate template="checkout/cart/pt_cart">
+    <div class="container">
+        <h1 class="page-title">${Resource.msg('title.checkout', 'checkout', null)}</h1>
+    </div>
+    <div class="container cart cart-page">
+        <div class="row">
+            <div class="esw-iframe-checkout-container col-lg-12">
+                <div data-esw-iframe-failed-fallback-url="${pdict.eswIframeFallbackUrl}"
+                    data-esw-iframe-failed-log-url="${pdict.eswIframeErrorLogUrl}"
+                    data-esw-checkout-url="${pdict.eswCheckoutUrl}" 
+                    class="esw-iframe-checkout" id="esw-checkout">
+                    <iscomment>iFrame loading area</iscomment>
+                </div>
+            </div>
+        </div>
+    </div>
+</isdecorate>

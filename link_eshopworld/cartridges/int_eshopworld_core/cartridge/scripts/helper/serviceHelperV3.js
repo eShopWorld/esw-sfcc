@@ -104,18 +104,19 @@ function convertPromotionMessage(promotionMessageString, selectedCountryDetail, 
 function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
     let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let finalPrice;
+    let itemDiscounts = [],
+        currencyCode,
+        liOrderDiscount,
+        discountType,
+        discountedAmount,
+        productUnitPriceInfo,
+        itemDiscount = {};
     try {
         if (!empty(order)) {
             finalPrice = pricingHelper.getConvertedPrice(item.basePrice.value, localizeObj, conversionPrefs);
         } else {
             finalPrice = eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
         }
-        let itemDiscounts = [],
-            currencyCode,
-            liOrderDiscount,
-            discountType,
-            discountedAmount,
-            productUnitPriceInfo;
         if (!empty(localizeObj)) {
             currencyCode = localizeObj.localizeCountryObj.currencyCode;
         } else {
@@ -145,23 +146,23 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
                 if (!empty(localizeObj)) {
                     let selectedCountryDetail = eswHelper.getCountryDetailByParam(request.httpParameters);
                     let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
-                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false, selectedCountryLocalizeObj).value / item.quantity.value).toFixed(2);
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false, selectedCountryLocalizeObj).value / item.quantity.value).toFixed(3);
                 } else {
-                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false).value / item.quantity.value);
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false).value / item.quantity.value).toFixed(3);
                 }
             } else {
                 // eslint-disable-next-line no-lonely-if
                 if (!empty(localizeObj)) {
                     let selectedCountryDetail = eswHelper.getCountryDetailByParam(request.httpParameters);
                     let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
-                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false, selectedCountryLocalizeObj).value / item.quantity.value).toFixed(2);
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false, selectedCountryLocalizeObj).value / item.quantity.value).toFixed(3);
                 } else {
-                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, true).value / item.quantity.value);
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, true).value / item.quantity.value).toFixed(3);
                 }
             }
-            discountedAmount = empty(order) ? discountedAmount.toFixed(3) : discountedAmount;
+            discountedAmount = empty(order) ? parseFloat(discountedAmount).toFixed(3) : parseFloat(discountedAmount);
             finalPrice = finalPrice.toFixed(3);
-            let itemDiscount = {
+            itemDiscount = {
                 'title': priceAdjustment.promotionID,
                 'description': convertPromotionMessage(priceAdjustment.lineItemText),
                 'discount': {
@@ -187,8 +188,8 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
         return productUnitPriceInfo;
     } catch (e) {
         Logger.error('ESW product unit price error: ' + e);
+        return null;
     }
-    return null;
 }
 
 /**
@@ -371,8 +372,8 @@ function getLineItemsV3(order, countryCode, currencyCode) {
             eswImageType;
         if (!empty(item.product)) {
             let productVariationModel = item.product.variationModel;
-            color = productVariationModel.getProductVariationAttribute('color') ? productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('color')).displayValue : null;
-            size = productVariationModel.getProductVariationAttribute('size') ? productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('size')).displayValue : null;
+            color = productVariationModel.getProductVariationAttribute('color') && !empty(productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('color'))) ? productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('color')).displayValue : null;
+            size = productVariationModel.getProductVariationAttribute('size') && !empty(productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('size'))) ? productVariationModel.getSelectedValue(productVariationModel.getProductVariationAttribute('size')).displayValue : null;
             eswImageType = eswHelper.geteswImageType();
         }
 
@@ -388,6 +389,7 @@ function getLineItemsV3(order, countryCode, currencyCode) {
                 'description': item.productName, // we are using product name/title instead of description. ESW checkout page displays description as product title. same field is used for product title name in ESW OMS which is used for logistic flows.
                 'productUnitPriceInfo': !empty(order) ? getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) : getProductUnitPriceInfo(item),
                 'imageUrl': !empty(eswImageType) ? item.product.getImage(eswImageType, 0).httpURL.toString() : '',
+                'productUrl': URLUtils.https('Product-Show', 'pid', item.product.ID).toString(),
                 'color': !empty(color) ? color : '',
                 'size': !empty(size) ? size : '',
                 'isNonStandardCatalogItem': false,

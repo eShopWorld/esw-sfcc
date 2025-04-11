@@ -17,9 +17,19 @@ const CheckoutRequestBuilder = {
      * @returns {Object} - request body JSON
      */
     composeRequestBody: function (order, shopperCountry, shopperCurrency, shopperLocale) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
         let bodyJSON = eswServiceHelper.preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale);
-        bodyJSON.retailerCartId = order.orderNo;
+        if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+            let eswRetailerCartId = order.UUID + '__' + Date.now();
+            bodyJSON.retailerCartId = eswRetailerCartId.substring(0, 99);
+            if (!('metadataItems' in bodyJSON.shopperCheckoutExperience) || empty(bodyJSON.shopperCheckoutExperience.metadataItems)) {
+                bodyJSON.shopperCheckoutExperience.metadataItems = [];
+            }
+            bodyJSON.shopperCheckoutExperience.metadataItems.push({ name: 'authorization', value: request.httpHeaders.authorization });
+        } else {
+            bodyJSON.retailerCartId = order.orderNo;
+        }
         return bodyJSON;
     },
     /**

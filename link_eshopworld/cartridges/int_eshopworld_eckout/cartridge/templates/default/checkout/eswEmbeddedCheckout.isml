@@ -1,0 +1,26 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" scope="page" />
+<isset name="ecLtiScriptPath" value="${eswHelper.getEswEmbCheckoutScriptPath()}" scope="page" />
+<isscript>
+    var assets = require('*/cartridge/scripts/assets.js');
+        assets.addJs('/js/eckout.js');
+        assets.addJs(`${ecLtiScriptPath}`);
+        assets.addCss('/css/eckout.css');
+</isscript>
+<isdecorate template="common/layout/page">
+    <div class="container">
+        <h1 class="page-title">${Resource.msg('title.checkout', 'checkout', null)}</h1>
+    </div>
+    <div class="container cart cart-page">
+        <div class="row">
+            <div class="col-lg-12 esw-iframe-checkout-container">
+                <div data-esw-iframe-failed-fallback-url="${pdict.eswIframeFallbackUrl}"
+                    data-esw-iframe-failed-log-url="${pdict.eswIframeErrorLogUrl}"
+                    data-esw-checkout-url="${pdict.eswCheckoutUrl}"
+                    class="esw-iframe-checkout"
+                    id="esw-checkout">
+                    <iscomment>iFrame loading area</iscomment>
+                </div>
+            </div>
+        </div>
+    </div>
+</isdecorate>

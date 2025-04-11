@@ -214,8 +214,12 @@ const OCAPIHelper = {
             if (!empty(shopperCurrency)) {
                 // API Includes
                 let Logger = require('dw/system/Logger');
-
-                let shopperLocale = !empty(param.locale) ? param.locale[0] : order.customerLocaleID;
+                let shopperLocale;
+                if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                    shopperLocale = request.locale;
+                } else {
+                    shopperLocale = !empty(param.locale) ? param.locale[0] : order.customerLocaleID;
+                }
                 try {
                     let result = checkoutHelper.callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocale);
                     if (!empty(result)) {
@@ -235,6 +239,7 @@ const OCAPIHelper = {
      * @param {Object} basket - basket object SFCC API
      */
     handleEswBasketAttributes: function (basket) {
+        let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
         let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
             checkoutHelper = require('*/cartridge/scripts/helper/eswCheckoutHelperHL'),
             param = request.httpParameters;
@@ -253,6 +258,10 @@ const OCAPIHelper = {
                 let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
 
                 checkoutHelper.setEswBasketAttributes(basket, localizeObj, conversionPrefs);
+                if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                    eswHelperHL.adjustThresholdDiscounts(basket, localizeObj, !pricingHelper.isFixedPriceCountry(param['country-code'][0]) ? conversionPrefs : {});
+                    checkoutHelper.setOverrideShippingMethods(basket, localizeObj, conversionPrefs);
+                }
             }
         }
     },

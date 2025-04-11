@@ -12,7 +12,9 @@ const logger = require('dw/system/Logger');
 const ArrayList = require('dw/util/ArrayList');
 const URLUtils = require('dw/web/URLUtils');
 const ContentMgr = require('dw/content/ContentMgr');
+
 const eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+const Constants = require('*/cartridge/scripts/util/Constants');
 
 const getEswHelper = {
     isEnableLandingPageRedirect: function () {
@@ -28,7 +30,6 @@ const getEswHelper = {
         return this.isEswCatalogFeatureEnabled() && Site.getCustomPreferenceValue('isEswCatalogInternalValidationEnabled');
     },
     isEswCatalogApiMethod: function () {
-        let Constants = require('*/cartridge/scripts/util/Constants');
         return this.isEswCatalogFeatureEnabled() && this.getCatalogUploadMethod() === Constants.API;
     },
     isEswMultiAddressEnabled: function () {
@@ -41,12 +42,48 @@ const getEswHelper = {
         return this.getEShopWorldModuleEnabled() && Site.getCustomPreferenceValue('eswMultiOriginEnabled');
     },
     /**
+     * Checks if the ESW Embedded Checkout feature is enabled.
+     *
+     * @returns {boolean} True if the ESW Embedded Checkout feature is enabled, false otherwise.
+     */
+    isEswEnabledEmbeddedCheckout: function () {
+        let result = false;
+        try {
+            const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+            result = !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath());
+        } catch (e) {
+            // if cartridge is not inculded then gracefully return false from the function
+            result = false;
+        }
+        return this.getEShopWorldModuleEnabled() && result;
+    },
+    getEswHeadlessSiteUrl: function () {
+        return Site.getCustomPreferenceValue('eswHeadlessSiteUrl');
+    },
+    /**
+     * Gets the path to the ESW Embedded Checkout script if feature is enabled, return null otherwise.
+     *
+     * @returns {string|null} The path to the ESW Embedded Checkout script.
+     */
+    getEswEmbCheckoutScriptPath: function () {
+        let embScriptPath = null;
+        try {
+            const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+            if (this.isEswEnabledEmbeddedCheckout()) {
+                embScriptPath = embCheckoutHelper.getEswEmbCheckoutScriptPath();
+            }
+        } catch (e) {
+            // if cartridge is not inculded then gracefully return false from the function
+            embScriptPath = null;
+        }
+        return embScriptPath;
+    },
+    /**
      * Determine pa version used by the service URL
      * @returns {string} pa version
      */
     getPaVersion: function () {
         let LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-        let Constants = require('*/cartridge/scripts/util/Constants');
         let paVersion = Constants.UNKNOWN;
         let serviceUrl = '';
         try {
@@ -74,7 +111,6 @@ const getEswHelper = {
      */
     getCatalogUploadMethod: function () {
         let LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-        let Constants = require('*/cartridge/scripts/util/Constants');
         let uploadMethod = Constants.UNKNOWN;
         let serviceUrl = '';
         if (!this.isEswCatalogFeatureEnabled()) {
@@ -159,6 +195,9 @@ const getEswHelper = {
     },
     getClientSecret: function () {
         return Site.getCustomPreferenceValue('eswClientSecret');
+    },
+    getOcapiClientID: function () {
+        return Site.getCustomPreferenceValue('eswOcapiClientId');
     },
     getEnableHeaderBar: function () {
         return Site.getCustomPreferenceValue('eswEnableHeaderPagebar');
@@ -424,7 +463,6 @@ const getEswHelper = {
      * @returns {Object} - fxRate, countryAdjustment and rounding rules
      */
     selectCountry: function (country, currency, locale, paCategory) {
-        let Constants = require('*/cartridge/scripts/util/Constants');
         let eswPaV4Helper = require('*/cartridge/scripts/helper/eswHelperPav4');
         let selectedPaCategory = null;
         let paVersion = this.getPaVersion();
@@ -783,13 +821,18 @@ const getEswHelper = {
      * @returns {dw.value.Money} - DW Money object
      */
     getOrderDiscount: function (cart, localizeCountryObj) {
+        let orderLevelProratedDiscount = 0;
+        let siteId = Site.getID();
         try {
             if (!empty(localizeCountryObj) && 'localizeCountryObj' in localizeCountryObj) {
                 localizeCountryObj = localizeCountryObj.localizeCountryObj;
             }
             let Money = require('dw/value/Money');
             let that = this;
-            let orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
+            if (siteId === Constants.SITE_GENESIS_SITE_ID) {
+                that.removeThresholdPromo(cart);
+            }
+            orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
             return new Money(orderLevelProratedDiscount, !empty(localizeCountryObj) && !empty(localizeCountryObj.currencyCode) ? localizeCountryObj.currencyCode : request.httpCookies['esw.currency'].value);
         } catch (e) {
             logger.error('Error while calculating order discount: {0} {1}', e.message, e.stack);
@@ -942,7 +985,7 @@ const getEswHelper = {
     /*
      * Function to calculate amount when country is override country
      */
-    applyOverridePrice: function (billingAmount, selectedCountry) {
+    applyOverridePrice: function (billingAmount, selectedCountry, isFixedPriceCountry) {
         try {
             let overrridePricebooks = this.getOverridePriceBooks(selectedCountry);
 
@@ -952,7 +995,7 @@ const getEswHelper = {
             let baseCurrency = this.getBaseCurrencyPreference(),
                 priceBookCurrency = this.getPriceBookCurrency(overrridePricebooks[0]);
 
-            if (priceBookCurrency && priceBookCurrency !== baseCurrency) {
+            if (priceBookCurrency && priceBookCurrency !== baseCurrency && !isFixedPriceCountry) {
                 let fxRates = this.getPricingAdvisorData().fxRates;
                 let selectedFxRate = [];
 
@@ -1286,26 +1329,30 @@ const getEswHelper = {
      * @param {Object} currentBasket - Basket
      */
     removeThresholdPromo: function (currentBasket) {
-        let collections = require('*/cartridge/scripts/util/collections');
-        let shippingLineItemIter = currentBasket.getDefaultShipment().getShippingLineItems().iterator();
-        let shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
-        if (shippingLineItem && shippingLineItem.shippingPriceAdjustments) {
-            collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
-                if (lineItemAdjustment.promotion && lineItemAdjustment.promotion.custom.eswLocalizedThresholdEnabled) {
-                    shippingLineItem.removeShippingPriceAdjustment(lineItemAdjustment);
-                }
-            });
-        }
-        let basketPriceAdjustments = currentBasket.getPriceAdjustments();
-        if (!empty(basketPriceAdjustments)) {
-            let adjustmentsIterator = basketPriceAdjustments.iterator();
-            let eachPriceAdjustment;
-            while (adjustmentsIterator.hasNext()) {
-                eachPriceAdjustment = adjustmentsIterator.next();
-                if (eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.custom.eswLocalizedThresholdEnabled) {
-                    currentBasket.removePriceAdjustment(eachPriceAdjustment);
+        try {
+            let collections = require('*/cartridge/scripts/util/collections');
+            let shippingLineItemIter = currentBasket.getDefaultShipment().getShippingLineItems().iterator();
+            let shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
+            if (shippingLineItem && shippingLineItem.shippingPriceAdjustments) {
+                collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
+                    if (lineItemAdjustment.promotion && lineItemAdjustment.promotion.custom.eswLocalizedThresholdEnabled) {
+                        shippingLineItem.removeShippingPriceAdjustment(lineItemAdjustment);
+                    }
+                });
+            }
+            let basketPriceAdjustments = currentBasket.getPriceAdjustments();
+            if (!empty(basketPriceAdjustments)) {
+                let adjustmentsIterator = basketPriceAdjustments.iterator();
+                let eachPriceAdjustment;
+                while (adjustmentsIterator.hasNext()) {
+                    eachPriceAdjustment = adjustmentsIterator.next();
+                    if (eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.custom.eswLocalizedThresholdEnabled) {
+                        currentBasket.removePriceAdjustment(eachPriceAdjustment);
+                    }
                 }
             }
+        } catch (error) {
+            logger.error('Error while removing threshold promo {0} {1}', error.message, error.stack);
         }
     },
     /**
@@ -1590,16 +1637,20 @@ const getEswHelper = {
      * @returns  {Object} - Object of basket meta data
      */
     getMappedBasketMetadata: function (basket) {
-        let Constants = require('*/cartridge/scripts/util/Constants');
         let metadataItems = this.getBasketMetadataPreference(),
             arr = new ArrayList([]),
             registration = {},
             i = 0;
+        let siteId = Site.getID();
 
         let eswCheckoutRegisterationEnabled = this.isCheckoutRegisterationEnabled();
         if (eswCheckoutRegisterationEnabled && !customer.authenticated) {
             registration[Constants.IS_REGISTERATION_NEEDED_NAME] = Constants.IS_REGISTERATION_NEEDED_VALUE;
-            registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_URL_VALUE).toString();
+            if (siteId === Constants.SITE_GENESIS_SITE_ID) {
+                registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_URL_VALUE_SG).toString();
+            } else {
+                registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_URL_VALUE).toString();
+            }
         } else {
             registration[Constants.IS_REGISTERATION_NEEDED_NAME] = false;
         }
@@ -1682,7 +1733,6 @@ const getEswHelper = {
      */
     generateRandomPassword: function () {
         let password = '';
-        let Constants = require('*/cartridge/scripts/util/Constants');
         for (let i = 0; i <= Constants.RANDOM_LENGTH; i++) {
             let randomNumber = Math.floor(Math.random() * Constants.RANDOM_CHARS.length);
             password += Constants.RANDOM_CHARS.substring(randomNumber, randomNumber + 1);
@@ -1828,7 +1878,7 @@ const getEswHelper = {
         let obj = reqBody,
             responseJSON = {},
             eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
-        if (empty(requestType) || (this.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + this.encodeBasicAuth()))) {
+        if (!this.isValidEswAuthorization()) {
             response.setStatus(401);
             logger.error('ESW Process Webhooks Check Error: Basic Authentication Token did not match OR requestType not Available in request Headers');
         } else {
@@ -1932,9 +1982,9 @@ const getEswHelper = {
     getValidateInventoryResponseJson: function (obj) {
         let inventoryAvailable = true;
         if (this.getEnableInventoryCheck()) {
-            if (this.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + this.encodeBasicAuth())) {
+            if (!this.isValidEswAuthorization()) {
                 response.setStatus(401);
-                logger.error('ESW Inventory Check Error: Basic Authentication Token did not match');
+                logger.error('ESW Inventory Check Error: Authentication Token did not match');
             } else {
                 let OrderMgr = require('dw/order/OrderMgr'),
                     ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
@@ -1986,6 +2036,21 @@ const getEswHelper = {
         this.createCookie('esw.sessionid', customer.ID, '/');
     },
     /**
+     * Splits a string into chunks of specified length and stores them in an array.
+     *
+     * @param {string} str - The string to be split.
+     * @param {number} chunkSize - The maximum length of each chunk.
+     * @returns {Array} An array of string chunks.
+     */
+    splitStringIntoChunks: function (str, chunkSize) {
+        let chunks = [];
+        chunkSize = (typeof chunkSize === 'undefined' || isNaN(chunkSize) || chunkSize <= 0) ? Constants.exports.STR_QUOTA_LIMIT : chunkSize;
+        for (let i = 0; i < str.length; i += chunkSize) {
+            chunks.push(str.substring(i, i + chunkSize));
+        }
+        return chunks;
+    },
+    /**
      * Sets OAuth Token
      */
     setOAuthToken: function () {
@@ -2001,7 +2066,29 @@ const getEswHelper = {
         if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
             logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
         }
-        session.privacy.eswOAuthToken = JSON.parse(oAuthResult.object).access_token;
+        let eswAuthTokenChunks = this.splitStringIntoChunks(JSON.parse(oAuthResult.object).access_token, Constants.STR_QUOTA_LIMIT);
+        // Store chunks in session.privacy with dynamic variable names
+        for (let i = 0; i < eswAuthTokenChunks.length; i++) {
+            session.privacy['eswAuthToken_Chunk' + (i + 1)] = eswAuthTokenChunks[i];
+        }
+    },
+    /**
+     * Concatenates all chunks stored in session.privacy with keys like 'eswAuthToken_Chunk1', 'eswAuthToken_Chunk2', etc.
+     *
+     * @returns {string} The concatenated string.
+     */
+    concatenateAuthTokenChunksFromSession: function () {
+        let concatenatedString = '';
+        let chunkIndex = 1;
+        let chunkKey = 'eswAuthToken_Chunk' + chunkIndex;
+
+        while (session.privacy[chunkKey]) {
+            concatenatedString += session.privacy[chunkKey];
+            chunkIndex++;
+            chunkKey = 'eswAuthToken_Chunk' + chunkIndex;
+        }
+
+        return concatenatedString;
     },
     /**
      * Returns site custom preference value
@@ -2440,15 +2527,15 @@ const getEswHelper = {
             conversionPrefs
         );
     },
-     /**
-     * Gets the discount price based on the architecture.
-     *
-     * @param {number} value - The original price value.
-     * @param {Object} localizeObj - The localization object.
-     * @param {Object} conversionPrefs - The conversion preferences.
-     * @param {boolean} isDiscount - Whether the price is a discount.
-     * @returns {number} - The converted price based on the architecture.
-     */
+    /**
+    * Gets the discount price based on the architecture.
+    *
+    * @param {number} value - The original price value.
+    * @param {Object} localizeObj - The localization object.
+    * @param {Object} conversionPrefs - The conversion preferences.
+    * @param {boolean} isDiscount - Whether the price is a discount.
+    * @returns {number} - The converted price based on the architecture.
+    */
     getDiscountPriceBasedOnArchitecture: function (value, localizeObj, conversionPrefs, isDiscount) {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         const isPWA = eswHelper.isEswPwa(request.httpParameters);
@@ -2526,12 +2613,307 @@ const getEswHelper = {
         };
     },
     /**
-     * Generate address name based on the full address object
-     * @param {dw.order.OrderAddress} address - Object that contains shipping address
-     * @returns {string} - String with the generated address name
+    * function to log Jwks keys
+    * @returns {Object} - Jwks keys
+    */
+    fetchJwksFromEsw: function () {
+        try {
+            let log = dw.system.Logger.getLogger('EShopWorldInfo', 'EswInfoLog');
+            let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
+            let fetchJwksFromEswService = eswCoreService.getJwksFromEswService();
+            let fetchJwksFromEswServiceResult = fetchJwksFromEswService.call();
+            if (fetchJwksFromEswServiceResult.status === 'ERROR' || empty(fetchJwksFromEswServiceResult.object)) {
+                log.error('ESW Jwks keys Service Error: {0}', fetchJwksFromEswServiceResult.errorMessage);
+            } else {
+                log.info('ESW Jwks Service Response: {0}', this.beautifyJsonAsString(fetchJwksFromEswServiceResult.object.keys));
+            }
+            return fetchJwksFromEswServiceResult.object.keys;
+        } catch (error) {
+            logger.error('Error while fetching jwks {0} {1}', error.message, error.stack);
+        }
+        return null;
+    },
+    /**
+     * Checks if the ESW (eShopWorld) authorization is valid.
+     * It first check Basic Auth, if its not valid then it will check jwt
+     *
+     * @param {string} jwt - The jwt string.
+     * @returns {boolean} True if the authorization is valid, false otherwise.
      */
+    isValidEswAuthorization: function () {
+        const eswJwtHelper = require('*/cartridge/scripts/jwt/eswJwtHelpers');
+        let jwt = request.httpHeaders.get('esw-authorization');
+        let isValidAuth = false;
+        // Request is valid if basic auth is NOT enabled and jwt is empty
+        if (!this.getBasicAuthEnabled() && empty(jwt)) {
+            isValidAuth = true;
+        }
+        // Validate request using JWKs if isValidAuth is false and jwt is not empty
+        if (!isValidAuth && !empty(jwt)) {
+            isValidAuth = eswJwtHelper.isValidJwt(jwt);
+        }
+        // Validate request using basic auth if isValidAuth is false and basic auth is enabled
+        if (!isValidAuth && this.getBasicAuthEnabled()) {
+            isValidAuth = request.httpHeaders.authorization.equals('Basic ' + this.encodeBasicAuth());
+        }
+        return isValidAuth;
+    },
+    /* Generate address name based on the full address object
+    * @param {dw.order.OrderAddress} address - Object that contains shipping address
+    * @returns {string} - String with the generated address name
+    */
     generateAddressName: function (address) {
         return [(address.address1 || ''), (address.city || ''), (address.postalCode || '')].join(' - ');
+    },
+    /**
+     * Process the retailerCartId from ocPayloadJson
+     * @param {Object} retailerCartId - The payload JSON object
+     * @returns {Object} - Processed retailerCartId parts
+     */
+    getRetailerCartId: function (retailerCartId) {
+        const parts = retailerCartId.split('__');
+        let uuid;
+        if (parts.length === 2) {
+            uuid = parts[0];
+        } else {
+            // Handle the case where '__' is not present
+            uuid = retailerCartId;
+        }
+        return uuid;
+    },
+    /**
+     * Generate preOrder request for the embeded checkout
+     * @returns {Object} - order request response object
+     */
+    generatePreOrderUsingBasket: function () {
+        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
+            preorderServiceObj = eswCoreService.getPreorderServiceV2(),
+            eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
+            redirectPreference = eswHelper.getRedirect();
+        if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
+            if (!customer.authenticated) {
+                session.privacy.TargetLocation = URLUtils.https('EShopWorld-PreOrderRequest').toString();
+                return {
+                    status: 'REDIRECT'
+                };
+            }
+        }
+        eswHelper.setOAuthToken();
+
+        let requestObj = eswServiceHelper.preparePreOrder();
+        let BasketMgr = require('dw/order/BasketMgr');
+        let currentBasket = BasketMgr.getCurrentBasket();
+        let eswRetailerCartId = currentBasket.UUID + '__' + Date.now();
+        requestObj.retailerCartId = eswRetailerCartId.substring(0, 99);
+        if (!('metadataItems' in requestObj.shopperCheckoutExperience) || empty(requestObj.shopperCheckoutExperience.metadataItems)) {
+            requestObj.shopperCheckoutExperience.metadataItems = [];
+        }
+        requestObj.shopperCheckoutExperience.metadataItems.push({ name: 'dwsid', value: request.httpCookies.dwsid.value });
+
+        eswHelper.validatePreOrder(requestObj, true);
+        session.privacy.confirmedOrderID = currentBasket.UUID;
+        let result = preorderServiceObj.call(JSON.stringify(requestObj));
+        return result;
+    },
+    getDwsid: function (reqObj) {
+        let dwsid = '';
+        if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
+            let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
+            // eslint-disable-next-line no-restricted-syntax
+            for (let metaObj in metadataItems) {
+                if (metadataItems[metaObj] && metadataItems[metaObj].name === 'dwsid') {
+                    dwsid = metadataItems[metaObj].value;
+                }
+            }
+        }
+        return dwsid;
+    },
+    getPWAHeadlessAccessToken: function (reqObj) {
+        let accessToken = '';
+        if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
+            let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
+            // eslint-disable-next-line no-restricted-syntax
+            for (let metaObj in metadataItems) {
+                if ((metadataItems[metaObj] && metadataItems[metaObj].name === 'accessTokenPart1') || (metadataItems[metaObj] && metadataItems[metaObj].name === 'authorization')) {
+                    accessToken = metadataItems[metaObj].value;
+                    if (metadataItems[metaObj] && metadataItems[metaObj].name === 'authorization') {
+                        accessToken = { authorization: accessToken };
+                    }
+                }
+            }
+        }
+        ['cartItems', 'lineItems'].forEach(function (key) {
+            if (!empty(reqObj[key]) && !empty(reqObj[key][0].metadataItems)) {
+                let metadataItems = reqObj[key][0].metadataItems;
+                for (let i = 0; i < metadataItems.length; i++) {
+                    if (metadataItems[i] && metadataItems[i].name === 'accessTokenPart2') {
+                        accessToken += metadataItems[i].value;
+                    }
+                }
+            }
+        });
+        return accessToken;
+    },
+    /**
+     * This function sets the override pricebook
+     * configured in custom site preference.
+     * @param {Object} basket - Basket API object (Optional)
+     * if basket object exists then,
+     * sets the basketCurrency for pricebook override
+     */
+    setEmbededCheckoutOverridePriceBooks: function (basket) {
+        var param = request.httpParameters,
+            arrPricebooks = [],
+            PriceBookMgr = require('dw/catalog/PriceBookMgr');
+        if (!empty(param['country-code'])) {
+            let overridePricebooks = this.getOverridePriceBooks(param['country-code'][0]);
+            if (overridePricebooks.length > 0) {
+                // eslint-disable-next-line array-callback-return
+                overridePricebooks.forEach(function (pricebookId) {
+                    let priceBook = PriceBookMgr.getPriceBook(pricebookId);
+                    if (priceBook) { // Check if the price book exists
+                        arrPricebooks.push(priceBook);
+                    }
+                });
+                try {
+                    if (arrPricebooks.length > 0) {
+                        PriceBookMgr.setApplicablePriceBooks(arrPricebooks);
+                        let priceBookCurrency = this.getPriceBookCurrency(overridePricebooks[0]);
+                        if (priceBookCurrency != null && basket) {
+                            this.setBaseCurrencyPriceBook(priceBookCurrency);
+                        }
+                    }
+                } catch (e) {
+                    logger.error(e.message + e.stack);
+                }
+            }
+        }
+    },
+    /**
+     * Handles/ sets basket attributes and it's logic
+     * @param {Object} basket - basket object SFCC API
+     */
+    handleEmbededCheckoutEswBasketAttributes: function (basket) {
+        let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
+            param = request.httpParameters;
+        let shippingAddress = eswServiceHelper.getShipmentShippingAddress(basket.getDefaultShipment());
+
+        if (!empty(param['country-code']) && this.checkIsEswAllowedCountry(param['country-code'][0])) {
+            let shopperCurrency = !empty(param['currency-code']) ? param['currency-code'][0] : pricingHelper.getShopperCurrency(param['country-code'][0]);
+            if (!empty(shopperCurrency)) {
+                let localizeObj = {
+                    localizeCountryObj: {
+                        countryCode: param['country-code'][0],
+                        currencyCode: shopperCurrency
+                    }
+                };
+
+                shippingAddress.setFirstName('eswUser');
+                shippingAddress.setLastName('eswUser');
+                shippingAddress.setCountryCode(localizeObj.localizeCountryObj.countryCode);
+                shippingAddress.setCity('eswCity');
+
+                let billingAddress = basket.createBillingAddress();
+                billingAddress.setFirstName('eswUser');
+                billingAddress.setLastName('eswUser');
+                billingAddress.setCountryCode(localizeObj.localizeCountryObj.countryCode);
+                billingAddress.setCity('eswCity');
+                dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', basket);
+
+                basket.createPaymentInstrument('ESW_PAYMENT', eswServiceHelper.getNonGiftCertificateAmount(basket));
+                let email = (!empty(basket.getCustomerEmail())) ? basket.getCustomerEmail() : 'eswUser_' + new Date().getTime() + '@gmail.com';
+                basket.setCustomerEmail(email);
+            }
+        }
+    },
+     /* Add currency symbol or formatted money object to a price range string
+     * @param {string} priceRange - A string representing a price range (e.g., "65.00 - 180.01")
+     * @param {dw.order.OrderAddress} selectedCountryDetail - Object that contains selectedCountryDetail
+     * @param {Object} selectedCountryLocalizeObj - Object that contains selectedCountryLocalizeObj
+     * @returns {string} - A string with currency symbols or formatted money objects
+     */
+    updatePriceFilterWithCurrency: function (priceRange, selectedCountryDetail, selectedCountryLocalizeObj) {
+        try {
+            let currency,
+                isFixedPriceModel;
+            if (!empty(selectedCountryDetail)) {
+                currency = require('dw/util/Currency').getCurrency(selectedCountryDetail.defaultCurrencyCode);
+                isFixedPriceModel = selectedCountryDetail.isFixedPriceModel;
+            } else {
+                let currencyCode = request.httpCookies['esw.currency'].value;
+                let locationCode = request.httpCookies['esw.location'].value;
+                currency = require('dw/util/Currency').getCurrency(currencyCode);
+                isFixedPriceModel = this.getSelectedCountryDetail(locationCode).isFixedPriceModel;
+            }
+
+            let parts = priceRange.split(' ');
+            let that = this;
+
+            // Process each part
+            let processedParts = parts.map(function (part) {
+                if (/\d/.test(part)) {
+                    if (isFixedPriceModel) {
+                        return currency.symbol + part.replace(/^\D+/, '');
+                    } else {
+                        // eslint-disable-next-line no-lonely-if
+                        if (!empty(selectedCountryLocalizeObj)) {
+                            return currency.symbol + that.getMoneyObject(part.replace(/^\D+/, ''), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+                        } else {
+                            return that.getMoneyObject(part.replace(/^\D+/, ''));
+                        }
+                    }
+                } else {
+                    return part;
+                }
+            });
+            return processedParts.map(function (item) {
+                return item;
+            }).join(' ');
+        } catch (error) {
+            logger.error('Error while updating filter price {0} {1}', error.message, error.stack);
+        }
+        return priceRange;
+    },
+    /**
+     * update shopper currency on basket for fixed country model
+     * @param {dw.order.OrderAddress} selectedCountryDetail - Object that contains selectedCountryDetail
+     * @param {Object} basket - The cart object.
+     */
+    updateShopperBasketCurrency: function (selectedCountryDetail, basket) {
+        try {
+            let Currency = require('dw/util/Currency');
+            if (selectedCountryDetail && selectedCountryDetail.defaultCurrencyCode &&
+                session.currency.currencyCode !== selectedCountryDetail.defaultCurrencyCode
+            ) {
+                let currency = Currency.getCurrency(selectedCountryDetail.defaultCurrencyCode);
+                if (basket && currency) {
+                    session.setCurrency(currency);
+                    basket.updateCurrency();
+                }
+            }
+        } catch (error) {
+            logger.error('Error while updating basket currency {0} {1}', error.message, error.stack);
+        }
+    },
+    /**
+     * Get all request HTTP headers.
+     *
+     * @param {dw.system.Request} request - The current request object.
+     * @returns {Array} An array of objects containing header names and values.
+     */
+    getRequestHeadersArr: function (request) {
+        let headers = request.httpHeaders;
+        let headerNames = headers.keySet().toArray();
+        let headersArr = [];
+        headerNames.forEach(function (headerName) {
+            let headerValue = headers.get(headerName);
+            let headerObj = {};
+            headerObj[headerName] = headerValue;
+            headersArr.push(headerObj);
+        });
+        return headersArr;
     }
 };
 

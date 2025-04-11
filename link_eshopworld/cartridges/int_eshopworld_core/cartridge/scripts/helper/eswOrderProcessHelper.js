@@ -123,8 +123,13 @@ const eswOrderProcessHelper = {
      */
     cancelAnOrder: function (reqBodyJson) {
         try {
+            let order;
             // cancel order check
-            let order = OrderMgr.getOrder(reqBodyJson.Request.BrandOrderReference);
+            if (eswCoreHelper.isEswEnabledEmbeddedCheckout()) {
+                order = OrderMgr.searchOrder('orderNo={0} OR custom.eswBasketUuid={0}', reqBodyJson.Request.BrandOrderReference);
+            } else {
+                order = OrderMgr.getOrder(reqBodyJson.Request.BrandOrderReference);
+            }
             let cancelOrderJsonPayload = [];
             if (order && order.status.value !== Order.ORDER_STATUS_CANCELLED) {
                 let isPartialOrderCancelled = reqBodyJson.Request && 'LineItemId' in reqBodyJson.Request;

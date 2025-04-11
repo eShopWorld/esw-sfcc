@@ -3,6 +3,17 @@
   width: 100%;
 }
 
+.esw-iframe-checkout-container{
+	min-height: 600px;
+	background: #F6F6F6;
+	margin-bottom:20px;
+}
+.esw-iframe-checkout iframe{
+	width: 100%;
+	height: 100vh;
+	border: 0;
+}
+
 @media screen and (min-width: 48rem) {
   .esw-country-selector {
     border-bottom: none;
@@ -225,7 +236,7 @@
   }
 
   .selectors.footerDropdown {
-    display: none;
+    display: block;
   }
 }
 

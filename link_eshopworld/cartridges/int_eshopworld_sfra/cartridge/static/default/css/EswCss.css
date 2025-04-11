@@ -3,6 +3,10 @@
   width: 100%;
   z-index: 30;
 }
+#mobileCountrySelector {
+	position: relative;
+	z-index: 1;
+}
 
 .closeLandingPage {
   position: absolute;

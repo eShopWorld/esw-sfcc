@@ -10,6 +10,7 @@
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
 const BasketMgr = require('dw/order/BasketMgr');
+const URLUtils = require('dw/web/URLUtils');
 
 /**
  * function to get product unit price info
@@ -152,6 +153,7 @@ function getLineItemsV3(order, countryCode, currencyCode) {
                 description: item.productName,
                 productUnitPriceInfo: getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs),
                 imageUrl: customizationHelper.getProductImage(item.product),
+                productUrl: URLUtils.https('Product-Show', 'pid', item.product.ID).toString(),
                 color: color,
                 size: size,
                 isNonStandardCatalogItem: false,
@@ -161,9 +163,6 @@ function getLineItemsV3(order, countryCode, currencyCode) {
             cartGrouping: 'Group 1',
             metadataItems: null
         };
-        if (eswHelper.isEnabledMultiOrigin()) {
-            cartItem.FulfilmentCountryIso = !empty(item.custom.eswFulfilmentCountryIso) ? item.custom.eswFulfilmentCountryIso : '';
-        }
         lineItems.push(cartItem);
     }
     return lineItems;
@@ -255,9 +254,6 @@ function getLineItemsV2(order, countryCode, currencyCode) {
             cartGrouping: 'Group 1',
             metadataItems: null
         };
-        if (eswHelper.isEnabledMultiOrigin()) {
-            cartItem.fulfilmentCountryIso = !empty(item.custom.eswFulfilmentCountryIso) ? item.custom.eswFulfilmentCountryIso : '';
-        }
         lineItems.push(cartItem);
     }
     return lineItems;

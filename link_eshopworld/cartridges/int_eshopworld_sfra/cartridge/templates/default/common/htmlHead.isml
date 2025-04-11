@@ -1,4 +1,4 @@
-<isset value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" name="eswHelper" scope="page" />
+<isset value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" name="eswHelper" scope="page" />
 
 <meta charset=UTF-8>
 
@@ -53,7 +53,7 @@
     hook for Marketing Cloud connector & other integration which need to inject
     logic or markup into the page header
         IMPORTANT: Note that this hook will be called to cached as well as uncached pages
-        Refrain from calling processing intensive logic in here 
+        Refrain from calling processing intensive logic in here
         do not include shopper specific information.
 </iscomment>
 ${dw.system.HookMgr.callHook('app.template.htmlHead', 'htmlHead', pdict) || ''}

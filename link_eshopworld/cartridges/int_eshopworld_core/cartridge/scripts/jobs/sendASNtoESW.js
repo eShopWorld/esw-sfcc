@@ -222,10 +222,13 @@ function execute() {
         dw.order.Order.SHIPPING_STATUS_SHIPPED
     );
     let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    let order;
+    let result;
+    let isAsnExportEnabledOnCountry = false;
     try {
-        let order;
         while (orders.hasNext()) {
             order = orders.next();
+            isAsnExportEnabledOnCountry = isAsnExportEnabledForCountry(order);
             if (!empty(order.orderNo)) {
                 let lineItemCtnr = 1;
                 if (eswHelper.isEswSplitShipmentEnabled() && order.shipments.length > 1) {
@@ -233,11 +236,11 @@ function execute() {
                     let shipmentsItr = order.getShipments().iterator();
                     while (shipmentsItr.hasNext()) {
                         let shipment = shipmentsItr.next();
-                        let result = asnUtils.sendASNForPackage(order, shipment, lineItemCtnr);
+                        result = asnUtils.sendASNForPackage(order, shipment, lineItemCtnr);
                         lineItemCtnr = result.lineItemCtnr;
                         if (result.response && result.response.status === 'OK') {
                             let responseObj = JSON.parse(result.response.object);
-                            if (responseObj.outcome.equalsIgnoreCase('PackageCreated')) {
+                            if (responseObj.outcome && !empty(responseObj.outcome) && responseObj.outcome.toLowerCase() === 'packagecreated') {
                                 Transaction.begin();
                                 if (!empty(order.custom.eswPackageJSON)) {
                                     packageJsonPayload = JSON.parse(order.custom.eswPackageJSON);
@@ -261,11 +264,11 @@ function execute() {
                             Logger.error('ASN transmission failed for order: {0} - Shipment {1} - {2}.', order.orderNo, shipment.ID, result.response.errorMessage);
                         }
                     }
-                } else if (isAsnExportEnabledForCountry(order)) {
-                    let result = asnUtils.sendASNForPackage(order, null, lineItemCtnr);
-                    if (result && result.status === 'OK') {
-                        let responseObj = JSON.parse(result.object);
-                        if (responseObj.outcome.equalsIgnoreCase('PackageCreated')) {
+                } else if (isAsnExportEnabledOnCountry) {
+                    result = asnUtils.sendASNForPackage(order, null, lineItemCtnr);
+                    if (result && result.response.status === 'OK') {
+                        let responseObj = JSON.parse(result.response.object);
+                        if (responseObj.outcome && !empty(responseObj.outcome) && responseObj.outcome.toLowerCase() === 'packagecreated') {
                             Transaction.begin();
                             order.custom.eswPackageReference = responseObj.package.eShopPackageReference.toString();
                             order.custom.eswTrackingURL = responseObj.package.trackingUrl;

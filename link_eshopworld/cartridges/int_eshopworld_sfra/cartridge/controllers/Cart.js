@@ -7,10 +7,9 @@
 const server = require('server');
 server.extend(module.superModule);
 
+const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
 const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswMultiOriginHelper = require('*/cartridge/scripts/helper/eswMultiOriginHelper');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-
 /**
  * Cart-MiniCart : The Cart-MiniCart endpoint is responsible for displaying the cart icon in the header with the number of items in the current basket
  * @name Base/Cart-MiniCart
@@ -74,15 +73,16 @@ server.prepend(
         eswHelper.rebuildCartUponBackFromESW();
         let BasketMgr = require('dw/order/BasketMgr'),
             currentBasket = BasketMgr.getCurrentBasket();
-        if (currentBasket && eswCoreHelper.getEShopWorldModuleEnabled() && eswCoreHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
-            let viewData = res.getViewData();
+        let viewData = res.getViewData();
+        if (currentBasket && eswCoreHelper.getEShopWorldModuleEnabled() && request.httpCookies['esw.location'] && eswCoreHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
             // Set override shipping methods if configured
             eswCoreHelper.applyShippingOverrideMethod(currentBasket);
-            res.setViewData(viewData);
         }
+        res.setViewData(viewData);
         return next();
     }
 );
+
 
 /**
  * Cart-Show : The Cart-Show endpoint renders the cart page with the current basket
@@ -103,7 +103,6 @@ server.append('Show', function (req, res, next) {
     res.setViewData(viewData);
     next();
 });
-
 
 /**
  * Cart-SelectShippingMethod : The Cart-SelectShippingMethod endpoint is responsible for assigning a shipping method to the shipment in basket
@@ -133,6 +132,20 @@ server.prepend('SelectShippingMethod', function (req, res, next) {
  * @param {renders} - isml
  * @param {serverfunction} - get
  */
+server.prepend('MiniCartShow', function (req, res, next) {
+    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    next();
+});
+
+/**
+ * Cart-MiniCartShow : The Cart-MiniCartShow is responsible for getting the basket and showing the contents when you hover over minicart in header
+ * @name Base/Cart-MiniCartShow
+ * @function
+ * @memberof Cart
+ * @param {category} - sensitive
+ * @param {renders} - isml
+ * @param {serverfunction} - get
+ */
 server.append('MiniCartShow', function (req, res, next) {
     let viewData = res.getViewData();
     // Group product for multi origin
@@ -143,105 +156,23 @@ server.append('MiniCartShow', function (req, res, next) {
     next();
 });
 
-server.prepend('MiniCartShow', function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
-    next();
-});
-
 /**
- * Cart-RemoveProductLineItem : The Cart-RemoveProductLineItem endpoint removes a product line item from the basket
- * @name Base/Cart-RemoveProductLineItem
+ * Cart-AddCoupon : The Cart-AddCoupon endpoint is responsible for adding a coupon to a basket
+ * @name Base/Cart-AddCoupon
  * @function
  * @memberof Cart
- * @param {querystringparameter} - pid - the product id
- * @param {querystringparameter} - uuid - the universally unique identifier of the product object
+ * @param {middleware} - server.middleware.https
+ * @param {middleware} - csrfProtection.validateAjaxRequest
+ * @param {querystringparameter} - couponCode - the coupon code to be applied
+ * @param {querystringparameter} - csrf_token - hidden input field csrf token
  * @param {category} - sensitive
  * @param {returns} - json
  * @param {serverfunction} - get
  */
-server.replace('RemoveProductLineItem', function (req, res, next) {
-    let BasketMgr = require('dw/order/BasketMgr');
-    let Resource = require('dw/web/Resource');
-    let Transaction = require('dw/system/Transaction');
-    let URLUtils = require('dw/web/URLUtils');
-    let CartModel = require('*/cartridge/models/cart');
-    let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+server.prepend('AddCoupon', function (req, res, next) {
     eswHelper.setEnableMultipleFxRatesCurrency(req);
-    let currentBasket = BasketMgr.getCurrentBasket();
-
-    if (!currentBasket) {
-        res.setStatusCode(500);
-        res.json({
-            error: true,
-            redirectUrl: URLUtils.url('Cart-Show').toString()
-        });
-
-        return next();
-    }
-
-    let isProductLineItemFound = false;
-    let bonusProductsUUIDs = [];
-
-    Transaction.wrap(function () {
-        if (req.querystring.pid && req.querystring.uuid) {
-            let productLineItems = currentBasket.getAllProductLineItems(req.querystring.pid);
-            // Custom Start: esw integration
-            let productGroupUuids = eswMultiOriginHelper.getGroupedPlisUuidByPid(req.querystring.pid, productLineItems);
-            let uuids = eswCoreHelper.isEnabledMultiOrigin() ? productGroupUuids : [req.querystring.uuid];
-            // Custom End: esw integration
-
-            let bonusProductLineItems = currentBasket.bonusLineItems;
-            let mainProdItem;
-            for (var i = 0; i < productLineItems.length; i++) {
-                let item = productLineItems[i];
-                // Custom Start: esw integration
-                if (uuids.indexOf(item.UUID) !== -1) {
-                // Custom End: esw integration
-                    if (bonusProductLineItems && bonusProductLineItems.length > 0) {
-                        for (var j = 0; j < bonusProductLineItems.length; j++) {
-                            let bonusItem = bonusProductLineItems[j];
-                            mainProdItem = bonusItem.getQualifyingProductLineItemForBonusProduct();
-                            if (mainProdItem !== null
-                                && (mainProdItem.productID === item.productID)) {
-                                bonusProductsUUIDs.push(bonusItem.UUID);
-                            }
-                        }
-                    }
-
-                    let shipmentToRemove = item.shipment;
-                    currentBasket.removeProductLineItem(item);
-                    if (shipmentToRemove.productLineItems.empty && !shipmentToRemove.default) {
-                        currentBasket.removeShipment(shipmentToRemove);
-                    }
-                    isProductLineItemFound = true;
-                    // Custom Start: esw integration
-                    if (!eswCoreHelper.isEnabledMultiOrigin()) {
-                    // Custom End: esw integration
-                        break;
-                    // Custom Start: esw integration
-                    }
-                    // Custom End: esw integration
-                }
-            }
-        }
-        basketCalculationHelpers.calculateTotals(currentBasket);
-    });
-
-    if (isProductLineItemFound) {
-        let basketModel = new CartModel(currentBasket);
-        let basketModelPlus = {
-            basket: basketModel,
-            toBeDeletedUUIDs: bonusProductsUUIDs
-        };
-        res.json(basketModelPlus);
-    } else {
-        res.setStatusCode(500);
-        res.json({ errorMessage: Resource.msg('error.cannot.remove.product', 'cart', null) });
-    }
-
-    return next();
+    next();
 });
-
 
 /**
  * Cart-RemoveCouponLineItem : The Cart-RemoveCouponLineItem endpoint is responsible for removing a coupon from a basket
@@ -256,6 +187,27 @@ server.replace('RemoveProductLineItem', function (req, res, next) {
  */
 server.prepend('RemoveCouponLineItem', function (req, res, next) {
     eswHelper.setEnableMultipleFxRatesCurrency(req);
+    next();
+});
+
+/**
+ * Cart-RemoveCouponLineItem : The Cart-RemoveCouponLineItem endpoint is responsible for removing a coupon from a basket
+ * @name Base/Cart-RemoveCouponLineItem
+ * @function
+ * @memberof Cart
+ * @param {querystringparameter} - code - the coupon code
+ * @param {querystringparameter} - uuid - the UUID of the coupon line item object
+ * @param {category} - sensitive
+ * @param {returns} - json
+ * @param {serverfunction} - get
+ */
+server.append('RemoveCouponLineItem', function (req, res, next) {
+    let viewData = res.getViewData();
+    // Group product for multi origin
+    if (eswCoreHelper.isEnabledMultiOrigin() && viewData && viewData.items) {
+        viewData.items = eswMultiOriginHelper.groupCartPlis(viewData.items);
+    }
+    res.setViewData(viewData);
     next();
 });
 
@@ -319,12 +271,6 @@ server.prepend('GetProduct', function (req, res, next) {
  * @param {returns} - json
  * @param {serverfunction} - get
  */
-
-server.prepend('AddCoupon', function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
-    next();
-});
-
 server.append(
     'AddCoupon',
     function (req, res, next) {
@@ -352,28 +298,6 @@ server.append(
         return next();
     }
 );
-
-/**
- * Cart-RemoveCouponLineItem : The Cart-RemoveCouponLineItem endpoint is responsible for removing a coupon from a basket
- * @name Base/Cart-RemoveCouponLineItem
- * @function
- * @memberof Cart
- * @param {querystringparameter} - code - the coupon code
- * @param {querystringparameter} - uuid - the UUID of the coupon line item object
- * @param {category} - sensitive
- * @param {returns} - json
- * @param {serverfunction} - get
- */
-server.append('RemoveCouponLineItem', function (req, res, next) {
-    let viewData = res.getViewData();
-    // Group product for multi origin
-    if (eswCoreHelper.isEnabledMultiOrigin() && viewData && viewData.items) {
-        viewData.items = eswMultiOriginHelper.groupCartPlis(viewData.items);
-    }
-    res.setViewData(viewData);
-    next();
-});
-
 
 /**
  * Cart-UpdateQuantity : The Cart-UpdateQuantity endpoint handles updating the quantity of a product line item in the basket
@@ -518,6 +442,89 @@ server.replace('UpdateQuantity', function (req, res, next) {
         res.json({
             errorMessage: Resource.msg('error.cannot.update.product.quantity', 'cart', null)
         });
+    }
+
+    return next();
+});
+
+server.replace('RemoveProductLineItem', function (req, res, next) {
+    let BasketMgr = require('dw/order/BasketMgr');
+    let Resource = require('dw/web/Resource');
+    let Transaction = require('dw/system/Transaction');
+    let URLUtils = require('dw/web/URLUtils');
+    let CartModel = require('*/cartridge/models/cart');
+    let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    let currentBasket = BasketMgr.getCurrentBasket();
+
+    if (!currentBasket) {
+        res.setStatusCode(500);
+        res.json({
+            error: true,
+            redirectUrl: URLUtils.url('Cart-Show').toString()
+        });
+
+        return next();
+    }
+
+    let isProductLineItemFound = false;
+    let bonusProductsUUIDs = [];
+
+    Transaction.wrap(function () {
+        if (req.querystring.pid && req.querystring.uuid) {
+            let productLineItems = currentBasket.getAllProductLineItems(req.querystring.pid);
+            // Custom Start: esw integration
+            let productGroupUuids = eswMultiOriginHelper.getGroupedPlisUuidByPid(req.querystring.pid, productLineItems);
+            let uuids = eswCoreHelper.isEnabledMultiOrigin() ? productGroupUuids : [req.querystring.uuid];
+            // Custom End: esw integration
+
+            let bonusProductLineItems = currentBasket.bonusLineItems;
+            let mainProdItem;
+            for (var i = 0; i < productLineItems.length; i++) {
+                let item = productLineItems[i];
+                // Custom Start: esw integration
+                if (uuids.indexOf(item.UUID) !== -1) {
+                // Custom End: esw integration
+                    if (bonusProductLineItems && bonusProductLineItems.length > 0) {
+                        for (var j = 0; j < bonusProductLineItems.length; j++) {
+                            let bonusItem = bonusProductLineItems[j];
+                            mainProdItem = bonusItem.getQualifyingProductLineItemForBonusProduct();
+                            if (mainProdItem !== null
+                                && (mainProdItem.productID === item.productID)) {
+                                bonusProductsUUIDs.push(bonusItem.UUID);
+                            }
+                        }
+                    }
+
+                    let shipmentToRemove = item.shipment;
+                    currentBasket.removeProductLineItem(item);
+                    if (shipmentToRemove.productLineItems.empty && !shipmentToRemove.default) {
+                        currentBasket.removeShipment(shipmentToRemove);
+                    }
+                    isProductLineItemFound = true;
+                    // Custom Start: esw integration
+                    if (!eswCoreHelper.isEnabledMultiOrigin()) {
+                    // Custom End: esw integration
+                        break;
+                    // Custom Start: esw integration
+                    }
+                    // Custom End: esw integration
+                }
+            }
+        }
+        basketCalculationHelpers.calculateTotals(currentBasket);
+    });
+
+    if (isProductLineItemFound) {
+        let basketModel = new CartModel(currentBasket);
+        let basketModelPlus = {
+            basket: basketModel,
+            toBeDeletedUUIDs: bonusProductsUUIDs
+        };
+        res.json(basketModelPlus);
+    } else {
+        res.setStatusCode(500);
+        res.json({ errorMessage: Resource.msg('error.cannot.remove.product', 'cart', null) });
     }
 
     return next();
@@ -691,7 +698,7 @@ server.replace('EditProductLineItem', function (req, res, next) {
             });
         } else {
             cartItem = arrayHelper.find(cartModel.items, function (item) {
-                return item.UUID === response.uuid;
+                return item.UUID === uuid;
             });
         }
         // Custom End: esw integration

@@ -268,4 +268,3 @@ function updateProductIDWithSameOrigin(productId, totalQtyRequested, matchingLin
 base.addProductToCart = addProductToCart;
 base.updateProductIDWithSameOrigin = updateProductIDWithSameOrigin;
 module.exports = base;
-

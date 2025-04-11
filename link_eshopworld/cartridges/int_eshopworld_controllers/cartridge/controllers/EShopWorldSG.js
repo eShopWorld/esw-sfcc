@@ -12,8 +12,10 @@
 
 /* API includes */
 const URLUtils = require('dw/web/URLUtils');
+const ArrayList = require('dw/util/ArrayList');
 
 /* Script Modules */
+const Constants = require('*/cartridge/scripts/util/Constants');
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
 const app = require('*/cartridge/scripts/app');
 const guard = require('*/cartridge/scripts/guard');
@@ -236,8 +238,17 @@ function preOrderRequest() {
         if (!eswHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
             redirectURL = URLUtils.https('COCustomer-Start').toString();
         } else {
-            // eslint-disable-next-line no-use-before-define
-            result = handlePreOrderRequestV2();
+            if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                let cart = dw.order.BasketMgr.getCurrentOrNewBasket(),
+                    eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
+                if (empty(cart.defaultShipment.shippingMethod)) {
+                    eswServiceHelper.getApplicableDefaultShippingMethod(cart);
+                }
+                result = eswHelper.generatePreOrderUsingBasket();
+            } else {
+                // eslint-disable-next-line no-use-before-define
+                result = handlePreOrderRequestV2();
+            }
             if ((result.status === 'REDIRECT') && (!('guestCheckout' in session.privacy) || session.privacy.guestCheckout == null)) {
                 Response.renderJSON({
                     redirectURL: URLUtils.https('COCustomer-Start').toString()
@@ -247,15 +258,23 @@ function preOrderRequest() {
             if (result.status === 'ERROR' || empty(result.object)) {
                 logger.error('ESW Service Error: {0}', result.errorMessage);
                 if (isAjax) {
-                    Response.renderJSON({
-                        redirectURL: URLUtils.https('Cart-Show', 'eswfail', true).toString()
-                    });
+                    if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                        Response.renderJSON({
+                            error: 'CHECKOUT_FAILED'
+                        });
+                    } else {
+                        Response.renderJSON({
+                            redirectURL: URLUtils.https('Cart-Show', 'eswfail', true).toString()
+                        });
+                    }
                 } else {
                     response.redirect(URLUtils.https('Cart-Show', 'eswfail', true).toString());
                 }
                 return;
             }
-            redirectURL = JSON.parse(result.object).redirectUrl;
+            redirectURL = eswHelper.isEswEnabledEmbeddedCheckout() ?
+             URLUtils.https('EShopWorldSG-EswEmbeddedCheckout', Constants.EMBEDDED_CHECKOUT_QUERY_PARAM, JSON.parse(result.object).redirectUrl).toString() :
+             JSON.parse(result.object).redirectUrl;
             if ('shopperAccessToken' in JSON.parse(result.object)) {
                 eswHelper.createCookie('esw-shopper-access-token', JSON.parse(result.object).shopperAccessToken, '/', 3600, eswHelper.getTopLevelDomain());
             } else {
@@ -295,7 +314,7 @@ function handlePreOrderRequestV2() {
 
     if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
         if (!customer.authenticated) {
-            session.privacy.TargetLocation = URLUtils.https('EShopWorld-PreOrderRequest').toString();
+            session.privacy.TargetLocation = URLUtils.https('EShopWorldSG-PreOrderRequest').toString();
             return {
                 status: 'REDIRECT'
             };
@@ -424,6 +443,321 @@ function registerCustomer() {
         logger.error('ESW Plugin Account Creation Error: {0}', error.message);
     }
 }
+/**
+ * Function to be called from ESW to check Order items inventory in SFCC side.
+ */
+function validateInventory() {
+    let obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
+    let responseJSON = eswHelper.getValidateInventoryResponseJson(obj);
+    Response.renderJSON(responseJSON);
+}
+/**
+ * Function to handle order confirmation request in V2
+ */
+function notify() {
+    /* eslint-disable no-new-wrappers */
+    let Transaction = require('dw/system/Transaction'),
+        OrderMgr = require('dw/order/OrderMgr'),
+        logger = require('dw/system/Logger'),
+        Order = require('dw/order/Order'),
+        BasketMgr = require('dw/order/BasketMgr'),
+        pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
+        responseJSON = {};
+    if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
+        response.setStatus(401);
+        logger.error('ESW Order Confirmation Error: Basic Authentication Token did not match');
+    } else {
+        let obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
+        responseJSON = {
+            OrderNumber: obj.retailerCartId.toString(),
+            EShopWorldOrderNumber: obj.eShopWorldOrderNumber.toString(),
+            ResponseCode: '200',
+            ResponseText: 'Success'
+        };
+
+        try {
+            eswHelper.eswInfoLogger('Esw Order Confirmation Request', JSON.stringify(obj));
+            let ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
+                shopperCurrency = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.currency : obj.shopperCurrencyPaymentAmount.substring(0, 3),
+                totalCheckoutAmount = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.amount : obj.shopperCurrencyPaymentAmount.substring(3),
+                paymentCardBrand = ('paymentDetails' in obj) ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand,
+                basket = BasketMgr.getCurrentOrNewBasket();
+            // Set Override Price Books
+            try {
+                pricingHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency, basket, true);
+            } catch (e) {
+                ocHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency);
+            }
+            Transaction.wrap(function () {
+                let order = OrderMgr.getOrder(obj.retailerCartId);
+                // If order not found in SFCC
+                if (empty(order)) {
+                    response.setStatus(400);
+                    responseJSON.ResponseCode = '400';
+                    responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
+                    Response.renderJSON(responseJSON);
+                    return;
+                } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
+                    let result = OrderMgr.undoFailOrder(order);
+                    if (result.error) {
+                        response.setStatus(409);
+                        responseJSON.ResponseCode = '409';
+                        responseJSON.ResponseText = 'Error: Inventory Reservation Failed';
+                        Response.renderJSON(responseJSON);
+                        return;
+                    }
+                }
+                // If order already confirmed & processed
+                if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
+                    responseJSON.ResponseText = 'Order already exists';
+                    Response.renderJSON(responseJSON);
+                    return;
+                }
+                // If order exist with created status in SFCC then perform order confirmation
+                if (order.status.value === Order.ORDER_STATUS_CREATED) {
+                    let currentMethodID = order.shipments[0].shippingMethodID;
+                    ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, null, currentMethodID);
+                    // update ESW order custom attributes
+                    if ('checkoutTotal' in obj) { // OC response v3.0
+                        ocHelper.updateEswOrderAttributesV3(obj, order);
+                    } else { // OC response v2.0
+                        ocHelper.updateEswOrderAttributesV2(obj, order);
+                    }
+                    // update ESW order Item custom attributes
+                    let ocLineItemObject = ('lineItems' in obj) ? obj.lineItems : obj.cartItems;
+                    if (ocLineItemObject != null && ocLineItemObject[0].product.productCode) {
+                        let cartItem;
+                        for (let lineItem in order.productLineItems) {
+                            cartItem = ocLineItemObject.filter(function (value) {
+                                if (value.product.productCode === order.productLineItems[lineItem].productID && value.lineItemId === order.productLineItems[lineItem].custom.eswLineItemId) {
+                                    return value;
+                                }
+                            });
+                            if ('lineItems' in obj) { // OC response v3.0
+                                ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
+                            } else { // OC response v2.0
+                                ocHelper.updateEswOrderItemAttributesV2(obj, order.productLineItems[lineItem], cartItem);
+                            }
+                        }
+                        if ('lineItems' in obj) { // OC response v3.0
+                            ocHelper.updateOrderLevelAttrV3(obj, order);
+                        }
+                    }
+                    // update ESW order Item custom attributes
+                    ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
+                    // update ESW Payment instrument custom attributes
+                    ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
+
+                    OrderMgr.placeOrder(order);
+                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                    order.setExportStatus(Order.EXPORT_STATUS_READY);
+
+                    if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId)) {
+                        ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId, obj.shopperCheckoutExperience.saveAddressForNextPurchase);
+                    }
+
+                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    }
+                }
+            });
+        } catch (e) {
+            logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
+            // In SFCC, SystemError suggest exceptions initiated by system like optimistic lock exception etc.
+            if (e.name === 'SystemError') {
+                response.setStatus(429);
+                responseJSON.ResponseCode = '429';
+                responseJSON.ResponseText = 'Transient Error: Too many requests';
+            } else { // For other errors like ReferenceError etc.
+                response.setStatus(400);
+                responseJSON.ResponseCode = '400';
+                responseJSON.ResponseText = 'Error: Internal error';
+            }
+        }
+        eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
+    }
+    Response.renderJSON(responseJSON);
+}
+
+/**
+ * Function to handle Embeded Checkout order confirmation request in V2
+ */
+function eswEmbeddedCheckoutNotify() {
+    let eswCoreApiHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper'),
+        eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
+        eswOcapiServiceHelper = require('*/cartridge/scripts/services/EswOcapiService').getEswOcapiServices,
+        embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+    let Transaction = require('dw/system/Transaction'),
+        logger = require('dw/system/Logger'),
+        ProductMgr = require('dw/catalog/ProductMgr'),
+        responseJSON = {};
+    let preorderServiceObj = eswCoreService.getSFCCOcapi();
+    let currentBasketData = null;
+
+    if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
+        response.setStatus(401);
+        logger.error('ESW Order Confirmation Error: Basic Authentication Token did not match');
+    } else {
+        try {
+            let obj = JSON.parse(request.httpParameterMap.requestBodyAsString);
+
+            eswHelper.eswInfoLogger('Esw Order Confirmation Request', JSON.stringify(obj));
+
+            let ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper();
+
+            let inventoryValidationPlis = { productLineItems: new ArrayList([]) };
+            let authKey,
+                accessToken;
+            let basketID = eswHelper.getRetailerCartId(obj.retailerCartId);
+            accessToken = eswHelper.getPWAHeadlessAccessToken(obj);
+            if (!empty(accessToken)) {
+                if (typeof accessToken === 'string') {
+                    authKey = 'Bearer ' + accessToken;
+                } else {
+                    authKey = accessToken.authorization;
+                }
+            } else {
+                let dwSid = eswHelper.getDwsid(obj);
+                let customerEndpoint = Constants.CUSTOMER_AUTH + eswHelper.getOcapiClientID();
+                let customerAuth = preorderServiceObj.call({ requestBody: { type: 'session' }, endpoint: customerEndpoint, dwsid: dwSid });
+                authKey = customerAuth.ok && !empty(customerAuth.object) ? customerAuth.object.getResponseHeader('authorization') : null;
+            }
+            let shopperCurrency = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.currency : obj.shopperCurrencyPaymentAmount.substring(0, 3);
+            ocHelper.setOverridePriceBooks(obj.deliveryCountryIso, shopperCurrency);
+
+            let ocapiBasketResponse = eswOcapiServiceHelper.ocapiBasketService().call({
+                basketId: basketID,
+                httpMethod: 'GET',
+                authToken: authKey
+            });
+
+            if (ocapiBasketResponse.isOk() && !empty(ocapiBasketResponse.getObject())) {
+                currentBasketData = JSON.parse(ocapiBasketResponse.object.text);
+
+                if (eswHelper.getEnableInventoryCheck()) {
+                    for (let i = 0; i < currentBasketData.product_items.length; i++) {
+                        inventoryValidationPlis.productLineItems.add({
+                            product: ProductMgr.getProduct(currentBasketData.product_items[i].product_id),
+                            quantityValue: currentBasketData.product_items[i].quantity
+                        });
+                    }
+                    if (!ocHelper.validateEswOrderInventory(inventoryValidationPlis)) {
+                        throw new Error('Inventory validation failed');
+                    }
+                }
+            }
+
+            let isValidBasket = eswCoreApiHelper.compareBasketAndOcProducts(currentBasketData, obj);
+            if (!isValidBasket) {
+                throw new Error('Basket data from OCAPI and ESW Checkout are not equal');
+            }
+
+            let ocapiOrderResponse = eswOcapiServiceHelper.ocapiOrderService().call({
+                httpMethod: 'POST',
+                authToken: authKey,
+                basketId: basketID,
+                countryCode: obj.deliveryCountryIso
+            });
+
+            if (ocapiOrderResponse.isOk() && !empty(ocapiOrderResponse.getObject())) {
+                let orderData = JSON.parse(ocapiOrderResponse.object.text);
+                Transaction.wrap(function () {
+                    embCheckoutHelper.processUpdateOrderAttributes(orderData.order_no, obj, null);
+                });
+
+                responseJSON = {
+                    OrderNumber: orderData.order_no,
+                    EShopWorldOrderNumber: obj.eShopWorldOrderNumber,
+                    ResponseCode: '200',
+                    ResponseText: 'Success'
+                };
+            } else {
+                throw new Error('Error while generating order from the basket');
+            }
+        } catch (e) {
+            logger.error('ESW Service Error: {0}', e.message);
+            if (e.name === 'SystemError') {
+                response.setStatus(429);
+                responseJSON.ResponseCode = '429';
+                responseJSON.ResponseText = 'Transient Error: Too many requests';
+            } else {
+                response.setStatus(400);
+                responseJSON.ResponseCode = '400';
+                responseJSON.ResponseText = 'Error: Internal error';
+            }
+        }
+
+        eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
+    }
+
+    Response.renderJSON(responseJSON);
+}
+
+/**
+ * Store webhook response
+ * @returns {void} - Void
+ */
+function processWebHooks() {
+    let responseJSON = {};
+    responseJSON = eswHelper.handleWebHooks(JSON.parse(request.httpParameterMap.requestBodyAsString), request.httpHeaders.get('esw-event-type'));
+    Response.renderJSON(responseJSON);
+}
+
+/**
+ * Function to be called to render ESW Embeded Checkout page
+ */
+function eswEmbeddedCheckout() {
+    // This controller will be in use only if int_eshopworld_eckout cartridge is in the path
+    const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+    var iframeUrlQueryParam = request.httpParameterMap.get(Constants.EMBEDDED_CHECKOUT_QUERY_PARAM).stringValue;
+    var eswIframeCheckoutUrl = empty(iframeUrlQueryParam) ? request.httpCookies[embCheckoutHelper.getEswIframeCookieName()].value : iframeUrlQueryParam;
+    app.getView({
+        eswCheckoutUrl: eswIframeCheckoutUrl,
+        eswIframeErrorLogUrl: URLUtils.https('EShopWorldSG-EswIframeFailed').toString(),
+        eswIframeFallbackUrl: embCheckoutHelper.getEswIframeFallbackUrl()
+    }).render('checkout/eswEmbeddedCheckoutSG');
+}
+
+/**
+ * Function to be called to render ESW Embeded Checkout page Headless Checkout
+ */
+function eswEmbeddedCheckoutPreOrderRequest() {
+    let logger = require('dw/system/Logger');
+    let eswOcapiServiceHelper = require('*/cartridge/scripts/services/EswOcapiService').getEswOcapiServices;
+    let response = {};
+    let param = request.httpParameterMap;
+    let postedData = null;
+    let ocapiBasketResponse = null;
+
+    try {
+        // Validate country code
+        if (!param.get('country-code') || !eswHelper.checkIsEswAllowedCountry(param.get('country-code').stringValue)) {
+            response.error = 'CHECKOUT_FAILED';
+            Response.renderJSON(response);
+            return;
+        }
+
+        postedData = JSON.parse(request.httpParameterMap.requestBodyAsString);
+        ocapiBasketResponse = eswOcapiServiceHelper.ocapiBasketService().call({
+            basketId: postedData.basket_id,
+            httpMethod: 'PATCH',
+            countryCode: param.get('country-code').stringValue
+        });
+
+        if (ocapiBasketResponse.ok && ocapiBasketResponse.object) {
+            response = JSON.parse(ocapiBasketResponse.object.text);
+            if (response.c_eswPreOrderResponse && response.c_eswPreOrderResponse.redirectUrl) {
+                response.c_eswPreOrderResponse.redirectUrl = eswHelper.getEswHeadlessSiteUrl() + Constants.EMBEDDED_CHECKOUT_ENDPOINT_HEADLESS_SITE_GENESIS + Constants.EMBEDDED_CHECKOUT_QUERY_PARAM + Constants.EQUALS_OPERATOR + response.c_eswPreOrderResponse.redirectUrl;
+            }
+        } else {
+            response.error = 'CHECKOUT_FAILED';
+        }
+    } catch (e) {
+        logger.error('EShopWorld-EswEmbeddedCheckoutPreOrderRequest Error: {0}', e.message);
+        response.error = 'CHECKOUT_FAILED';
+    }
+    Response.renderJSON(response);
+}
 
 /* Web exposed methods */
 
@@ -466,3 +800,27 @@ exports.GetCart = guard.ensure(['get'], eswBackToCart);
 /** Renders the account login/create page redirected from ESW Confirmation.
  * @see module:controllers/EShopWorld~registerCustomer */
 exports.RegisterCustomer = guard.ensure(['get'], registerCustomer);
+
+/** Handles the order inventory check before order confirmation.
+ * @see {@link module:controllers/EShopWorld~ValidateInventory} */
+exports.ValidateInventory = guard.ensure(['post', 'https'], validateInventory);
+
+/** Handles the order confirmation request
+  * @see {@link module:controllers/EShopWorld~Notify} */
+exports.Notify = guard.ensure(['post', 'https'], notify);
+
+ /** Process the webhook for Logistic return portal.
+  * @see module:controllers/EShopWorld~processWebHooks */
+exports.ProcessWebHooks = guard.ensure(['post'], processWebHooks);
+
+/** Renders the Embeded checkout
+ * @see module:controllers/EShopWorldSG~eswEmbeddedCheckout */
+exports.EswEmbeddedCheckout = guard.ensure(['get'], eswEmbeddedCheckout);
+
+/** Handles the order confirmation request
+ * @see module:controllers/EShopWorldSG~EsWEmbeddedCheckoutNotify */
+exports.EsWEmbeddedCheckoutNotify = guard.ensure(['post'], eswEmbeddedCheckoutNotify);
+
+/** Handles the pre order request
+ * @see module:controllers/EShopWorldSG~EswEmbeddedCheckoutPreOrderRequest */
+exports.EswEmbeddedCheckoutPreOrderRequest = guard.ensure(['post'], eswEmbeddedCheckoutPreOrderRequest);

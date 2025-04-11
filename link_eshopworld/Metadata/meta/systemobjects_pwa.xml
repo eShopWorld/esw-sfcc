@@ -25,4 +25,14 @@
             </attribute-group>
         </group-definitions>
     </type-extension>
+	<type-extension type-id="Basket">
+		<custom-attribute-definitions>
+            <attribute-definition attribute-id="eswPreOrderRequest">
+                <display-name xml:lang="x-default">ESW PreOrderRequest</display-name>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+		</custom-attribute-definitions>
+	</type-extension>
 </metadata>
