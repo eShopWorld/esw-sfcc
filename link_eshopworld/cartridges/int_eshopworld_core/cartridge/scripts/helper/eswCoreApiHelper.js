@@ -7,7 +7,6 @@ const Site = require('dw/system/Site').getCurrent();
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const ShippingMgr = require('dw/order/ShippingMgr');
 const pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
-const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
 
 /**
  * Updates the productLineItems (pli) with in the basket
@@ -19,7 +18,9 @@ const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
  * @param {boolean} isFixedPriceCountry - indicate shopper country fixed or dynamic
  */
 function eswPliPriceConversions(basket, pliAttributeMap, localizeObj, conversionPrefs, isFixedPriceCountry) {
-    let collections = require('*/cartridge/scripts/util/collections');
+    let collections = require('*/cartridge/scripts/util/collections'),
+        eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+
 
     collections.forEach(basket.productLineItems, function (item) {
         if (!empty(pliAttributeMap)) {
@@ -87,6 +88,7 @@ function sendOverrideShippingMethods(basket, basketResponse) {
  * @param {Object} basket - Basket API object
  */
 function eswBasketPriceConversions(basket) {
+    const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
     try {
         if (Object.hasOwnProperty.call(basket, 'orderNo')) {
             return;
@@ -136,7 +138,95 @@ function eswBasketPriceConversions(basket) {
     }
 }
 
+/**
+ * sort Array products by ID
+ * @param {Array<Object>} arr - products array.
+ * @returns {Array<Object>} arr - Sorted products array.
+ */
+function sortByProductId(arr) {
+    return arr.sort(function (a, b) {
+        if (a.product_id < b.product_id) {
+            return -1;
+        }
+        if (a.product_id > b.product_id) {
+            return 1;
+        }
+        return 0;
+    });
+}
+/**
+ * Compares currentBasketData and ocPayloadJson to check if they are equal.
+ * @param {Array<Object>} currentBasketData - Current basket contents.
+ * @param {Array<Object>} ocPayloadJson - The ocPayloadJson.
+ * @returns {boolean} - Returns true if the arrays are equal, otherwise false.
+ */
+function compareBasketAndOcProducts(currentBasketData, ocPayloadJson) {
+    if (empty(currentBasketData) || empty(ocPayloadJson)) {
+        return false;
+    }
+    // Get baskt SKUs
+    let basketProductsData = [];
+    if ('productItems' in currentBasketData) {
+        let basketProducts = currentBasketData.productItems;
+        for (let i = 0; i < basketProducts.length; i++) {
+            basketProductsData.push({
+                product_id: basketProducts[i].productId,
+                quantity: basketProducts[i].quantity
+            });
+        }
+    } else {
+        let basketProducts = currentBasketData.product_items;
+        for (let i = 0; i < basketProducts.length; i++) {
+            basketProductsData.push({
+                product_id: basketProducts[i].product_id,
+                quantity: basketProducts[i].quantity
+            });
+        }
+    }
+
+    // Get OC SKUs
+    let ocProducts = null;
+    let ocProductsData = [];
+    if ('cartItems' in ocPayloadJson) { // OC response for v2
+        ocProducts = ocPayloadJson.cartItems;
+    } else {  // OC response for v3
+        ocProducts = ocPayloadJson.lineItems;
+    }
+
+    for (let i = 0; i < ocProducts.length; i++) {
+        ocProductsData.push({
+            product_id: ocProducts[i].product.productCode,
+            quantity: ocProducts[i].quantity
+        });
+    }
+
+    if (basketProductsData.length !== ocProductsData.length) {
+        return false;
+    }
+    basketProductsData = sortByProductId(basketProductsData);
+    ocProductsData = sortByProductId(ocProductsData);
+
+    for (let i = 0; i < basketProductsData.length; i++) {
+        let basketProductsDataKeys = Object.keys(basketProductsData[i]);
+        let ocProductsDataKeys = Object.keys(ocProductsData[i]);
+
+        if (basketProductsDataKeys.length !== ocProductsDataKeys.length) {
+            return false;
+        }
+
+        for (let key of basketProductsDataKeys) {
+            if (basketProductsData[i][key] !== ocProductsData[i][key]) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
 module.exports = {
     eswBasketPriceConversions: eswBasketPriceConversions,
-    sendOverrideShippingMethods: sendOverrideShippingMethods
+    sendOverrideShippingMethods: sendOverrideShippingMethods,
+    compareBasketAndOcProducts: compareBasketAndOcProducts
 };

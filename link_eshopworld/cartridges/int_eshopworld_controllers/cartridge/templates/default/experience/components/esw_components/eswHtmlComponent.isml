@@ -2,7 +2,7 @@
 <div class="esweHtml-component-container">
     <isif condition="${pdict.isEswEnabled && eswHelper.isFrontendConversionEnabled()}">
         <isinclude
-            url="${URLUtils.url('EShopWorld-GetEswAppResources', pdict.countryUrlParam, pdict.selectedCountry)}" />
+            url="${URLUtils.url('EShopWorldSG-GetEswAppResources', pdict.countryUrlParam, pdict.selectedCountry)}" />
     </isif>
     <div class="row">
         <div class="col-12 align-self-center text-center text-lg-left">

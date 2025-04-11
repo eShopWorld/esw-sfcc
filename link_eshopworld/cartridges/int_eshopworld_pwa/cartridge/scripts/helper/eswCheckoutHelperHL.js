@@ -165,8 +165,31 @@ const CheckoutRequestBuilder = {
     composeRequestBody: function (order, shopperCountry, shopperCurrency, shopperLocale) {
         let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
         let bodyJSON = eswServiceHelper.preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale);
-        bodyJSON.retailerCartId = order.orderNo;
         bodyJSON.retailerCheckoutExperience = this.getPWAExpansionPairs(shopperLocale, shopperCountry);
+        if ('custom' in order && 'eswPreOrderRequest' in order.custom && !empty(order.custom.eswPreOrderRequest)) {
+            let eswRetailerCartId = order.UUID + '__' + Date.now();
+            bodyJSON.retailerCartId = eswRetailerCartId.substring(0, 99);
+            let accessToken = order.custom.eswPreOrderRequest;
+            let partLength = Math.ceil(accessToken.length / 2);
+
+            // Split the string into two parts
+            let accessTokenPart1 = accessToken.slice(0, partLength);
+            let accessTokenPart2 = accessToken.slice(partLength);
+
+            if (!('metadataItems' in bodyJSON.shopperCheckoutExperience) || empty(bodyJSON.shopperCheckoutExperience.metadataItems)) {
+                bodyJSON.shopperCheckoutExperience.metadataItems = [];
+            }
+            ['cartItems', 'lineItems'].forEach(function (key) {
+                if (key in bodyJSON) {
+                    bodyJSON[key][0].metadataItems = bodyJSON[key][0].metadataItems || [];
+                }
+            });
+
+            (bodyJSON.cartItems || bodyJSON.lineItems)[0].metadataItems.push({ name: 'accessTokenPart2', value: accessTokenPart2 });
+            bodyJSON.shopperCheckoutExperience.metadataItems.push({ name: 'accessTokenPart1', value: accessTokenPart1 });
+        } else {
+            bodyJSON.retailerCartId = order.orderNo;
+        }
 
         return bodyJSON;
     },
@@ -241,12 +264,16 @@ function callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocal
     if (empty(requestBody.shopperCheckoutExperience.registration)) {
         requestBody.shopperCheckoutExperience.registration = {};
     }
-    if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestBody.shopperCheckoutExperience.registration) && requestBody.shopperCheckoutExperience.registration.showRegistration) {
-        requestBody.shopperCheckoutExperience.registration.registrationUrl += '?retailerCartId=' + requestBody.retailerCartId;
+    // eslint-disable-next-line no-lonely-if
+    if (eswCheckoutRegisterationEnabled && !customer.authenticated) {
+        requestBody.shopperCheckoutExperience.registration.showRegistration = true;
     } else {
         requestBody.shopperCheckoutExperience.registration.showRegistration = false;
     }
     requestBody.shopperCheckoutExperience.registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_PWA_URL_VALUE).toString();
+    if (eswCheckoutRegisterationEnabled && !customer.authenticated && !empty(requestBody.shopperCheckoutExperience.registration) && requestBody.shopperCheckoutExperience.registration.showRegistration) {
+        requestBody.shopperCheckoutExperience.registration.registrationUrl += '?retailerCartId=' + requestBody.retailerCartId;
+    }
 
     let result = preorderServiceObj.call({
         eswOAuthToken: JSON.parse(oAuthResult.object).access_token,
@@ -314,17 +341,21 @@ function setEswOrderAttributes(order, localizeObj, conversionPrefs) {
         let isFixedPriceCountry = eswHelper.getFixedPriceModelCountries().filter(function (country) {
             return country.value === localizeObj.localizeCountryObj.countryCode;
         });
-        if (empty(isFixedPriceCountry)) {
-            order.custom.eswFxrate = Number(conversionPrefs.selectedFxRate[0].rate).toFixed(4);
-        } else {
-            let defaultCurrencyCode = localizeObj.localizeCountryObj.currencyCode,
-                overridePricebooks = eswHelper.getOverridePriceBooks(localizeObj.localizeCountryObj.countryCode);
-            if (overridePricebooks.length > 0 && defaultCurrencyCode !== eswHelper.getPriceBookCurrency(overridePricebooks[0])) {
+        if (!('eswPreOrderRequest' in order.custom)) {
+            if (empty(isFixedPriceCountry)) {
                 order.custom.eswFxrate = Number(conversionPrefs.selectedFxRate[0].rate).toFixed(4);
+            } else {
+                let defaultCurrencyCode = localizeObj.localizeCountryObj.currencyCode,
+                    overridePricebooks = eswHelper.getOverridePriceBooks(localizeObj.localizeCountryObj.countryCode);
+                if (overridePricebooks.length > 0 && defaultCurrencyCode !== eswHelper.getPriceBookCurrency(overridePricebooks[0])) {
+                    order.custom.eswFxrate = Number(conversionPrefs.selectedFxRate[0].rate).toFixed(4);
+                }
             }
         }
     }
-    order.custom.eswShopperCurrencyTotalOrderDiscount = eswHelperHL.getOrderDiscount(order, localizeObj, conversionPrefs).value;
+    if (!('eswPreOrderRequest' in order.custom)) {
+        order.custom.eswShopperCurrencyTotalOrderDiscount = eswHelperHL.getOrderDiscount(order, localizeObj, conversionPrefs).value;
+    }
 }
 
 /**

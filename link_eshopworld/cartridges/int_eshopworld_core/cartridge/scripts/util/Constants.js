@@ -33,3 +33,12 @@ exports.eswPkgOptionMixed = {
     value: 'mixed'
 };
 exports.pkgAsnMaxDays = 3;
+exports.STR_QUOTA_LIMIT = 999;
+exports.CUSTOMER_AUTH = 'customers/auth?client_id=';
+exports.EMBEDDED_CHECKOUT_QUERY_PARAM = 'eswiframeurl';
+exports.EMBEDDED_CHECKOUT_ENDPOINT_HEADLESS = 'EShopWorld-EswEmbeddedCheckout?';
+exports.EMBEDDED_CHECKOUT_ENDPOINT_HEADLESS_SITE_GENESIS = 'EShopWorldSG-EswEmbeddedCheckout?';
+exports.EQUALS_OPERATOR = '=';
+exports.COUNTRY_CODE = '?country-code=';
+exports.REGISTERATION_URL_VALUE_SG = 'EShopWorldSG-RegisterCustomer';
+exports.SITE_GENESIS_SITE_ID = 'SiteGenesis';

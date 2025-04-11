@@ -1,5 +1,6 @@
 const Status = require('dw/system/Status');
 const Transaction = require('dw/system/Transaction');
+const logger = require('dw/system/Logger');
 
 const OCAPIHelper = require('*/cartridge/scripts/helper/eswOCAPIHelperHL');
 const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
@@ -16,6 +17,13 @@ exports.modifyPOSTResponse = function (basket, doc) {
 exports.modifyPATCHResponse = function (basket, doc) {
     if (eswCoreHelper.getEShopWorldModuleEnabled()) {
         OCAPIHelper.basketItemsModifyResponse(basket, doc);
+    }
+    if (eswCoreHelper.isEswEnabledEmbeddedCheckout() && 'eswPreOrderRequest' in basket.custom) {
+        try {
+            OCAPIHelper.handleEswPreOrderCall(basket, doc);
+        } catch (error) {
+            logger.error('Error while modifying basket for  embeded checkout {0} ', error);
+        }
     }
     return new Status(Status.OK);
 };
@@ -57,6 +65,19 @@ exports.afterPATCH = function (basket) {
             }
         });
     }
+    if (eswCoreHelper.isEswEnabledEmbeddedCheckout() && 'eswPreOrderRequest' in basket.custom) {
+        try {
+            Transaction.wrap(function () {
+                OCAPIHelper.handleEswBasketAttributes(basket);
+                OCAPIHelper.handleEswOrderAttributes(basket);
+            });
+        } catch (error) {
+            logger.error('Error while modifying basket for  embeded checkout {0} ', error);
+            Transaction.wrap(function () {
+                basket.custom.eswPreOrderRequest = '';
+            });
+        }
+    }
     return new Status(Status.OK);
 };
 
@@ -73,6 +94,9 @@ exports.beforePOST = function (basket, items) {
     if (eswCoreHelper.getEShopWorldModuleEnabled()) {
         let selectedCountryDetail = eswCoreHelper.getCountryDetailByParam(request.httpParameters);
         Transaction.wrap(function () {
+            if (selectedCountryDetail.isFixedPriceModel) {
+                eswCoreHelper.updateShopperBasketCurrency(selectedCountryDetail, basket);
+            }
             if (empty(basket.shipments[0].shippingMethodID)) {
                 eswCoreHelper.applyOverrideShipping(basket, selectedCountryDetail.countryCode);
             }

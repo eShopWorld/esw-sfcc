@@ -63,7 +63,7 @@ const getEswCalculationHelper = {
             if (!isJob) {
                 if ((empty(promotionPriceObj) || !promotionPriceObj || isFixedPriceCountry)) {
                     // applying override price if override pricebook is set
-                    billingPrice = Number(eswHelper.applyOverridePrice(billingPrice, selectedCountry));
+                    billingPrice = Number(eswHelper.applyOverridePrice(billingPrice, selectedCountry, isFixedPriceCountry));
                 }
             }
             // fixed price countries will not have adjustment, duty and taxes applied
@@ -81,11 +81,10 @@ const getEswCalculationHelper = {
                     }
                 }
             }
+
             // applying FX rate if currency is not same as base currency
-            if (selectedFxRate.toShopperCurrencyIso !== baseCurrency) {
-                if (selectedFxRate && !empty(selectedFxRate)) {
-                    billingPrice = Number((billingPrice * selectedFxRate.rate));
-                }
+            if ((isJob || (!isFixedPriceCountry && selectedFxRate.toShopperCurrencyIso !== baseCurrency) && selectedFxRate && !empty(selectedFxRate))) {
+                billingPrice = Number(billingPrice * selectedFxRate.rate);
             }
             // applying the rounding model
             if (eswHelper.isEswRoundingsEnabled() && (billingPrice > 0) && !noRounding && (!isFixedPriceCountry || isJob)) {

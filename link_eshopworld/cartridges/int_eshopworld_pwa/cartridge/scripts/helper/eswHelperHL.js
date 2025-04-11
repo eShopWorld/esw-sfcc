@@ -31,6 +31,8 @@ const eswHelperHL = {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
             if (!empty(eachPriceAdjustment.promotion) && eachPriceAdjustment.promotion.promotionClass === Promotion.PROMOTION_CLASS_ORDER) {
                 orderLevelProratedDiscount += eachPriceAdjustment.priceValue;
+            } else if (empty(eachPriceAdjustment.promotion) && eachPriceAdjustment.promotionID && eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
+                orderLevelProratedDiscount += eachPriceAdjustment.priceValue;
             }
         }
         if (orderLevelProratedDiscount < 0) {

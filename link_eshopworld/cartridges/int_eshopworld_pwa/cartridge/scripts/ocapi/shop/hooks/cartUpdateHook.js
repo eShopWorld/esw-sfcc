@@ -15,6 +15,8 @@ exports.afterPATCH = function (basket) {
             OCAPIHelper.adjustThresholdDiscounts(basket, cartTotals, selectedCountryLocalizeObj);
             basketCalculationHelpers.calculateTotals(basket);
             eswCoreHelper.removeThresholdPromo(basket);
+        } else {
+            basketCalculationHelpers.calculateTotals(basket);
         }
     });
     return new Status(Status.OK);

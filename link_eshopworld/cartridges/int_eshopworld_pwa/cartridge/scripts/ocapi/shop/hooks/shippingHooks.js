@@ -8,3 +8,8 @@ exports.modifyPUTResponse = function (basket, doc) {
     }
     return new Status(Status.OK);
 };
+
+exports.modifyGETResponse_v2 = function (shipment, shippingMethodResult) {
+    OCAPIHelper.updateShippingMethodSelection(shippingMethodResult);
+    return new Status(Status.OK);
+};

@@ -16,7 +16,7 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
  */
 exports.onRequest = function () {
     if (!request.includeRequest && request.httpRequest && request.httpPath.indexOf(staticBaseUrl.toString()) < 0) {
-        if (Site.getCustomPreferenceValue('eswEshopworldModuleEnabled')) {
+        if (eswHelper.getEShopWorldModuleEnabled()) {
             eswHelper.setLocation(request.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')));
         }
     }

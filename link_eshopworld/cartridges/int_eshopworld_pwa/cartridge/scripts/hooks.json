@@ -37,6 +37,10 @@
 			"script": "./ocapi/shop/hooks/promotionModifyResponse.js"
 		},
 		{
+			"name": "dw.ocapi.shop.basket.coupon.afterDELETE",
+			"script": "./ocapi/shop/hooks/promotionModifyResponse.js"
+		},
+		{
 			"name": "dw.ocapi.shop.basket.modifyPATCHResponse",
 			"script": "./ocapi/shop/hooks/basketItemsModifyResponse.js"
 		},
@@ -74,6 +78,10 @@
 		},
 		{
 			"name": "dw.ocapi.shop.basket.shipment.shipping_method.modifyPUTResponse",
+			"script": "./ocapi/shop/hooks/shippingHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.shipments.shipping_methods.modifyGETResponse_v2",
 			"script": "./ocapi/shop/hooks/shippingHooks.js"
 		},
 		{

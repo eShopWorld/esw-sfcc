@@ -194,6 +194,9 @@ function getServiceUrl(serviceID) {
             case 'EswGetAsnPackage':
                 serviceUrl = eswCoreService.getAsnServiceForEswToSfcc().getURL();
                 break;
+            case 'EswGetJwksService':
+                serviceUrl = eswCoreService.getJwksFromEswService().getURL();
+                break;
             default:
                 break;
         }
@@ -347,7 +350,6 @@ function loadReport(csrf) {
                         'Service URL:': {
                             ESWCatalogService: getServiceUrl('ESWCatalogService'),
                             ESWSFTP: getServiceUrl('ESWSFTP')
-
                         }
                     },
                     Package: {
@@ -368,7 +370,8 @@ function loadReport(csrf) {
                         }
                     },
                     services: {
-                        EswOAuthService: getServiceUrl('EswOAuthService')
+                        EswOAuthService: getServiceUrl('EswOAuthService'),
+                        EswGetJwksService: getServiceUrl('EswGetJwksService')
                     },
                     customObjects: {
                         ESWCountries: getCountriesConfigurations(),

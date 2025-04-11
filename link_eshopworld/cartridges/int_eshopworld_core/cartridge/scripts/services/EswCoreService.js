@@ -113,7 +113,7 @@ const eShopWorldServices = {
         let preorderCheckoutServiceName = eswHelper.getCheckoutServiceName();
         let preorderServicev2 = LocalServiceRegistry.createService(preorderCheckoutServiceName, {
             createRequest: function (service, params) {
-                let bearerToken = 'Bearer ' + session.privacy.eswOAuthToken;
+                let bearerToken = 'Bearer ' + eswHelper.concatenateAuthTokenChunksFromSession();
                 service.addHeader('Content-Type', 'application/json');
                 service.addHeader('Authorization', bearerToken);
                 // eslint-disable-next-line no-param-reassign
@@ -317,6 +317,58 @@ const eShopWorldServices = {
             },
             parseResponse: function (service, svcResponse) {
                 eswHelper.eswInfoLogger('parseResponse - GET ASN Service from ESW to SFCC : ', svcResponse.text);
+                return JSON.parse(svcResponse.text);
+            }
+        });
+    },
+    /**
+     * Service for Ocapi API
+     * @returns {Object} - Service response
+     */
+    getSFCCOcapi: function () {
+        let orderCreationService = LocalServiceRegistry.createService('ESWOrderCreation', {
+            createRequest: function (service, params) {
+                let Site = require('dw/system/Site').getCurrent();
+                let siteId = Site.getID();
+                service.URL = service.URL.replace(/{SiteID}+/g, siteId);
+                service.URL += params.endpoint;
+                service.addHeader('Content-Type', 'application/json');
+                if (params.dwsid) {
+                    service.addHeader('Cookie', 'dwsid=' + params.dwsid);
+                } else {
+                    service.addHeader('Authorization', params.Authorization);
+                }
+                service.setRequestMethod('POST');
+                eswHelper.eswInfoLogger('Esw  Ocapi Service Request : ', JSON.stringify(params.requestBody));
+
+                return JSON.stringify(params.requestBody);
+            },
+            parseResponse: function (service, svcResponse) {
+                eswHelper.eswInfoLogger('Esw Ocapi Service Response :', svcResponse.text);
+                return svcResponse;
+            },
+            filterLogMessage: function (message) {
+                return message;
+            },
+            getRequestLogMessage: function (serviceRequest) {
+                return serviceRequest;
+            },
+            getResponseLogMessage: function (serviceResponse) {
+                return serviceResponse;
+            }
+        });
+        return orderCreationService;
+    },
+     /* Service call to ESW fetch Jwks
+     * @returns {Object} - Service response
+     */
+    getJwksFromEswService: function () {
+        return LocalServiceRegistry.createService('EswGetJwksService', {
+            createRequest: function (service) {
+                service.setRequestMethod('GET');
+            },
+            parseResponse: function (service, svcResponse) {
+                eswHelper.eswInfoLogger('parseResponse - GET ESW fetch Jwks from ESW to SFCC : ', svcResponse.text);
                 return JSON.parse(svcResponse.text);
             }
         });

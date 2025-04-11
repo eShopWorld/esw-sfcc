@@ -39,12 +39,13 @@ server.post('Notify', function (req, res, next) {
     let Transaction = require('dw/system/Transaction'),
         OrderMgr = require('dw/order/OrderMgr'),
         responseJSON = {};
-
-    if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
+    let obj = JSON.parse(req.body);
+    eswHelper.eswInfoLogger('Esw Order Confirmation Request Headers', eswHelper.beautifyJsonAsString(eswHelper.getRequestHeadersArr(req)));
+    eswHelper.eswInfoLogger('Esw Order Confirmation Request Payload', JSON.stringify(obj));
+    if (!eswHelper.isValidEswAuthorization()) {
         response.setStatus(401);
-        logger.error('ESW Order Confirmation Error: Basic Authentication Token did not match');
+        logger.error('ESW Order Confirmation Error: Authentication Token did not match');
     } else {
-        let obj = JSON.parse(req.body);
         responseJSON = {
             OrderNumber: obj.retailerCartId.toString(),
             EShopWorldOrderNumber: obj.eShopWorldOrderNumber.toString(),
@@ -53,7 +54,6 @@ server.post('Notify', function (req, res, next) {
         };
 
         try {
-            eswHelper.eswInfoLogger('Esw Order Confirmation Request', JSON.stringify(obj));
             let ocHelper = require('*/cartridge/scripts/helper/orderConfirmationHelper').getEswOcHelper(),
                 shopperCurrency = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.currency : obj.shopperCurrencyPaymentAmount.substring(0, 3),
                 totalCheckoutAmount = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.amount : obj.shopperCurrencyPaymentAmount.substring(3),
@@ -185,4 +185,14 @@ server.post('ProcessExternalOrder', function (req, res, next) {
     next();
 });
 
+/**
+ * Just a test controller, should be removed when JWT is available in requests from ESP
+ */
+server.post('TestEswAuth', function (req, res, next) {
+    let isValidAuth = eswHelper.isValidEswAuthorization();
+    res.json({
+        isValidAuth: isValidAuth
+    });
+    next();
+});
 module.exports = server.exports();

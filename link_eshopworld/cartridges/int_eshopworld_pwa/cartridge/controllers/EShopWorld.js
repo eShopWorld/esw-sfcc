@@ -12,7 +12,7 @@ const Transaction = require('dw/system/Transaction');
 const Resource = require('dw/web/Resource');
 
 const eswCoreBmHelper = require('*/cartridge/scripts/helper/eswBmHelper');
-const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswPwaHelper = require('*/cartridge/scripts/helper/eswPwaCoreHelper');
 const Currency = require('dw/util/Currency');
 
@@ -25,7 +25,7 @@ server.get('BmConfigs', function (req, res, next) {
     ).attributes;
     let filteredFields = {};
     // Add allowed fields in this array
-    let allwedResponseFields = ['eswEshopworldModuleEnabled'];
+    let allwedResponseFields = ['eswEshopworldModuleEnabled', 'eswEnableTaxInformation'];
     for (let i = 0; i < configFields.length; i++) {
         let configFieldId = configFields[i].id;
         if (allwedResponseFields.indexOf(configFieldId) !== -1) {
@@ -36,9 +36,21 @@ server.get('BmConfigs', function (req, res, next) {
     let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
 
     filteredFields.defaultLoaderText = Resource.msg('message.default.esw.loading', 'esw', null);
+    if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+        filteredFields.eswEmbeddedCheckoutScriptPath = eswHelper.getEswEmbCheckoutScriptPath();
+    }
     if (eswHelper.checkIsEswAllowedCountry(selectedCountryDetail.countryCode)) {
         filteredFields.eswNativeShippingEnabled = eswHelper.isEswNativeShippingHidden() ? !eswHelper.isSelectedCountryOverrideShippingEnabled(selectedCountryDetail.countryCode) : false;
         filteredFields.eswNativeShippingEnabledMsg = Resource.msg('hide.shipping.disclaimer.msg', 'esw', null);
+    }
+    filteredFields.isEswEnabledEmbeddedCheckout = eswHelper.isEswEnabledEmbeddedCheckout();
+    if (filteredFields.isEswEnabledEmbeddedCheckout === true) {
+        try {
+            const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+            filteredFields.ecCookieName = embCheckoutHelper.getEswIframeCookieName();
+        } catch (e) {
+            filteredFields.ecCookieName = null;
+        }
     }
     eswHelper.setLocation(selectedCountryDetail.countryCode);
     eswHelper.createCookie('esw.location', selectedCountryDetail.countryCode, '/');
@@ -85,12 +97,10 @@ server.get('AbandonmentCart', function (req, res, next) {
     let order = null;
     // eslint-disable-next-line eqeqeq
     if (!empty(eswClientLastOrderId) && eswClientLastOrderId != 'null') {
-        order = OrderMgr.searchOrder('orderNo={0} AND (status={1} OR status={2} OR status={3})',
-            eswClientLastOrderId,
-            dw.order.Order.ORDER_STATUS_FAILED,
-            dw.order.Order.ORDER_STATUS_CREATED,
-            dw.order.Order.ORDER_STATUS_NEW);
-        if (order && !empty(order)) {
+        order = OrderMgr.getOrder(eswClientLastOrderId);
+        if (order && !empty(order) && (order.status.value === dw.order.Order.ORDER_STATUS_FAILED
+        || order.status.value === dw.order.Order.ORDER_STATUS_CREATED
+        || order.status.value === dw.order.Order.ORDER_STATUS_NEW)) {
             eswHelper.rebuildCartUponBackFromESW(order.getOrderNo());
             if (order.status.value === dw.order.Order.ORDER_STATUS_CREATED) {
                 Transaction.wrap(function () {

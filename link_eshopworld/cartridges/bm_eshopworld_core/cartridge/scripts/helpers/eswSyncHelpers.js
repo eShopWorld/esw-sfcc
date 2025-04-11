@@ -47,9 +47,10 @@ function getSyncStatusInfo(product) {
             let syncedDateTime = eswSyncedAttrVal.lastSynced || null;
             if (!empty(syncedDateTime)) {
                 syncedDateTime = new Date(syncedDateTime);
-                isModifiedAfterSync = productModifiedDate.getTime() > syncedDateTime.getTime();
+                isModifiedAfterSync = productModifiedDate.getTime() >= syncedDateTime.getTime();
             }
-            if (isModifiedAfterSync) {
+            if (isModifiedAfterSync && eswSyncedAttrVal.code === 202) {
+                statusInfoMsg = 'synced';
                 return statusInfoMsg;
             }
             if (eswSyncedAttrVal.code === 202) {

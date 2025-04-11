@@ -41,3 +41,8 @@ exports.afterPOST = function (basket) {
     });
     return new Status(Status.OK);
 };
+
+exports.afterDELETE = function (basket) {
+    OCAPIHelper.basketModifyBasketAfterCouponDelete(basket);
+    return new Status(Status.OK);
+};

@@ -1,0 +1,11 @@
+.esw-iframe-checkout-container{
+	margin-bottom:20px;
+}
+.esw-iframe-checkout iframe{
+	width: 100%;
+	border: 0;
+}
+
+.esw-iframe-checkout iframe{
+	min-height: 900px;
+}

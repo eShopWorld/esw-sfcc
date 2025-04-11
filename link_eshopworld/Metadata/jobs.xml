@@ -64,7 +64,7 @@
         </triggers>
     </job>
 
-     <job job-id="eswRetailerPackageFeed" priority="0">
+    <job job-id="eswRetailerPackageFeed" priority="0">
         <description>This job syncs Retailer Package Information with ESW Package service.</description>
         <parameters/>
         <flow>
@@ -311,6 +311,30 @@
                         <weekday>Saturday</weekday>
                         <weekday>Monday</weekday>
                     </day-of-week>
+                </recurrence>
+            </run-recurring>
+        </triggers>
+    </job>
+    <job job-id="eswGetJwksJob" priority="0">
+        <description>Job to fetch JWKS from ESW</description>
+        <flow>
+            <context site-id="RefArch" />
+            <step step-id="ESW_GetJWKS" type="custom.ESW_GetJWKSJob" enforce-restart="false">
+                <description>Fetch JWKS from ESW</description>
+                <parameters/>
+            </step>
+        </flow>
+        <rules>
+            <on-running runtime-threshold="30m" enabled="true">
+                <mark-job-as-hanging />
+            </on-running>
+        </rules>
+        <triggers>
+            <run-recurring enabled="true">
+                <recurrence>
+                    <date-from>2018-07-10Z</date-from>
+                    <start-time>03:00:00.000Z</start-time>
+                    <interval>1d</interval>
                 </recurrence>
             </run-recurring>
         </triggers>

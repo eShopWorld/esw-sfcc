@@ -53,6 +53,11 @@
                             <button class="navbar-toggler d-md-none" type="button" aria-controls="sg-navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
                                 &#9776; <span class="hidden-xs-down">Menu</span>
                             </button>
+                            <div class = "d-lg-none d-md-none position-relative" id="mobileCountrySelector">
+                                <isif condition="${isEswEnabled}">
+                                        <isinclude url="${URLUtils.url('EShopWorld-GetEswHeader', sfCountryUrlParam.countryUrlParamKey,sfCountryUrlParam.countryUrlParamVal)}"/>
+                                </isif>
+                            </div>
                         </div>
                         <div class="pull-right">
                             <div class="search hidden-xs-down">
