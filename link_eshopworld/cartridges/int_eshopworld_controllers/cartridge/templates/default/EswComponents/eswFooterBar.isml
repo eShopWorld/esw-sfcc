@@ -1,9 +1,0 @@
-<!--- TEMPLATENAME: eswFooterBar.isml --->
-<iscontent type="text/html" charset="UTF-8" compact="true"/>
-<div class="selectors selector-container footerDropdown${(pdict.EswFooterEnabled) ? '' : ' d-none'}">
-	<div class="esw-country-selector selectCountry footer-select">
-		<i class="fa fa-fw selector-icon"></i>
-		<i class="flag-icon flag-icon-${pdict.EswFooterObject.selectedCountry.toLowerCase()}"></i>
-		<span>${pdict.EswFooterObject.selectedCountryName+' | '+pdict.EswFooterObject.selectedCurrency}</span>
-	</div>
-</div>
