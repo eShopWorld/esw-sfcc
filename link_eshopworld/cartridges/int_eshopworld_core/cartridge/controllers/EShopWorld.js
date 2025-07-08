@@ -118,6 +118,8 @@ server.post('Notify', function (req, res, next) {
                     ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
                     // update ESW Payment instrument custom attributes
                     ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand, obj);
+                    // Update SFCC promotion price upon order confirmation
+                    ocHelper.updateSfccPromotionPriceUponOrderConfirmation(order);
 
                     OrderMgr.placeOrder(order);
                     if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId)) {

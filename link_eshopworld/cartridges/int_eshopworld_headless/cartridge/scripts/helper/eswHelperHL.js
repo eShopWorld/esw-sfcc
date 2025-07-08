@@ -15,6 +15,102 @@ const eswHelperHL = {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         return new dw.value.Money((eswHelper.getSubtotalObject(lineItem, false, false, false, localizeObj, conversionPrefs).value / lineItem.quantity.value), localizeObj.localizeCountryObj.currencyCode);
     },
+    /*  function to get promo(s) or voucher code(s) entered on the cart by the shopper
+    * @param {Object} order - Order API object
+    * @param coupons - Returns (Binnian) Object} - the coupons Array
+    */
+    getRetailerPromoCodes: function (order) {
+        let coupons = [],
+            collections = require('*/cartridge/scripts/util/collections');
+        // eslint-disable-next-line no-prototype-builtins
+        if ((order.hasOwnProperty('couponLineItems') || order.couponLineItems) && !empty(order.couponLineItems)) {
+            collections.forEach(order.couponLineItems, function (couponLineItem) {
+                if (couponLineItem.couponCode) {
+                    coupons.push({ code: couponLineItem.couponCode });
+                }
+            });
+        }
+        return coupons;
+    },
+    /*  function to return basket and required info from order
+    * @param {string} eswClientLastOrderId - eswClientLastOrderId API object
+    * @returns {Object} - the basket object
+    */
+    generateBasketFromOrder: function (eswClientLastOrderId, sgRequest) {
+        let OrderMgr = require('dw/order/OrderMgr'),
+            BasketMgr = require('dw/order/BasketMgr'),
+            Transaction = require('dw/system/Transaction');
+        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        if (!empty(sgRequest)) {
+            eswHelper = require('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper').getEswHelper();
+        }
+
+        let orderItems = { products: [] },
+            basketItems = { products: [] },
+            coupons = [],
+            order = null;
+        if (!empty(eswClientLastOrderId) && eswClientLastOrderId !== 'null') {
+            order = OrderMgr.getOrder(eswClientLastOrderId);
+
+            if (order && !empty(order) &&
+                (order.status.value === dw.order.Order.ORDER_STATUS_FAILED ||
+                order.status.value === dw.order.Order.ORDER_STATUS_CREATED ||
+                order.status.value === dw.order.Order.ORDER_STATUS_NEW)) {
+                eswHelper.rebuildCartUponBackFromESW(order.getOrderNo());
+
+                if (order.status.value === dw.order.Order.ORDER_STATUS_CREATED) {
+                    Transaction.wrap(function () {
+                        OrderMgr.failOrder(order, true);
+                    });
+                }
+
+                let allLineItems = order.getAllLineItems().iterator();
+
+                while (allLineItems.hasNext()) {
+                    let currentLineItem = allLineItems.next();
+                    if (currentLineItem instanceof dw.order.ProductLineItem) {
+                        orderItems.products.push({
+                            productId: currentLineItem.getProductID(),
+                            price: currentLineItem.getPriceValue(),
+                            quantity: currentLineItem.getQuantityValue()
+                        });
+                    }
+                }
+
+                // Re-iterate since previous iterator is consumed
+                allLineItems = order.getAllLineItems().iterator();
+                while (allLineItems.hasNext()) {
+                    let lineItem = allLineItems.next();
+                    if (lineItem instanceof dw.order.ProductLineItem) {
+                        basketItems.products.push({
+                            productId: lineItem.getProductID(),
+                            lineItemId: lineItem.getUUID()
+                        });
+                    }
+                }
+
+                coupons = this.getRetailerPromoCodes(order);
+            } else {
+                response.setStatus(404);
+                return {
+                    Error: 'The order is either unavailable or was not successfully placed. Please verify the details and try again.'
+                };
+            }
+        }
+
+        let customerBasket = BasketMgr.getCurrentOrNewBasket();
+        let currentBasketId = customerBasket.getUUID();
+        return {
+            orderLineItems: orderItems,
+            basketId: currentBasketId,
+            couponCodes: coupons,
+            removeLineItems: !empty(order) ? (
+                order.status.value === dw.order.Order.ORDER_STATUS_NEW ||
+                order.status.value === dw.order.Order.ORDER_STATUS_OPEN
+            ) : false,
+            basketItems: basketItems
+        };
+    },
     /**
      * This function is used to get Order Pro-rated Discount
      * @param {Object} order - Order API object

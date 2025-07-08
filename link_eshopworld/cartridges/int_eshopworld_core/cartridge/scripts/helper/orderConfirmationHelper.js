@@ -299,6 +299,9 @@ const getEswOcHelper = {
         }
         lineItem.custom.eswFulfilmentCountryIso = !empty(cartItem[0].fulfilmentCountryIso) ? cartItem[0].fulfilmentCountryIso : '';
         lineItem.custom.eswDeliveryOption = !empty(cartItem[0].deliveryOption) ? cartItem[0].deliveryOption : '';
+        if (!empty(cartItem[0].articles)) {
+            this.checkAndSetOrderCustomAttribute(lineItem, 'eswArticleCharges', JSON.stringify(cartItem[0].articles));
+        }
         return {
             ShopperDiscount: [],
             RetailerDiscount: []
@@ -329,6 +332,8 @@ const getEswOcHelper = {
                 order.shipments[0].shippingAddress.countryCode = contactDetails[detail].country;
                 order.shipments[0].shippingAddress.postalCode = contactDetails[detail].postalCode;
                 order.shipments[0].shippingAddress.phone = contactDetails[detail].telephone;
+                order.shipments[0].shippingAddress.custom.nativeFirstName = !empty(contactDetails[detail].nativeFirstName) ? contactDetails[detail].nativeFirstName : '';
+                order.shipments[0].shippingAddress.custom.nativeLastName = !empty(contactDetails[detail].nativeLastName) ? contactDetails[detail].nativeLastName : '';
                 if (!empty(contactDetails[detail].region)) {
                     order.shipments[0].shippingAddress.stateCode = contactDetails[detail].region;
                 }
@@ -340,6 +345,8 @@ const getEswOcHelper = {
                 order.billingAddress.city = contactDetails[detail].city;
                 order.billingAddress.countryCode = contactDetails[detail].country;
                 order.billingAddress.postalCode = contactDetails[detail].postalCode;
+                order.billingAddress.custom.nativeFirstName = !empty(contactDetails[detail].nativeFirstName) ? contactDetails[detail].nativeFirstName : '';
+                order.billingAddress.custom.nativeLastName = !empty(contactDetails[detail].nativeLastName) ? contactDetails[detail].nativeLastName : '';
                 if (!empty(contactDetails[detail].region)) {
                     order.billingAddress.stateCode = contactDetails[detail].region;
                 }
@@ -718,6 +725,39 @@ const getEswOcHelper = {
             this.updateEswPaymentAttributes(dwOrder, totalCheckoutAmount, paymentCardBrand, ocPayload);
         }
         return isKonbiniOrder;
+    },
+    /**
+    * Updates SFCC promotion price after EswOrderAttributes are updated
+    * @param {dw.order.Order} order - The order object
+    */
+    updateSfccPromotionPriceUponOrderConfirmation: function (order) {
+        if (!order || !order.shipments || !order.shipments[0]) {
+            return; // If order or shipment is not available, exit the function
+        }
+        let parsedEswShopperDeliveryObjects = order.custom
+            && order.custom.eswShopperCurrencyDeliveryDiscountsInfo
+            && JSON.parse(order.custom.eswShopperCurrencyDeliveryDiscountsInfo)[0];
+        let eswDiscountsFlat = [];
+        if (parsedEswShopperDeliveryObjects
+            && parsedEswShopperDeliveryObjects.deliveryOptionsPriceInfo
+            && parsedEswShopperDeliveryObjects.deliveryOptionsPriceInfo.discounts) {
+            parsedEswShopperDeliveryObjects.deliveryOptionsPriceInfo.discounts.forEach(function (discountGroup) {
+                eswDiscountsFlat = eswDiscountsFlat.concat(discountGroup);
+            });
+        }
+        // Since ESW does not support multiple shipments, we are only considering the first shipment.
+        let shippingPriceAdjustments = order.shipments[0].getShippingPriceAdjustments().toArray();
+        eswDiscountsFlat.forEach(function (eswDiscount) {
+            let eswPromoID = eswDiscount.title;
+            let eswAmount = eswDiscount.discount && eswDiscount.discount.shopper && eswDiscount.discount.shopper.amount;
+            shippingPriceAdjustments.forEach(function (priceAdj) {
+                let sfccPromotionID = priceAdj.getPromotionID();
+                if (sfccPromotionID === eswPromoID) {
+                    priceAdj.setPriceValue(-parseFloat(eswAmount));
+                }
+            });
+        });
+        eswHelper.removeThresholdPromo(order);
     }
 };
 

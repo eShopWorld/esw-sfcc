@@ -93,6 +93,7 @@ function execute() {
                                 co.getCustom().fxRatesJson = JSON.stringify(mappedData.fxRates);
                                 co.getCustom().countryAdjustmentJson = JSON.stringify(mappedData.countryAdjustments);
                                 co.getCustom().eswRoundingJson = JSON.stringify(mappedData.roundingRules);
+                                co.getCustom().eswPriceFeedLastUpdated = mappedData.lastUpdated;
                             });
                         }
                         break;

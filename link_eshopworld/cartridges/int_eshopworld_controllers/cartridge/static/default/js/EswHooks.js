@@ -326,6 +326,61 @@ function convertPrice() {
     }
 }
 
+/* * This function is used to get the last currency and amount from the string.
+ * It uses a regular expression to match the pattern of currency and amount.
+ * The function returns the last matched currency and amount as a string.
+ * @param {string} inputString - The input string containing currency and amount - example: "€95.10€95.1€95.10€95.1"
+ * @returns {string|null} - The last matched currency and amount or null if no match is found.
+ */
+function getLastCurrencyAndAmount(inputString) {
+    let regex = /([^\d.\s]*?)(\d+\.\d)0?/g;
+    let finalresult = null;
+    let matches = Array.from(inputString.matchAll(regex));
+    if (matches.length > 0) {
+        let lastMatchObject = matches[matches.length - 1];
+        finalresult = lastMatchObject[1] + lastMatchObject[2];
+    }
+    return finalresult;
+}
+
+
+function formatPrice(priceElement) {
+    if (!priceElement || !priceElement.jquery || !priceElement[0]) {
+        return '';
+    }
+    let price = $.trim(priceElement.text());
+    let finalFormattedPrice = price.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+    return getLastCurrencyAndAmount(finalFormattedPrice);
+}
+
+
+function currencyDisplayFormatting() {
+    let selectedCountryAdjustment = window.ESWSitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.ESWSitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
+    let showTrailingZero = selectedCountryAdjustment && selectedCountryAdjustment.currencyDisplay ? selectedCountryAdjustment.currencyDisplay.showTrailingZeros : true;
+    if (showTrailingZero) {
+        return;
+    }
+    $('.product-sales-price').each(function () {
+            // If there are no .value children, format the current element
+        let formatted = formatPrice($(this));
+        $(this).text(formatted);
+    });
+
+    $('.price-sales').each(function () {
+        // If there are no .value children, format the current element
+        let formatted = formatPrice($(this));
+        $(this).text(formatted);
+    });
+    $('.order-shipping td:nth-child(2)').text(formatPrice($('.order-shipping td:nth-child(2)')));
+    $('.order-subtotal td:nth-child(2)').text(formatPrice($('.order-subtotal td:nth-child(2)')));
+    $('.mini-cart-subtotals .value').text(formatPrice($('.mini-cart-subtotals .value')));
+    $('.mini-cart-price').text(formatPrice($('.mini-cart-price')));
+    $('.price-total').text(formatPrice($('.price-total')));
+    $('.order-value').text(formatPrice($('.order-value')));
+    $('.price-unadjusted > span').text(formatPrice($('.price-unadjusted > span')));
+    $('.price-adjusted-total > span').text(formatPrice($('.price-adjusted-total > span')));
+}
+
 $(document).ready(function () {
     updateCountryList();
     if ($('.eswModal').length > 0) {
@@ -333,13 +388,45 @@ $(document).ready(function () {
         let $selectedCurrency = $('#selected-currency');
         setDefaultCurrency($selectedCurrency);
     }
+    currencyDisplayFormatting();
+    $(document).ajaxComplete(function () {
+        currencyDisplayFormatting();
+    });
     if (typeof window.ESWSitePreferences !== 'undefined' && window.ESWSitePreferences.ESW_ENABLE_PRICECONVERSION) {
         convertPrice();
-        $(document).ajaxComplete(function (event, request, settings) {
+        $(document).ajaxComplete(function () {
             convertPrice();
         });
     }
-    $('body').on('click', '.formbuttonrow button', function (e) {
+    $('body').on('click', '.formbuttonrow button', function () {
         $('.formbuttonrow button').prop('disabled', true);
+    });
+
+    // Mini cart update in case of trailing zero
+    const $miniCart = $('#mini-cart');
+    if (!$miniCart.length) {
+        return;
+    }
+
+    const observer = new MutationObserver(function (mutationsList, observerInstance) {
+        // Check current state using jQuery within the observer callback
+        currencyDisplayFormatting();
+
+        // Disonnect the observer to prevent re-triggering
+        // This is important to avoid infinite loops
+        observer.disconnect();
+        // Reconnect the observer after processing
+        setTimeout(function () {
+            observerInstance.observe($miniCart[0], {
+                childList: true,
+                subtree: true
+            });
+        }, 1000);
+    });
+
+    // Start observing the raw DOM element (jQuery objects are wrappers)
+    observer.observe($miniCart[0], {
+        childList: true,
+        subtree: true
     });
 });

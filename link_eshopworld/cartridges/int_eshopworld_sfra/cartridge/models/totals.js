@@ -5,6 +5,7 @@ const collections = require('*/cartridge/scripts/util/collections');
 const HashMap = require('dw/util/HashMap');
 const Template = require('dw/util/Template');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const Constants = require('*/cartridge/scripts/util/Constants');
 
 const base = module.superModule;
 
@@ -141,6 +142,7 @@ function totals(lineItemContainer) {
     base.call(this, lineItemContainer);
 
     if (eswHelper.getEShopWorldModuleEnabled()) {
+        let siteTaxationModel = eswHelper.getTaxationModel();
         if (lineItemContainer) {
             if (eswHelper.isEswNativeShippingHidden() && !eswHelper.isSelectedCountryOverrideShippingEnabled() && !Object.hasOwnProperty.call(lineItemContainer, 'orderNo')) {
                 let isESWSupportedCountry = eswHelper.isESWSupportedCountry(),
@@ -150,10 +152,14 @@ function totals(lineItemContainer) {
                 }
                 this.subTotal = (isESWSupportedCountry) ? formatMoney(eswHelper.getFinalOrderTotalsObject()) : getTotals(lineItemContainer.getAdjustedMerchandizeTotalPrice(false));
                 this.totalShippingCost = getTotals(lineItemContainer.shippingTotalPrice);
-                this.totalTax = (isESWSupportedCountry && lineItemContainer.totalTax.available) ? formatMoney(new dw.value.Money(lineItemContainer.totalTax.decimalValue, request.getHttpCookies()['esw.currency'].value)) : getTotals(lineItemContainer.totalTax);
+                let shopperCurrency;
+                if (empty(request.httpCookies['esw.currency'])) {
+                    shopperCurrency = eswHelper.applyDefaultCurrencyForCountry();
+                }
+                this.totalTax = (isESWSupportedCountry && lineItemContainer.totalTax.available) ? formatMoney(new dw.value.Money(lineItemContainer.totalTax.decimalValue, (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value))) : getTotals(lineItemContainer.totalTax);
                 // Exclude shipping cost from grand total
                 let cartPageShippingCost = new dw.value.Money(0, request.getHttpCookies()['esw.currency'].value);
-                this.grandTotal = (isESWSupportedCountry) ? eswHelper.getOrderTotalWithShippingCost(cartPageShippingCost) : getTotals(lineItemContainer.totalGrossPrice);
+                this.grandTotal = (isESWSupportedCountry) ? eswHelper.getOrderTotalWithShippingCost(cartPageShippingCost) : getTotals(siteTaxationModel === Constants.NET_TAXATION_MODEL ? lineItemContainer.totalNetPrice : lineItemContainer.totalGrossPrice);
                 if (!orderHistoryFlag) {
                     this.orderLevelDiscountTotal = eswHelper.getOrderLevelDiscountTotal(lineItemContainer, isESWSupportedCountry);
                     this.shippingLevelDiscountTotal = eswHelper.getShippingLevelDiscountTotal(lineItemContainer, isESWSupportedCountry);
@@ -203,10 +209,14 @@ function totals(lineItemContainer) {
                     this.grandTotal = '-';
                 } else if (this.totalShippingCost !== '-') {
                     if (!orderHistoryFlag) {
-                        this.grandTotal = (isESWSupportedCountry) ? eswHelper.getOrderTotalWithShippingCost(getEswCartShippingCost(lineItemContainer.shippingTotalPrice)) : getTotals(lineItemContainer.totalGrossPrice);
-                        this.totalTax = (isESWSupportedCountry && lineItemContainer.totalTax.available) ? formatMoney(new dw.value.Money(lineItemContainer.totalTax.decimalValue, request.getHttpCookies()['esw.currency'].value)) : getTotals(lineItemContainer.totalTax);
+                        let shopperCurrency;
+                        if (empty(request.httpCookies['esw.currency'])) {
+                            shopperCurrency = eswHelper.applyDefaultCurrencyForCountry();
+                        }
+                        this.grandTotal = (isESWSupportedCountry) ? eswHelper.getOrderTotalWithShippingCost(getEswCartShippingCost(lineItemContainer.shippingTotalPrice)) : getTotals(siteTaxationModel === Constants.NET_TAXATION_MODEL ? lineItemContainer.totalNetPrice : lineItemContainer.totalGrossPrice);
+                        this.totalTax = (isESWSupportedCountry && lineItemContainer.totalTax.available) ? formatMoney(new dw.value.Money(lineItemContainer.totalTax.decimalValue, (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value))) : getTotals(lineItemContainer.totalTax);
                     } else if (eswHelper.isOrderDetailEnabled()) {
-                        this.grandTotal = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyPaymentAmount, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalGrossPrice.decimalValue, lineItemContainer.getCurrencyCode());
+                        this.grandTotal = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyPaymentAmount, eswShopperCurrencyCode) : getOrderTotals((siteTaxationModel === Constants.NET_TAXATION_MODEL ? lineItemContainer.totalNetPrice.decimalValue : lineItemContainer.totalGrossPrice.decimalValue), lineItemContainer.getCurrencyCode());
                         let eswTotalTax = 0;
                         if (!empty(lineItemContainer.totalTax.decimalValue) || !empty(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes)) {
                             eswTotalTax = (!empty(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes)) ? lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes : lineItemContainer.totalTax.decimalValue;

@@ -73,6 +73,14 @@ server.prepend(
         eswHelper.rebuildCartUponBackFromESW();
         let BasketMgr = require('dw/order/BasketMgr'),
             currentBasket = BasketMgr.getCurrentBasket();
+        // eslint-disable-next-line no-restricted-syntax, guard-for-in
+        for (let lineItemNumber in currentBasket.productLineItems) {
+            let cartProduct = currentBasket.productLineItems[lineItemNumber].product;
+            if (eswHelper.isProductRestricted(cartProduct.custom)) {
+                session.privacy.eswProductRestricted = true;
+                session.privacy.restrictedProductID = cartProduct.ID;
+            }
+        }
         let viewData = res.getViewData();
         if (currentBasket && eswCoreHelper.getEShopWorldModuleEnabled() && request.httpCookies['esw.location'] && eswCoreHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
             // Set override shipping methods if configured
@@ -719,6 +727,29 @@ server.replace('EditProductLineItem', function (req, res, next) {
             errorMessage: Resource.msg('error.cannot.update.product', 'cart', null)
         });
     }
+
+    return next();
+});
+
+server.append('SelectShippingMethod', function (req, res, next) {
+    const BasketMgr = require('dw/order/BasketMgr');
+    const Transaction = require('dw/system/Transaction');
+    const CartModel = require('*/cartridge/models/cart');
+    const basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+    const PromotionMgr = require('dw/campaign/PromotionMgr');
+
+    let currentBasket = BasketMgr.getCurrentBasket();
+
+    Transaction.wrap(function () {
+        eswHelper.adjustThresholdDiscounts(currentBasket);
+        PromotionMgr.applyDiscounts(currentBasket);
+        basketCalculationHelpers.calculateTotals(currentBasket);
+        // Upon applying shipping method, remove threshold promo if it exists
+        eswHelper.removeThresholdPromo(currentBasket);
+    });
+
+    let updatedBasketModel = new CartModel(currentBasket);
+    res.json(updatedBasketModel);
 
     return next();
 });

@@ -1,10 +1,17 @@
+/* global jQuery */
 'use strict';
 
 $(document).ready(function () {
     let enableCatalogMethodField = 'select#isEswCatalogFeatureEnabled';
     let relventFields = { sftpFields: [], apiFields: [] };
-    if (typeof $('#eswCatalogReleventFields').val() !== 'undefined') {
-        relventFields = JSON.parse($('#eswCatalogReleventFields').val());
+    let $relevantFields = $('#eswCatalogReleventFields');
+    if ($relevantFields !== null && $relevantFields.length > 0) {
+        // Attempt to parse the JSON value
+        const parsedValue = JSON.parse($relevantFields.val());
+        // Check if parsing was successful and the result is an object with the expected properties
+        if (parsedValue !== null && typeof parsedValue === 'object' && parsedValue.sftpFields && parsedValue.apiFields) {
+            relventFields = parsedValue;
+        }
     }
     let sftpFields = relventFields.sftpFields.map(function (el) {
         return 'tr.esw-field-' + el;
@@ -15,11 +22,11 @@ $(document).ready(function () {
     let allFields = apiFields.concat(sftpFields);
 
     // Export button should be enable when atleast one order is selected
-    $('input.select-Product, a.selectAllCheckbox').on('click', function () {
-        if ($('input.select-Product:checked').length === 0) {
-            $('button.SyncSlected').attr('disabled', true);
+    jQuery('input.select-Product, a.selectAllCheckbox').on('click', function () {
+        if (jQuery('input.select-Product:checked').length === 0) {
+            jQuery('button.SyncSlected').attr('disabled', true);
         } else {
-            $('button.SyncSlected').attr('disabled', false);
+            jQuery('button.SyncSlected').attr('disabled', false);
         }
     });
 
@@ -27,10 +34,8 @@ $(document).ready(function () {
      * Show/hide catalog method
      */
     function showOrHideCatalogMethod() {
-        if ($(enableCatalogMethodField).val() === 'false') {
-            $(allFields.join(',')).hide();
-        } else {
-            $(allFields.join(',')).show();
+        if (jQuery(enableCatalogMethodField).val() !== 'false') {
+            jQuery(allFields.join(',')).show();
         }
     }
     /**
@@ -44,7 +49,7 @@ $(document).ready(function () {
      * Events and actions on the page
      */
     onPageLoad();
-    $(enableCatalogMethodField).change(function () {
+    jQuery(enableCatalogMethodField).change(function () {
         showOrHideCatalogMethod();
     });
 });

@@ -236,6 +236,40 @@ const eswPricingHelper = {
             }
         }
         return true;
+    },
+
+    /**
+     * update override price book
+     * @param {string} shopperCountry - the shopper country
+     * @param {string} overrideCurrency - the override pricebook currency
+     * @param {Object} basket - SFCC Basket Object
+     * @returns {boolean} returns boolean value
+     */
+    updateOrderPriceBooksAndSessionCurrency: function (shopperCountry, overrideCurrency, basket) {
+        let PriceBookMgr = require('dw/catalog/PriceBookMgr'),
+            eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper(),
+            arrPricebooks = [],
+            overridePricebooks = eswHelper.getOverridePriceBooks(shopperCountry);
+        let Currency = require('dw/util/Currency');
+        const OCAPIHelper = require('*/cartridge/scripts/helper/eswOCAPIHelperHL');
+        if (overridePricebooks.length > 0) {
+            // eslint-disable-next-line array-callback-return
+            overridePricebooks.map(function (pricebookId) {
+                arrPricebooks.push(PriceBookMgr.getPriceBook(pricebookId));
+            });
+            try {
+                eswHelper.setAllAvailablePriceBooks();
+                let currency = Currency.getCurrency(overrideCurrency);
+                session.setCurrency(currency);
+                basket.updateCurrency();
+                OCAPIHelper.setDefaultOverrideShippingMethod(basket);
+                dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', basket);
+            } catch (e) {
+                logger.error(e.message + e.stack);
+            }
+            return true;
+        }
+        return false;
     }
 };
 

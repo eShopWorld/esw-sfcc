@@ -442,8 +442,8 @@ function getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversio
 
     let priceFormat = eswHelper.getDeliveryDiscountsPriceFormat(cart, localizeObj, conversionPrefs);
 
-    let beforeDiscount = (isConversionDisabled || cart.defaultShipment.shippingTotalNetPrice.value === 0)
-        ? cart.defaultShipment.shippingTotalNetPrice.value
+    let beforeDiscount = (isConversionDisabled || cart.defaultShipment.shippingTotalPrice.value === 0)
+        ? cart.defaultShipment.shippingTotalPrice.value
         : priceFormat;
 
     let ShippingDiscounts = [];

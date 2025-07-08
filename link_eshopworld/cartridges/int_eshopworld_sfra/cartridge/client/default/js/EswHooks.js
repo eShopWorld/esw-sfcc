@@ -355,7 +355,75 @@ function applyRoundingModel(price) {
 
     return price;
 }
-
+/**
+ * Helper function to format price for PA v4 currency display
+ * @param {*} priceElement - priceElement
+ * @returns {string} - priceElement
+ */
+function formatPrice(priceElement) {
+    if (!priceElement || !priceElement.jquery || !priceElement[0]) {
+        return '';
+    }
+    let price = $.trim(priceElement.text());
+    return price.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+}
+/**
+ * function to format price for PA v4 currency display
+ *
+ */
+function currencyDisplayFormatting() {
+    let selectedCountryAdjustment = window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
+    let showTrailingZero = selectedCountryAdjustment && selectedCountryAdjustment.currencyDisplay ? selectedCountryAdjustment.currencyDisplay.showTrailingZeros : true;
+    if (showTrailingZero) {
+        return;
+    }
+    $('.sales').each(function () {
+        // Look for nested .value elements
+        let $valueSpans = $(this).find('.value');
+        if ($valueSpans.length > 0) {
+            // Process each .value element
+            $valueSpans.each(function () {
+                // Target the last child span containing the price text
+                let $priceSpan = $(this).find('span:last-child');
+                if ($priceSpan.length) {
+                    let formatted = formatPrice($priceSpan);
+                    $priceSpan.text(formatted);
+                } else {
+                    let formatted = formatPrice($(this));
+                    $(this).text(formatted);
+                }
+            });
+        } else {
+            // If there are no .value children, format the current element
+            let formatted = formatPrice($(this));
+            $(this).text(formatted);
+        }
+    });
+    $('.shipping-cost').text(formatPrice($('.shipping-cost')));
+    $('.line-item-total-price-amount').each(function () {
+        let $element = $(this);
+        let formatted = formatPrice($element);
+        $element.text(formatted);
+    });
+    $('.grand-total').text(formatPrice($('.grand-total')));
+    $('.order-discount-total').text(formatPrice($('.order-discount-total')));
+    $('.shipping-discount-total').text(formatPrice($('.shipping-discount-total')));
+    $('.sub-total').text(formatPrice($('.sub-total')));
+    $('.shipping-method-price').each(function () {
+        let $element = $(this);
+        let formatted = formatPrice($element);
+        $element.text(formatted);
+    });
+    $('.grand-total-price').text(formatPrice($('.grand-total-price')));
+    $('.dashboard-order-card-footer-value').each(function () {
+        let $element = $(this);
+        let formatted = formatPrice($element);
+        $element.text(formatted);
+    });
+    $('.shipping-total-cost').text(formatPrice($('.shipping-total-cost')));
+    $('.grand-total-sum').text(formatPrice($('.grand-total-sum')));
+    $('.tax-total').text(formatPrice($('.tax-total')));
+}
 /**
  * function to convert static prices on the page.
  * @returns {boolean} - ture
@@ -390,6 +458,7 @@ function convertPrice() {
             if (!disableRounding && enableRounding) {
                 eswPrice = applyRoundingModel(eswPrice);
             }
+            eswPrice = eswPrice.jquery ? formatPrice(eswPrice.toString()) : eswPrice.toString();
             element.text(selectedCurrencySymbol + eswPrice);
             element.addClass('esw-price-converted');
         });
@@ -397,11 +466,8 @@ function convertPrice() {
         priceElements.each(function () {
             let element = $(this);
             // eslint-disable-next-line no-shadow
-            let selectedFxRate = window.SitePreferences.ESW_SELECTED_FXRATE ? JSON.parse(window.SitePreferences.ESW_SELECTED_FXRATE) : '';
             let eswPrice = Number($.trim(element.text()).replace(/[^0-9\.-]+/g, ''));
-            if (selectedFxRate && element.text().indexOf(window.SitePreferences.ESW_CURRENCY_SYMBOL) == -1) {
-                eswPrice = Number((eswPrice * selectedFxRate.rate).toFixed(2));
-            }
+            eswPrice = eswPrice.jquery ? formatPrice(eswPrice.toString()) : eswPrice.toString();
             element.text(selectedCurrencySymbol + eswPrice);
             element.addClass('esw-price-converted');
         });
@@ -434,6 +500,10 @@ $(document).ready(function () {
         let $selectedCurrency = $('#selected-currency');
         setDefaultCurrency($selectedCurrency);
     }
+    currencyDisplayFormatting();
+    $(document).ajaxComplete(function () {
+        currencyDisplayFormatting();
+    });
     if (typeof window.SitePreferences !== 'undefined' && window.SitePreferences.ESW_ENABLE_PRICECONVERSION) {
         convertPrice();
         $(document).ajaxComplete(function () {

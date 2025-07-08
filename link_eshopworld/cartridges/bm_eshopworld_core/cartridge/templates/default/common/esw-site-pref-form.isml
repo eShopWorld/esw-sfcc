@@ -9,7 +9,7 @@
             <td class="top right">
                 <div class="permanent-tooltip-container">
                     <input type="submit" value="Save" class="esw-frm-submit-btn" />
-                    <isif condition="${isPackageConfigPage}">
+                    <isif condition="${!empty(pdict.isPackageConfigPage) && pdict.isPackageConfigPage}">
                         <span class="permanentTooltip">
                             ${Resource.msg('msg.pkg.model.save', 'eswbm', null)}
                         </span>
@@ -57,7 +57,7 @@
     </table>
 
     <iscomment>Package Config Form</iscomment>
-    <isif condition="${isPackageConfigPage}">
+    <isif condition="${!empty(pdict.isPackageConfigPage) && pdict.isPackageConfigPage}">
         <div
             class="js-mixed-selection ${pdict.sitePrefFields.attributes[0].currentValue.value === 'mixed' ? '' : 'hidden'}">
             <div class="mt-6"></div>

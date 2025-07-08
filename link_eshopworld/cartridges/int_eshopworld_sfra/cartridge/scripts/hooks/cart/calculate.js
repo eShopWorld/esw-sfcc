@@ -77,7 +77,7 @@ exports.calculate = function (basket, isESWOrderCalculate, currentMethodID) {
     // ===================================================
     if (!eswHelper.getEShopWorldModuleEnabled() || !isESWOrderCalculate  || !eswHelper.isDeliveryDiscountBasedOnCoupon(basket, currentMethodID) ) {
         PromotionMgr.applyDiscounts(basket);
-        if (isESWOrderCalculate) {
+        if (isESWOrderCalculate) { // Runs in case of order confirmation call
             eswHelper.removeCouponsIfNoPromotions(basket);
         }
     }

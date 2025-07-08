@@ -150,8 +150,12 @@ eswHelper.rebuildCartUponBackFromESW = function () {
  */
 eswHelper.getOrderTotalWithShippingCost = function (totalShippingCost) {
     let BasketMgr = require('dw/order/BasketMgr');
+    let shopperCurrency;
+    if (empty(request.httpCookies['esw.currency'])) {
+        shopperCurrency = eswHelper.applyDefaultCurrencyForCountry();
+    }
     // eslint-disable-next-line no-mixed-operators
-    return formatMoney(new Money(eswHelper.getFinalOrderTotalsObject().value + totalShippingCost.decimalValue - eswHelper.getShippingDiscount(BasketMgr.currentBasket), request.httpCookies['esw.currency'].value));
+    return formatMoney(new Money(eswHelper.getFinalOrderTotalsObject().value + totalShippingCost.decimalValue - eswHelper.getShippingDiscount(BasketMgr.currentBasket), (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value)));
 };
     /**
  * renders PackageJSON tracking information
