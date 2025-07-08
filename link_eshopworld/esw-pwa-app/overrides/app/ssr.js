@@ -65,14 +65,21 @@ const {handler} = runtime.createHandler(options, (app) => {
                     'script-src': [
                         // Used by the service worker in /worker/main.js
                         'storage.googleapis.com',
-                        'assets.sandbox.eshopworld.com'
-                    ],
-                    'frame-src': [
+                        // Allow AB Tasty scripts
+                        '*.abtasty.com',
                         '*.eshopworld.com'
                     ],
                     'connect-src': [
                         // Connect to Einstein APIs
-                        'api.cquotient.com'
+                        'api.cquotient.com',
+                        'app.abtasty.com',
+                        '*.abtasty.com',
+                        '*.eshopworld.com'
+                    ],
+                    'frame-src': [
+                        "'self'",  // Keep the default self-origin
+                        'https://qa-assistant.abtasty.com',
+                        'https://*.eshopworld.com' 
                     ]
                 }
             }

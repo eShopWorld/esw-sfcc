@@ -737,6 +737,7 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
             </attribute-group>
         </group-definitions>
     </type-extension>
+
     <type-extension type-id="ProductLineItem">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="eswFulfilmentCountryIso">
@@ -1051,6 +1052,13 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswArticleCharges">
+                <display-name xml:lang="x-default">ESW Article Charges</display-name>
+                <description xml:lang="x-default">The charges on Article(unit product) level</description>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="eswNewConfirmation">
@@ -1060,6 +1068,7 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
                 <attribute attribute-id="eswDeltaRoundingValue"/>
                 <attribute attribute-id="eswLineItemId"/>
                 <attribute attribute-id="eswReturnProhibited"/>
+                <attribute attribute-id="eswArticleCharges"/>
             </attribute-group>
             <attribute-group group-id="eswRetailerCurrencyItemsConfirmation">
                 <display-name xml:lang="x-default">ESW Retailer Currency Order Items Confirmation</display-name>
@@ -1740,6 +1749,12 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswAbTastyScriptPath">
+                <display-name xml:lang="x-default">ESW AB Tasty Script Path</display-name>
+                <description xml:lang="x-default">Add script URL</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+            </attribute-definition>
             <attribute-definition attribute-id="eswEnableTaxInformation">
                 <display-name xml:lang="x-default">ESW Enable Tax Information</display-name>
                 <type>boolean</type>
@@ -1876,6 +1891,7 @@ Example: &#13;
                 <attribute attribute-id="eswEnableLandingPageRedirect"/>
                 <attribute attribute-id="eswEnableOrderDetail"/>
                 <attribute attribute-id="eswHideNativeShipping"/>
+                <attribute attribute-id="eswAbTastyScriptPath"/>
             </attribute-group>
             <attribute-group group-id="ESW Pricing Configuration">
                 <display-name xml:lang="x-default">ESW Pricing Configuration</display-name>
@@ -1978,6 +1994,7 @@ Example: &#13;
             </attribute-group>
         </group-definitions>
     </type-extension>
+
     <type-extension type-id="PriceAdjustment">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="thresholdDiscountType">
@@ -1988,6 +2005,31 @@ Example: &#13;
             </attribute-definition>
         </custom-attribute-definitions>
     </type-extension>
+
+    <type-extension type-id="OrderAddress">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="nativeFirstName">
+                    <display-name xml:lang="x-default">Native First Name for Japanese</display-name>
+                    <description xml:lang="x-default">This attribute will store the native First Name for Japanese Shoppers</description>
+                    <type>string</type>
+                    <mandatory-flag>false</mandatory-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="nativeLastName">
+                    <display-name xml:lang="x-default">Native Last Name for Japanese</display-name>
+                    <description xml:lang="x-default">This attribute will store the native Last Name for Japanese Shoppers</description>
+                    <type>string</type>
+                    <mandatory-flag>false</mandatory-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="Japense Katakana Name">
+                <display-name xml:lang="x-default">Japanese Native Name</display-name>
+                <attribute attribute-id="nativeFirstName"/>
+                <attribute attribute-id="nativeLastName"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+
     <type-extension type-id="Shipment">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="eswOutboundShipmentJson">

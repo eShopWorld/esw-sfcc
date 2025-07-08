@@ -1,8 +1,18 @@
+/* eslint-disable valid-jsdoc */
 /*
- * Copyright (c) 2021, salesforce.com, inc.
+ * Copyright (c) 2024, salesforce.com, inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+ */
+
+/*
+ * Developer note! When updating this file, make sure to also update the
+ * _app-config template files in pwa-kit-create-app.
+ *
+ * In the pwa-kit-create-app, the templates are found under:
+ * - assets/bootstrap/js/overrides/app/components/_app-config
+ * - assets/templates/@salesforce/retail-react-app/app/components/_app-config
  */
 import React from 'react'
 import PropTypes from 'prop-types'
@@ -13,6 +23,7 @@ import 'focus-visible/dist/focus-visible'
 
 import theme from '@salesforce/retail-react-app/app/theme'
 import {MultiSiteProvider} from '@salesforce/retail-react-app/app/contexts'
+import {useAppOrigin} from '@salesforce/retail-react-app/app/hooks/use-app-origin'
 import {
     resolveSiteFromUrl,
     resolveLocaleFromUrl
@@ -24,7 +35,6 @@ import createLogger from '@salesforce/pwa-kit-runtime/utils/logger-factory'
 import {CommerceApiProvider} from '@salesforce/commerce-sdk-react'
 import {withReactQuery} from '@salesforce/pwa-kit-react-sdk/ssr/universal/components/with-react-query'
 import {useCorrelationId} from '@salesforce/pwa-kit-react-sdk/ssr/universal/hooks'
-import {getAppOrigin} from '@salesforce/pwa-kit-react-sdk/utils/url'
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 
 /**
@@ -34,11 +44,6 @@ import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
  *
  * You can also use the AppConfig to configure a state-management library such
  * as Redux, or Mobx, if you like.
- *
- * @param {Object} props - The component props.
- * @param {React.ReactNode} props.children - The child components.
- * @param {Object} props.locals - The local variables.
- * @returns {JSX.Element} The AppConfig component.
  */
 const AppConfig = ({children, locals = {}}) => {
     const {correlationId} = useCorrelationId()
@@ -47,9 +52,7 @@ const AppConfig = ({children, locals = {}}) => {
     }
 
     const commerceApiConfig = locals.appConfig.commerceAPI
-
-    const appOrigin = getAppOrigin()
-
+    const appOrigin = useAppOrigin()
     return (
         <CommerceApiProvider
             shortCode={commerceApiConfig.parameters.shortCode}
@@ -61,6 +64,9 @@ const AppConfig = ({children, locals = {}}) => {
             redirectURI={`${appOrigin}/callback`}
             proxy={`${appOrigin}${commerceApiConfig.proxyPath}`}
             headers={headers}
+            // Uncomment 'enablePWAKitPrivateClient' to use SLAS private client login flows.
+            // Make sure to also enable useSLASPrivateClient in ssr.js when enabling this setting.
+            // enablePWAKitPrivateClient={true}
             logger={createLogger({packageName: 'commerce-sdk-react'})}
         >
             <MultiSiteProvider site={locals.site} locale={locals.locale} buildUrl={locals.buildUrl}>
@@ -76,6 +82,7 @@ AppConfig.restore = (locals = {}) => {
         typeof window === 'undefined'
             ? locals.originalUrl
             : `${window.location.pathname}${window.location.search}`
+
     const site = resolveSiteFromUrl(path)
     const locale = resolveLocaleFromUrl(path)
 
@@ -109,7 +116,6 @@ AppConfig.propTypes = {
 }
 
 const isServerSide = typeof window === 'undefined'
-
 // Recommended settings for PWA-Kit usages.
 // NOTE: they will be applied on both server and client side.
 // retry is always disabled on server side regardless of the value from the options
@@ -126,6 +132,21 @@ const options = {
                 retry: false
             }
         }
+    },
+    beforeHydrate: (data) => {
+        const now = Date.now()
+
+        // Helper to reset the data timestamp to time of app load.
+        const updateQueryTimeStamp = ({state}) => {
+            state.dataUpdatedAt = now
+        }
+
+        // Update serialized mutations and queries to ensure that the cached data is
+        // considered fresh on first load.
+        data?.mutations?.forEach(updateQueryTimeStamp)
+        data?.queries?.forEach(updateQueryTimeStamp)
+
+        return data
     }
 }
 

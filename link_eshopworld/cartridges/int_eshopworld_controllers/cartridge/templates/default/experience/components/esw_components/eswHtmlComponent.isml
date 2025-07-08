@@ -1,0 +1,12 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+<div class="esweHtml-component-container">
+    <isif condition="${pdict.isEswEnabled && eswHelper.isFrontendConversionEnabled()}">
+        <isinclude
+            url="${URLUtils.url('EShopWorldSG-GetEswAppResources', pdict.countryUrlParam, pdict.selectedCountry)}" />
+    </isif>
+    <div class="row">
+        <div class="col-12 align-self-center text-center text-lg-left">
+            <isprint value="${pdict.eswHtmlContent}" encoding="off" />
+        </div>
+    </div>
+</div>

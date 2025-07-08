@@ -1,0 +1,10 @@
+<div class="price <isif condition="${typeof product != 'undefined' && product.isProductRestricted}">d-none</isif>"">
+    <span class="starting">
+        ${Resource.msg('label.starting_from', 'pricing', null)}
+        <isif condition="${product.price.min}">
+            ${product.price.min.sales.formatted}
+        <iselse>
+            ${product.price.sales.formatted}
+        </isif>
+    </span>
+</div>

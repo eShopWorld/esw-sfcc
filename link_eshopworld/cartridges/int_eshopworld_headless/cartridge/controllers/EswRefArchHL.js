@@ -47,4 +47,15 @@ server.get('PriceConversion', function (req, res, next) {
     next();
 });
 
+/**
+ * Rebuilds the basket from the last ESW client order ID
+ */
+server.post('RebuildBasketFromOrder', function (req, res, next) {
+    let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+    let eswClientLastOrderId = req.querystring.eswClientLastOrderId;
+    let response = eswHelperHL.generateBasketFromOrder(eswClientLastOrderId);
+    res.json(response);
+    return next();
+});
+
 module.exports = server.exports();

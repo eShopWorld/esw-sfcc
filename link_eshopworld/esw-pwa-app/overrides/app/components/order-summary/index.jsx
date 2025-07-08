@@ -1,3 +1,4 @@
+/* eslint-disable */
 /*
  * Copyright (c) 2021, salesforce.com, inc.
  * All rights reserved.
@@ -54,7 +55,6 @@ const CartItems = ({basket}) => {
             enabled: Boolean(productIds),
             select: (result) => {
                 // Convert array into key/value object with key is the product id
-                // eslint-disable-next-line no-shadow
                 return result?.data?.reduce((result, item) => {
                     const key = item.id
                     result[key] = item

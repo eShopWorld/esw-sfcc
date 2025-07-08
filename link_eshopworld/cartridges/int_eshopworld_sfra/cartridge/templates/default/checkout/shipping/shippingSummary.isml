@@ -1,0 +1,154 @@
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
+<!--- Shipping Address --->
+<isif condition="${eswHelper.getEShopWorldModuleEnabled()}">
+<isloop var="shippingModel" items="${pdict.order.shipping}" status="shippingLoop">
+    <isif condition="${shippingLoop.first}">
+        <div class="single-shipping" data-shipment-summary="${shippingModel.UUID}">
+            <isinclude template="checkout/shipping/shippingTitle" />
+            <isif condition="${shippingModel.shippingAddress !== null}">
+                <isset name="address" value="${shippingModel.shippingAddress}" scope="page" />
+            <iselse/>
+                <isset name="address" value="${{}}" scope="page" />
+            </isif>
+            <div class="summary-details shipping">
+                <isinclude template="checkout/addressSummary" />
+                <div class="shipping-phone">
+                    ${shippingModel.shippingAddress && shippingModel.shippingAddress.phone ? shippingModel.shippingAddress.phone : ''}
+                </div>
+            </div>
+
+            <!--- Shipping information --->
+            <p class="summary-section-label shipping-method-label">${Resource.msg('label.order.shipping.method', 'confirmation', null)}</p>
+            <div class="row summary-details leading-lines">
+                <div class="col-8 start-lines">
+                    <p class="shipping-method">
+                        <span class="shipping-method-title">${shippingModel.selectedShippingMethod.displayName}</span>
+                        <span class="shipping-method-arrival-time">
+                            <isif condition="${shippingModel.selectedShippingMethod.estimatedArrivalTime}">
+                                ( ${shippingModel.selectedShippingMethod.estimatedArrivalTime} )
+                            </isif>
+                        </span>
+                    </p>
+                </div>
+                <div class="col-4 end-lines">
+                    <p class="text-right pricing shipping-method-price">
+                        <isif
+                            condition="${!empty(pdict.order.totals.totalShippingCost) && typeof pdict.order.totals.totalShippingCost === 'object'}">
+                            ${pdict.order.totals.totalShippingCost.formatted}
+                        <iselse/>
+                            ${pdict.order.totals.totalShippingCost}
+                        </isif>
+                    </p>
+                </div>
+            </div>
+            <isinclude template="checkout/shipping/giftMessageSummary" />
+        </div>
+    </isif>
+</isloop>
+<p class="summary-section-label shipping-addr-label multi-shipping">
+    ${Resource.msg('order.summery.section.text', 'order', null)}
+</p>
+<iscomment>ESW Order/Package Tracking information </iscomment>
+<isif condition="${eswHelper.isOrderDetailEnabled() && !empty(pdict.order.totals.eswTrackingURL) && !empty(pdict.order.totals
+                 .eswTrackingURL)}">
+    <span class="summary-section-label shipping-addr-label">${Resource.msg('orderhistory.esw.tracking.number', 'esw', null)}</span><br>
+    <a class="shipping-addr-label" target="_blank" href="${pdict.order.totals.eswTrackingURL}">
+        ${pdict.order.totals.eswTrackingNumber}
+    </a>
+</isif>
+<iscomment>ESW Order/Package eswPackageJSON data</iscomment>
+<isif condition="${eswHelper.isEswSplitShipmentEnabled() && !empty(pdict.order.eswPackageJSON)}">
+    <span class="summary-section-label shipping-addr-label">${Resource.msg('orderhistory.esw.tracking.number', 'esw', null)}</span><br>
+    <isset name="size" value="${Resource.msg('esw.order.summary.size.text', 'esw', null)}" scope="page" />
+    <isset name="color" value="${Resource.msg('esw.order.summary.color.text', 'esw', null)}" scope="page" />
+    <isset name="quantity" value="${Resource.msg('field.selectquantity', 'cart', null)}" scope="page" />
+    <isset name="total" value="${Resource.msg('label.total.price', 'cart', null)}" scope="page" />
+
+    <div class="mb-3">
+        <isif condition="${!empty(pdict.order.eswPackageJSON)}">
+            <div class="mb-3">
+                <isloop var="item" items="${pdict.order.eswPackageJSON}" status="itemStatus">
+                    <isif
+                        condition="${!empty(item.trackingUrl) && !empty(item.trackingNumber) && !empty(item.productLineItems)}">
+                        <span class="tooltipOrder">
+                            <isif condition="${!empty(item.productLineItems)}">
+                                <a class="item_epj" data-detail="${JSON.stringify(item.productLineItems)}"
+                                    data-tracking-number="${String(item.trackingNumber)}"
+                                    aria-describedby="tooltip-${itemStatus.index}"
+                                    data-attribute='{"size": "${size}", "color": "${color}", "quantity": "${quantity}", "total": "${total}"}'
+                                    href="${item.trackingUrl}">
+                                    <isprint value="${String(item.trackingNumber)}" />
+                                </a>
+                            </isif>
+                            <span class="tooltiptext" id="tooltip-${String(item.trackingNumber)}" role="tooltip"
+                                aria-hidden="true">
+                                <iscomment> Tooltip Content Here </iscomment>
+                                <isloop var="lineItem" items="${item.productLineItems}" status="lineItemLoop">
+                                    <div class="tooltip-content">
+                                        <div class="tooltip-row title-row">
+                                            <div class="product-name">
+                                                <isif condition="${!empty(lineItem.lineItemDetail.productName)}">
+                                                    ${lineItem.lineItemDetail.productName}
+                                                <iselse/>
+                                                    ${Resource.msg('text.not.available.price', 'product', null)}
+                                                </isif>
+                                            </div>
+                                        </div>
+                                        <div class="tooltip-row details-row">
+                                            <isif condition="${!empty(lineItem.lineItemDetail.productImage)}">
+                                                <div class="image-cell">
+                                                    <img src="${lineItem.lineItemDetail.productImage}"
+                                                        alt="Product Image" class="tooltip-image" />
+                                                </div>
+                                            </isif>
+                                            <div class="details-cell">
+                                                <div class="product-attributes">
+                                                    <isif
+                                                        condition="${!empty(lineItem.lineItemDetail.color) && lineItem.LineItemDetail.color != 'N/A'}">
+                                                        <span>${color}: ${lineItem.lineItemDetail.color} </span>
+                                                    </isif>
+                                                    <isif
+                                                        condition="${!empty(lineItem.lineItemDetail.size) && lineItem.LineItemDetail.color != 'N/A'}">
+                                                        <br />
+                                                        <span> ${size}: ${lineItem.lineItemDetail.size} </span>
+                                                    </isif>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr class="line-item-divider" />
+                                        <div class="tooltip-row total-quantity-row">
+                                            <div class="empty-row"></div>
+                                            <div class="total-quantity">
+                                                <span class="title">${quantity}</span>
+                                                <span class="value">
+                                                    <isif condition="${!empty(lineItem.lineItemDetail.quantity)}">
+                                                        ${lineItem.lineItemDetail.quantity % 1 === 0 ? lineItem.lineItemDetail.quantity.toString() : lineItem.lineItemDetail
+                                                        .quantity}
+                                                    <iselse/>
+                                                        ${Resource.msg('text.not.available.price', 'product', null)}
+                                                    </isif>
+                                                </span>
+                                            </div>
+                                            <div class="total-quantity">
+                                                <isif condition="${!empty(lineItem.lineItemDetail.price)}">
+                                                    <span class="title">${total}</span>
+                                                    <span class="value">
+                                                        ${lineItem.lineItemDetail.price}
+                                                    </span>
+                                                </isif>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <isif condition="${!lineItemLoop.last}">
+                                        <hr class="line-item-divider-product">
+                                    </isif>
+                                </isloop>
+                            </span>
+                        </span>
+                    </isif>
+                </isloop>
+            </div>
+        </isif>
+    </div>
+</isif>
+</isif>

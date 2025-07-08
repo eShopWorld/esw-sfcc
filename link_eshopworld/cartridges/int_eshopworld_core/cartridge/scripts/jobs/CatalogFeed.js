@@ -138,21 +138,25 @@ const CatalogUtils = {
  * @return {boolean} - returns execute result
  */
 function execute() {
-    let saleableProducts,
-        fWriter,
-        csvWriter;
+    let saleableProducts;
+    let fWriter;
+    let csvWriter;
     let Constants = require('*/cartridge/scripts/util/Constants');
-    if (eswCoreHelper.isEswCatalogFeatureEnabled()) {
-        try {
-            if (eswCoreHelper.getCatalogUploadMethod() === Constants.API) {
-                saleableProducts = eswCatalogHelper.getFilteredProducts(true);
-                let productBatches = eswCatalogHelper.convertArrayToChunks(saleableProducts, Constants.CATALOG_API_CHUNK);
-                let payload;
-                for (let i = 0; i < productBatches.length; i++) {
-                    payload = eswCatalogHelper.generateProductBatchPayload(productBatches[i]);
-                    eswCatalogHelper.sendCatalogData(payload);
-                }
-            } else {
+    let uploadMethod = eswCoreHelper.getCatalogUploadMethod();
+    let isEswCatalogFeatureEnabled = eswCoreHelper.isEswCatalogFeatureEnabled();
+    try {
+        if (uploadMethod === Constants.API) {
+            // Always use Catalog API if feature is enabled
+            saleableProducts = eswCatalogHelper.getFilteredProducts(true);
+            let productBatches = eswCatalogHelper.convertArrayToChunks(saleableProducts, Constants.CATALOG_API_CHUNK);
+            let payload;
+            for (let i = 0; i < productBatches.length; i++) {
+                payload = eswCatalogHelper.generateProductBatchPayload(productBatches[i]);
+                eswCatalogHelper.sendCatalogData(payload);
+            }
+        } else if (uploadMethod === Constants.SFTP) {
+            try {
+                // Use SFTP if feature is not enabled
                 let fileName = eswCoreHelper.getFileName({ jobType: 'catalogFeed' });
                 let file = eswCoreHelper.createFile('catalogFeed');
                 fWriter = new FileWriter(file);
@@ -163,23 +167,21 @@ function execute() {
                 saleableProducts = eswCatalogHelper.getFilteredProducts();
                 let fileHasRecords = false;
                 let feedlastExecutedTimeStamp = eswCoreHelper.getFeedCustomPrefVal('TimeStamp', eswCatalogPref);
-                for (let i = 0; i < saleableProducts.length; i++) {
-                    saleableProducts.forEach(function (product) { // eslint-disable-line no-loop-func
-                        // Send all products in catalog if job is executing first time
-                        if (empty(feedlastExecutedTimeStamp)) {
-                            // Write CSV File Records
+                saleableProducts.forEach(function (product) { // eslint-disable-line no-loop-func
+                    // Send all products in catalog if job is executing first time
+                    if (empty(feedlastExecutedTimeStamp)) {
+                        // Write CSV File Records
+                        CatalogUtils.writeRecords(csvWriter, product);
+                        fileHasRecords = true;
+                    } else {
+                        // Send only that products which were created or modified after job execution
+                        let productLastModifiedTimeStamp = eswCatalogHelper.formatTimeStamp(product.lastModified);
+                        if (productLastModifiedTimeStamp > feedlastExecutedTimeStamp) {
                             CatalogUtils.writeRecords(csvWriter, product);
                             fileHasRecords = true;
-                        } else {
-                            // Send only that products which were created or modified after job execution
-                            let productLastModifiedTimeStamp = eswCatalogHelper.formatTimeStamp(product.lastModified);
-                            if (productLastModifiedTimeStamp > feedlastExecutedTimeStamp) {
-                                CatalogUtils.writeRecords(csvWriter, product);
-                                fileHasRecords = true;
-                            }
                         }
-                    });
-                }
+                    }
+                });
 
                 if (csvWriter) {
                     csvWriter.close();
@@ -187,26 +189,21 @@ function execute() {
                 if (fWriter) {
                     fWriter.close();
                 }
-
                 // If there are records in the file, then only send the file.
                 if (fileHasRecords) {
                     // Send File to ESW SFTP Server
                     let remotePath = eswCoreHelper.getFeedCustomPrefVal('RemotePath', eswCatalogPref);
-
                     if (empty(remotePath)) {
                         Logger.error('UploadCatalogFeed: Parameter remotePath is empty.');
                         return new Status(Status.ERROR);
                     }
-
                     let sftpService = eswCoreHelper.getSFTPService(eswCatalogPref);
                     remotePath += fileName;
                     let result = sftpService.setOperation('putBinary', remotePath, file).call();
-
                     if (!result.ok) {
                         Logger.error('UploadCatalogFeed: Error While sending file to SFTP.');
                         return new Status(Status.ERROR);
                     }
-
                     // Increment File Count each time a new file is distributed
                     CatalogUtils.incrementFileCount();
                 } else {
@@ -214,21 +211,39 @@ function execute() {
                     file.remove();
                     Logger.info('UploadCatalogFeed: No new record(s) found.');
                 }
-            }
-            // Save last execution time stamp of job feed
-            eswCatalogHelper.saveFeedExecutionTimeStamp();
-        } catch (e) {
-            if (eswCoreHelper.isEswCatalogFeatureEnabled() && eswCoreHelper.getCatalogUploadMethod() === Constants.SFTP) {
+            } catch (sftpErr) {
                 if (csvWriter) {
                     csvWriter.close();
                 }
                 if (fWriter) {
                     fWriter.close();
                 }
+                Logger.error('ESW Catalog SFTP logic error: ' + sftpErr + '\n' + (sftpErr.stack || ''));
+                return new Status(Status.ERROR);
             }
-            Logger.error('ESW Catalog Sync Job error: ' + e);
+        } else if (uploadMethod === Constants.UNKNOWN) {
+            if (isEswCatalogFeatureEnabled) {
+                Logger.error('UploadCatalogFeed: service URL not set. Please set a valid API URL for ESWCatalogService.');
+            } else {
+                Logger.error('UploadCatalogFeed: service URL not set. Please set a valid SFTP URL for ESWSFTPService.');
+            }
             return new Status(Status.ERROR);
         }
+        // Save last execution time stamp if API or SFTP logic ran
+        if (uploadMethod === Constants.API || uploadMethod === Constants.SFTP) {
+            eswCatalogHelper.saveFeedExecutionTimeStamp();
+        }
+    } catch (e) {
+        if (uploadMethod === Constants.SFTP) {
+            if (csvWriter) {
+                csvWriter.close();
+            }
+            if (fWriter) {
+                fWriter.close();
+            }
+        }
+        Logger.error('ESW Catalog Sync Job error: ' + e);
+        return new Status(Status.ERROR);
     }
     return new Status(Status.OK);
 }

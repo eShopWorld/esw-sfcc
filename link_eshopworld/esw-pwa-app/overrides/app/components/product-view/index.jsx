@@ -41,6 +41,7 @@ import SwatchGroup from '@salesforce/retail-react-app/app/components/swatch-grou
 import {getPriceData} from '../../../../../esw-pwa-app/overrides/app/utils/product-utils'
 import PromoCallout from '@salesforce/retail-react-app/app/components/product-tile/promo-callout'
 import { EswReturnProhibitMsg } from '../../../../../esw-pwa-app/overrides/app/esw/components/product-return-prohibit-msg'
+import { getEswShopperCurrencyConfigByKey } from '../../esw/esw-helpers'
 
 const ProductViewHeader = ({
     name,
@@ -124,7 +125,8 @@ const ProductView = forwardRef(
         },
         ref
     ) => {
-        const {currency: activeCurrency} = useCurrency()
+        const {currency: activeCurrency, setCurrency} = useCurrency()
+        setCurrency(product && typeof product.currency !== 'undefined' ? product.currency : getEswShopperCurrencyConfigByKey('code'))
         const showToast = useToast()
         const intl = useIntl()
         const location = useLocation()

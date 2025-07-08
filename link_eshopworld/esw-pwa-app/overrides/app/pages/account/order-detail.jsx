@@ -1,3 +1,4 @@
+/* eslint-disable no-shadow */
 /*
  * Copyright (c) 2023, salesforce.com, inc.
  * All rights reserved.

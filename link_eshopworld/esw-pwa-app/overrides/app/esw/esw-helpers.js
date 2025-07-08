@@ -5,6 +5,44 @@
 import {getCountry} from './esw-geo-location-helper'
 import {getAbandonmentCart, getBmConfigs, getGeoIpAlert} from './esw-services'
 
+/**
+ * Get configuration value from esw.config localStorage
+ * @param {string} configKey - Configuration json key in esw.configs
+ * @returns {string} - Correspondent key from esw.configs localStorage
+ */
+export const getEswConfigByKey = (configKey) =>
+    JSON.parse(localStorage.getItem('esw.configs'))[configKey]
+
+export const getAbTastyScriptPath = () => {
+    try {
+        return getEswConfigByKey('abTastyScriptPath')
+    } catch (e) {
+        return null
+    }
+}
+
+export const setAbTastyScriptInDom = (abTastyScriptPath) => {
+    if (abTastyScriptPath) {
+        // Remove existing script if present
+        const existingScript = document.getElementById('eswAbTastyScript')
+        if (existingScript) {
+            document.head.removeChild(existingScript)
+        }
+
+        // Add AB Tasty script
+        const abTastyScript = document.createElement('script')
+        abTastyScript.src = abTastyScriptPath
+        abTastyScript.async = true
+        abTastyScript.id = 'eswAbTastyScript'
+        document.head.appendChild(abTastyScript)
+    }
+
+    const scriptElement = document.getElementById('eswAbTastyScript')
+    if (scriptElement && abTastyScriptPath.length === 0) {
+        document.head.removeChild(scriptElement)
+    }
+}
+
 const storeBmConfigs = (locale) => {
     getBmConfigs(locale)
         .then((response) => response.json())
@@ -24,16 +62,11 @@ const storeBmConfigs = (locale) => {
                     JSON.stringify(data.eswBmConfigs.eswNativeShippingEnabled)
                 )
             }
+            // Setting AB Tasty DOM
+            setAbTastyScriptInDom(data.eswBmConfigs.abTastyScriptPath)
         })
         .catch((error) => error)
 }
-/**
- * Get configuration value from esw.config localStorage
- * @param {string} configKey - Configuration json key in esw.configs
- * @returns {string} - Correspondent key from esw.configs localStorage
- */
-export const getEswConfigByKey = (configKey) =>
-    JSON.parse(localStorage.getItem('esw.configs'))[configKey]
 
 /**
  * Get configuration value from access_token localStorage

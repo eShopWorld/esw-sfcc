@@ -34,6 +34,7 @@ exports.eswPkgOptionMixed = {
 };
 exports.pkgAsnMaxDays = 3;
 exports.STR_QUOTA_LIMIT = 999;
+exports.NET_TAXATION_MODEL = 'NET';
 exports.CUSTOMER_AUTH = 'customers/auth?client_id=';
 exports.EMBEDDED_CHECKOUT_QUERY_PARAM = 'eswiframeurl';
 exports.EMBEDDED_CHECKOUT_ENDPOINT_HEADLESS = 'EShopWorld-EswEmbeddedCheckout?';

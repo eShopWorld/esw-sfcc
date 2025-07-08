@@ -1,0 +1,106 @@
+{
+  "name": "EShopWorld",
+  "version": "25.5.0",
+  "description": "New Overlay Cartridge",
+  "main": "index.js",
+  "engines": {
+    "node": ">=10.0 <13.0"
+  },
+  "scripts": {
+    "test": "sgmf-scripts --test test/unit/**/*spec.js",
+    "test:integration": "sgmf-scripts --integration ../link_eshopworld/test/integration/**/*.js",
+    "test:all": "npm run test && npm run test:integration",
+    "compile:scss": "sgmf-scripts --compile css",
+    "compile:js": "sgmf-scripts --compile js",
+    "build": "npm run compile:js;npm run compile:scss;",
+    "lint": "npm run lint:css && npm run lint:js",
+    "lint:css": "sgmf-scripts --lint css",
+    "lint:js": "sgmf-scripts --lint js",
+    "uploadCartridge": "sgmf-scripts --uploadCartridge int_eshopworld_sfra && sgmf-scripts --uploadCartridge modules",
+    "watch": "sgmf-scripts --watch",
+    "validate": "npm run lint && npm run test",
+    "cover": " nyc --reporter=html --reporter=lcov --reporter=text-summary --reporter=cobertura sgmf-scripts --cover 'test/unit/**/*.js'",
+    "cover:report": "npm run cover report",
+    "test:logs": "cd test/logs && node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SalesforceCommerceCloud/link_eshopworld.git"
+  },
+  "license": "ISC",
+  "homepage": "https://github.com/SalesforceCommerceCloud/link_eshopworld",
+  "devDependencies": {
+    "@babel/core": "^7.11.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.11.0",
+    "@babel/preset-env": "^7.11.0",
+    "@tridnguyen/config": "^2.3.1",
+    "allure-commandline": "^2.13.0",
+    "axios": "^1.7.7",
+    "babel-core": "^6.26.3",
+    "babel-eslint": "^10.0.3",
+    "babel-loader": "^8.1.0",
+    "babel-plugin-istanbul": "^6.1.1",
+    "babel-preset-env": "^1.7.0",
+    "cross-env": "^7.0.3",
+    "css-loader": "^0.28.11",
+    "debug": "^4.1.1",
+    "deepmerge": "^3.3.0",
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb-base": "^5.0.3",
+    "eslint-plugin-import": "^1.16.0",
+    "eslint-plugin-sitegenesis": "~1.0.0",
+    "globalize": "^1.5.0",
+    "husky": "^4.2.5",
+    "mocha": "^5.2.0",
+    "mocha-junit-reporter": "^1.23.1",
+    "moment-timezone": "^0.5.31",
+    "node-sass": "^4.14.1",
+    "nyc": "^15.1.0",
+    "postcss-loader": "^2.1.6",
+    "properties-parser": "^0.3.1",
+    "proxyquire": "1.7.4",
+    "request-promise": "^4.2.6",
+    "sass-lint": "^1.13.1",
+    "sass-loader": "^7.3.1",
+    "selenium-standalone": "^6.18.0",
+    "shelljs": "^0.8.4",
+    "should": "^13.2.3",
+    "sinon": "^1.17.7",
+    "style-loader": "^0.21.0",
+    "stylelint": "^8.4.0",
+    "stylelint-config-standard": "^17.0.0",
+    "stylelint-scss": "^2.5.0",
+    "url": "^0.11.0"
+  },
+  "dependencies": {
+    "bootstrap": "4.3.1",
+    "chai": "^4.3.0",
+    "chai-http": "^4.3.0",
+    "cleave.js": "^1.6.0",
+    "dotenv": "^16.4.5",
+    "flag-icon-css": "^2.9.0",
+    "font-awesome": "^4.7.0",
+    "form-data": "^4.0.1",
+    "jquery": "^3.5.1",
+    "sgmf-scripts": "^2.4.2"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "ie >= 10"
+  ],
+  "packageName": "int_eshopworld_sfra",
+  "paths": {
+    "base": "../storefront-reference-architecture/cartridges/app_storefront_base",
+    "base_ext": "cartridges/int_eshopworld_sfra"
+  },
+  "babel": {
+    "presets": [
+      "env"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
+  }
+}

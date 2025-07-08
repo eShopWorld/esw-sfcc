@@ -43,6 +43,11 @@ server.get('BmConfigs', function (req, res, next) {
         filteredFields.eswNativeShippingEnabled = eswHelper.isEswNativeShippingHidden() ? !eswHelper.isSelectedCountryOverrideShippingEnabled(selectedCountryDetail.countryCode) : false;
         filteredFields.eswNativeShippingEnabledMsg = Resource.msg('hide.shipping.disclaimer.msg', 'esw', null);
     }
+
+    // Ab Tasty fields
+    filteredFields.isAbTastyEnabled = eswHelper.isEswEnabledAbTasty();
+    filteredFields.abTastyScriptPath = filteredFields.isAbTastyEnabled ? eswHelper.getEswAbTastyScriptPaths() : null;
+
     filteredFields.isEswEnabledEmbeddedCheckout = eswHelper.isEswEnabledEmbeddedCheckout();
     if (filteredFields.isEswEnabledEmbeddedCheckout === true) {
         try {

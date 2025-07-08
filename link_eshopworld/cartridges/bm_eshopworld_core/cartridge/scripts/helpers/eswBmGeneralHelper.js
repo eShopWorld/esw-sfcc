@@ -134,18 +134,28 @@ function loadGroups(preferences, groupURL, appendedParameter, groupId) {
  * @returns {Array} sitePrefs - New Array with fields specific to API/SFTP
  */
 function removeElements(sitePrefFieldsAttributes, relatedMethodFields) {
-    let uploadMethod = eswHelper.getCatalogUploadMethod(),
-        sitePrefs = [];
-    for (let i = 0; i < sitePrefFieldsAttributes.length; i++) {
-        if (sitePrefFieldsAttributes[i].id === 'isEswCatalogFeatureEnabled') {
-            sitePrefs.push(sitePrefFieldsAttributes[i]);
-        } else if (uploadMethod === 'sftp' && relatedMethodFields.sftpFields.indexOf(sitePrefFieldsAttributes[i].id) !== -1) {
-            sitePrefs.push(sitePrefFieldsAttributes[i]);
-        } else if (uploadMethod === 'api' && relatedMethodFields.apiFields.indexOf(sitePrefFieldsAttributes[i].id) !== -1) {
-            sitePrefs.push(sitePrefFieldsAttributes[i]);
-        }
+    let Constants = require('*/cartridge/scripts/util/Constants');
+    let uploadMethod = eswHelper.getCatalogUploadMethod();
+
+    // Always include the toggle field
+    let sitePrefs = sitePrefFieldsAttributes.filter(function (field) {
+        return field.id === 'isEswCatalogFeatureEnabled';
+    });
+    let allowedFields = [];
+    if (uploadMethod === Constants.API) {
+        allowedFields = relatedMethodFields.apiFields;
+    } else if (uploadMethod === Constants.SFTP) {
+        allowedFields = relatedMethodFields.sftpFields;
+    } else if (uploadMethod === Constants.UNKNOWN) {
+        return sitePrefs;
     }
-    return !empty(sitePrefs) ? sitePrefs : sitePrefFieldsAttributes;
+    // Add only fields that are in allowedFields and not the toggle field
+    sitePrefFieldsAttributes.forEach(function (field) {
+        if (field.id !== 'isEswCatalogFeatureEnabled' && allowedFields.indexOf(field.id) !== -1) {
+            sitePrefs.push(field);
+        }
+    });
+    return sitePrefs;
 }
 /**
  * Function to return masked data
@@ -324,7 +334,8 @@ function loadReport(csrf) {
                     site: Site.getCurrent().getID(),
                     eswCartridgeVersion: Resource.msg('esw.cartridges.version.label', 'esw', null) + Resource.msg('esw.cartridges.version.number', 'esw', null),
                     sfccArchitectVersion: Resource.msg('global.version.number', 'version', null),
-                    sfccCompatibilityMode: system.getCompatibilityMode()
+                    sfccCompatibilityMode: system.getCompatibilityMode(),
+                    taxationPolicy: eswHelper.getTaxationModel()
                 }
             },
             {

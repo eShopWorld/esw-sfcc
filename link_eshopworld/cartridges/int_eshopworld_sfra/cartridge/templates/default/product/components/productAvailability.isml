@@ -1,0 +1,8 @@
+<!-- Availability -->
+<isinclude template="/components/modules" sf-toolkit="off" />
+<div class="row availability product-availability" data-ready-to-order="${product.readyToOrder}" data-available="${product.available}">
+    <isinclude template="product/components/availability" />
+    <div class='esw-display-return-prohibited-message <isif condition="${!product.isReturnProhibited}"> d-none </isif>'>
+    	<iscontentasset aid="esw-display-return-prohibited-message" />
+    </div>
+</div>

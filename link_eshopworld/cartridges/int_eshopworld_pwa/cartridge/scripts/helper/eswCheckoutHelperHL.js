@@ -403,7 +403,7 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
                 shippingMethod = eswHelperHL.applyShippingMethod(cart, isOverrideCountry[0].shippingMethod.ID[rate], shopperCountry, false);
                 if (shippingMethod != null && cart.adjustedShippingTotalPrice.valueOrNull != null) {
                     discountObj = eswServiceHelperV3.getDeliveryDiscounts(cart, isConversionDisabled, localizeObj, conversionPrefs);
-                    let adjustedShippingCost = (isConversionDisabled || cart.adjustedShippingTotalPrice.value === 0) ? cart.adjustedShippingTotalPrice : eswHelper.getMoneyObject(Number(cart.defaultShipment.shippingTotalNetPrice), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj);
+                    let adjustedShippingCost = (isConversionDisabled || cart.adjustedShippingTotalPrice.value === 0) ? cart.adjustedShippingTotalPrice : eswHelper.getMoneyObject(Number(cart.defaultShipment.shippingTotalPrice), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj);
                     if (!v2Flag) {
                         shippingRate = {
                             deliveryOption: shippingMethod.displayName,

@@ -55,6 +55,15 @@ var eswPav4Helper = {
                 toShopperCurrencyIso: pav4Data.fxRates[0].to,
                 rate: parseFloat(pav4Data.fxRates[0].rate.toFixed(30), 10)
             });
+
+            var currencyDisplayLookup = {};
+            var currencyDisplays = new ArrayList(pav4Data.currencyDisplays);
+            collections.forEach(currencyDisplays, function (currencyDisplay) {
+                currencyDisplayLookup[currencyDisplay.currencyIso] = {
+                    showTrailingZeros: currencyDisplay.showTrailingZeros
+                };
+            });
+
             // Map country adjustments and rounding rules
             var paCategories = new ArrayList(pav4Data.categories);
             collections.forEach(paCategories, function (paCategory) {
@@ -70,6 +79,10 @@ var eswPav4Helper = {
                         dutyPercentage: paCategory.estimatedDuty,
                         taxPercentage: paCategory.estimatedTax,
                         feePercentage: paCategory.estimatedFee
+                    },
+                    currencyDisplay: {
+                        currencyIso: paCategory.currencyDisplays[0].currencyIso,
+                        showTrailingZeros: paCategory.currencyDisplays[0].showTrailingZeros
                     }
                 });
                 // Rounding rules array
@@ -94,7 +107,9 @@ var eswPav4Helper = {
             countryAdjustments.push(countryAdjusmentCategoryArr);
             roundingRules.push(roundingRuleArr);
         });
-        return { fxRates: fxRates, countryAdjustments: countryAdjustments[0], roundingRules: roundingRules[0] };
+
+        let lastUpdated = paV4Arr.length > 0 ? (paV4Arr.get(paV4Arr.length - 1).lastUpdated || null) : null;
+        return { fxRates: fxRates, countryAdjustments: countryAdjustments[0], roundingRules: roundingRules[0], lastUpdated: lastUpdated };
     }
 };
 module.exports = eswPav4Helper;
