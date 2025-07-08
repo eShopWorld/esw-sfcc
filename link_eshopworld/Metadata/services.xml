@@ -47,6 +47,18 @@
         <user-id/>
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
+
+    <service-credential service-credential-id="EswOcapiBasketServiceCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswOcapiOrderServiceCredentials">
+        <url></url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
     <service-credential service-credential-id="EswGetJwksServiceCredentials">
         <url></url>
         <user-id/>
@@ -149,6 +161,7 @@
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>EswGetAsnPackageCredentials</credential-id>
     </service>
+
    <service service-id="ESWOrderCreation">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
@@ -158,6 +171,28 @@
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>ESWOrderCreationCredentials</credential-id>
+    </service>
+
+     <service service-id="EswOcapiBasketService">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>EswOcapiBasketService</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswOcapiBasketServiceCredentials</credential-id>
+    </service>
+
+    <service service-id="EswOcapiOrderService">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>EswOcapiOrderService</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswOcapiOrderServiceCredentials</credential-id>
     </service>
 
     <service service-id="EswGetJwksService">

@@ -1,5 +1,6 @@
 <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
 <!--- Shipping Address --->
+<isif condition="${eswHelper.getEShopWorldModuleEnabled()}">
 <isloop var="shippingModel" items="${pdict.order.shipping}" status="shippingLoop">
     <isif condition="${shippingLoop.first}">
         <div class="single-shipping" data-shipment-summary="${shippingModel.UUID}">
@@ -149,4 +150,5 @@
             </div>
         </isif>
     </div>
+</isif>
 </isif>

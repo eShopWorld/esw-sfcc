@@ -220,7 +220,6 @@ server.get('CatalogConfig', function (req, res, next) {
     next();
 });
 
-
 server.post('SavePostedConfig', function (req, res, next) {
     let reqForm = req.form;
     let formHasPkgAndSelectToMix = false;
@@ -472,7 +471,8 @@ server.get('PackageConfigurations', function (req, res, next) {
         currentController: 'Package',
         eswCountrtiesCoArr: eswCountrtiesCoArr,
         alreadyUpdatedCountries: alreadyUpdatedCountries,
-        sitePrefFields: sitePrefFields
+        sitePrefFields: sitePrefFields,
+        isPackageConfigPage: true
     });
     next();
 });

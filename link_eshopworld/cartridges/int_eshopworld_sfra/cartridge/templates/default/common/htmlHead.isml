@@ -37,6 +37,11 @@
 </isloop>
 
 <isif condition="${'eswEshopworldModuleEnabled' in dw.system.Site.current.preferences.custom && dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled}">
+    <isif condition="${eswHelper.isEswEnabledAbTasty()}">
+        <isinclude url="${URLUtils.url('EShopWorld-GetEswAbTastyScriptPath')}"/>
+        <link rel="stylesheet" href="${URLUtils.staticURL('/css/ABTasty.css')}" />
+    </isif>
+
     <script defer="defer" src="${URLUtils.staticURL('/js/EswHooks.js')}"></script>
     <script defer="defer" src="${URLUtils.staticURL('/js/shippingSummary.js')}"></script>
     <isif condition="${!eswHelper.isSameGeoIpCountry().isSameCountry}">

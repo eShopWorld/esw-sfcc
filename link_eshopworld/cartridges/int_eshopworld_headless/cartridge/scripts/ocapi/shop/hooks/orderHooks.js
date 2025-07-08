@@ -9,7 +9,7 @@ let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper
 
 exports.beforePOST = function (basket) {
     if (!eswHelper.isEswEnabledEmbeddedCheckout()) {
-        OCAPIHelper.setOverridePriceBooks(basket);
+        OCAPIHelper.setOverridePriceBooksAndDefaultShipments(basket);
         OCAPIHelper.handleEswBasketAttributes(basket);
     }
 

@@ -319,7 +319,7 @@ const OCAPIHelper = {
                         eswHelperHL.applyShippingMethod(basket, 'EXP2', param['country-code'][0], true);
                     }
                 } else {
-                    let defaultShippingMethodID = customizationHelper.getDefaultShippingMethodID(ShippingMgr.getDefaultShippingMethod().getID(), basket);
+                    let defaultShippingMethodID = customizationHelper.getDefaultShippingMethodID(!empty(ShippingMgr.getDefaultShippingMethod()) ? ShippingMgr.getDefaultShippingMethod().getID() : ShippingMgr.getAllShippingMethods()[0].getID(), basket);
                     eswHelperHL.applyShippingMethod(basket, defaultShippingMethodID, param['country-code'][0], false);
                 }
             });
@@ -328,6 +328,28 @@ const OCAPIHelper = {
     handleEswOrderDetailCall: function (order, orderResponse) {
         if (orderResponse.c_eswPackageJSON && !empty(orderResponse.c_eswPackageJSON)) {
             orderResponse.c_eswPackageJSON = eswHelper.strToJson(orderResponse.c_eswPackageJSON);
+        }
+    },
+    /**
+     * This function sets the override pricebook and default shipment according to country
+     * configured in custom site preference.
+     * @param {Object} basket - Basket API object (Optional)
+     * if basket object exists then,
+     * sets the basketCurrency for pricebook override
+     */
+    setOverridePriceBooksAndDefaultShipments: function (basket) {
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper,
+            param = request.httpParameters;
+
+        if (!empty(param['country-code'])) {
+            var selectedCountryDetail = eswHelper.getSelectedCountryDetail(param['country-code'][0]);
+            if (!selectedCountryDetail.isFixedPriceModel && !empty(basket)) {
+                pricingHelper.updateOrderPriceBooksAndSessionCurrency(param['country-code'][0], eswHelper.getBaseCurrency(), basket);
+            } else if (selectedCountryDetail.isFixedPriceModel && !empty(basket)) {
+                pricingHelper.setOverridePriceBooks(param['country-code'][0], selectedCountryDetail.defaultCurrencyCode, basket);
+                OCAPIHelper.setDefaultOverrideShippingMethod(basket);
+                dw.system.HookMgr.callHook('dw.order.calculate', 'calculate', basket);
+            }
         }
     }
 };

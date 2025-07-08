@@ -129,7 +129,10 @@ function eswBasketPriceConversions(basket) {
                 basket.custom.eswOrderDiscount = !empty(orderDiscount) && orderDiscount !== 0 ? orderDiscount.value : orderDiscount;
                 basket.custom.eswOrderTotal = eswHelperHL.getFinalOrderTotalsObject(basket, localizeObj, conversionPrefs).value;
                 eswHelperHL.adjustThresholdDiscounts(basket, localizeObj, conversionPrefs);
-                basket.custom.eswEstimatedShippingTotal = eswHelperHL.getEswCartShippingCost(basket.shippingTotalPrice, localizeObj, conversionPrefs).value;
+                // added check to set attribute once shipping is set in case country switched
+                if (basket.shippingTotalPrice.value > 0) {
+                    basket.custom.eswEstimatedShippingTotal = eswHelperHL.getEswCartShippingCost(basket.shippingTotalPrice, localizeObj, conversionPrefs).value;
+                }
                 basket.custom.eswShopperCurrency = shopperCurrency;
             }
         }

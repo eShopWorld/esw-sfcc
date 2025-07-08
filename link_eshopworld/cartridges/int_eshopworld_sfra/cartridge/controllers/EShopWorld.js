@@ -176,6 +176,18 @@ server.get('GetEswAppResources', function (req, res, next) {
     next();
 });
 
+/**
+ * Renders the view for ESW AB Tasty script paths.
+ * This function retrieves the ESW AB Tasty script paths using the `eswHelper` module
+ * and renders the 'EswMfComponents/eswAbTastyScript' template with the retrieved paths.
+ */
+server.get('GetEswAbTastyScriptPath', function (req, res, next) {
+    res.render('/EswMfComponents/eswAbTastyScript', {
+        eswAbTastyScriptPathsUrl: eswHelper.getEswAbTastyScriptPaths()
+    });
+    next();
+});
+
 /*
  * This is the preorder request which is generating at time of redirection from cart page to ESW checkout
  */

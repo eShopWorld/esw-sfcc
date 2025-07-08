@@ -121,13 +121,13 @@ const getEswCalculationHelper = {
                 if (!empty(cart.optionProductLineItems)) {
                     // eslint-disable-next-line guard-for-in, no-restricted-syntax
                     for (let option in cart.optionProductLineItems) {
-                        cartBasePrice += cart.optionProductLineItems[option].adjustedNetPrice.value;
+                        cartBasePrice += cart.optionProductLineItems[option].adjustedPrice.value;
                     }
                 }
                 cartBasePrice += cart.basePrice.value;
-                if (empty(localizeObj) && empty(conversionPrefs) && !empty(request.httpCookies['esw.currency'])) {
+                if ((empty(localizeObj) && empty(conversionPrefs) && !empty(request.httpCookies['esw.currency'])) || (!empty(request.httpCookies['esw.location']))) {
                     total = eswHelper.getMoneyObject(cartBasePrice, false, false).value * cart.quantity.value;
-                    currencyCode = request.httpCookies['esw.currency'].value;
+                    currencyCode = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.applyDefaultCurrencyForCountry();
                 } else {
                     let calculatedCartBasePrice = pricingHelper.getConvertedPrice(cartBasePrice, localizeObj, conversionPrefs);
                     total = calculatedCartBasePrice * cart.quantity.value;
@@ -154,7 +154,7 @@ const getEswCalculationHelper = {
                                 if (!empty(cart.optionProductLineItems)) {
                                     // eslint-disable-next-line guard-for-in, no-restricted-syntax
                                     for (let option in cart.optionProductLineItems) {
-                                        total += cart.optionProductLineItems[option].adjustedNetPrice.value;
+                                        total += cart.optionProductLineItems[option].adjustedPrice.value;
                                     }
                                 }
                             } else {
@@ -195,6 +195,9 @@ const getEswCalculationHelper = {
                 shopperCurrency = request.httpCookies['esw.currency'].value;
             } else if (!empty(localizeObj)) {
                 shopperCurrency = localizeObj.localizeCountryObj.currencyCode;
+            }
+            if (empty(shopperCurrency)) {
+                shopperCurrency = eswHelper.applyDefaultCurrencyForCountry();
             }
             return new Money(total, shopperCurrency);
         } catch (error) {

@@ -1,7 +1,7 @@
 /* eslint-disable quotes */
 /* eslint-disable no-unused-vars */
 /* eslint-disable require-jsdoc */
-
+/* global jQuery */
 function switchSearchSelection(name, value) {
     let formTab = document.getElementById(name);
     formTab.style.display = value;
@@ -63,46 +63,48 @@ function generateArrForPkgModel(serializeForm) {
 
 window.addEventListener("load", function () {
     let $selectedSearch = document.querySelector(".productsList");
-    let selectedSearch = $selectedSearch.dataset.selectedsearch;
-    let synceMsg = document.getElementsByClassName("synceMsg");
-    if (selectedSearch === 'byID') {
-        switchToIDListSearch();
-    } else if (selectedSearch === 'advanced') {
-        switchToAdvancedSearch();
-    }
-    if (synceMsg.length > 0) {
-        setTimeout(function () {
-            synceMsg[0].style.display = "none";
-        }, 3000);
+    if ($selectedSearch) {
+        let selectedSearch = $selectedSearch.dataset.selectedsearch;
+        let synceMsg = document.getElementsByClassName("synceMsg");
+        if (selectedSearch === 'byID') {
+            switchToIDListSearch();
+        } else if (selectedSearch === 'advanced') {
+            switchToAdvancedSearch();
+        }
+        if (synceMsg.length > 0) {
+            setTimeout(function () {
+                synceMsg[0].style.display = "none";
+            }, 3000);
+        }
     }
 });
 
 function sendAjax(formAction, formData, sneakBarMsgHtml, reloadPage) {
-    $.ajax({
+    jQuery.ajax({
         method: "POST",
         url: formAction,
         data: formData,
         beforeSend: function () {
-            $("#esw-overlay").fadeIn();
+            jQuery("#esw-overlay").fadeIn();
         },
         success: function (data, status, xhr) {
-            $('#esw-snackbar').html(sneakBarMsgHtml);
-            $("#esw-snackbar").addClass('show');
-            setTimeout(function () { $("#esw-snackbar").removeClass('show'); }, 3000);
+            jQuery('#esw-snackbar').html(sneakBarMsgHtml);
+            jQuery("#esw-snackbar").addClass('show');
+            setTimeout(function () { jQuery("#esw-snackbar").removeClass('show'); }, 3000);
             if (reloadPage) {
                 window.location.reload();
             }
         },
         complete: function () {
-            $("#esw-overlay").fadeOut();
-            $(".esw-frm-submit-btn").attr('disabled', false);
+            jQuery("#esw-overlay").fadeOut();
+            jQuery(".esw-frm-submit-btn").attr('disabled', false);
         }
     });
 }
 
 function submitForm($productGridForm, clickEvent) {
-    let formAction = $($productGridForm).attr('action');
-    let formData = $($productGridForm).serialize() + '&' + clickEvent + '=' + clickEvent;
+    let formAction = jQuery($productGridForm).attr('action');
+    let formData = jQuery($productGridForm).serialize() + '&' + clickEvent + '=' + clickEvent;
     sendAjax(formAction, formData, 'Sync request has been generated for the products/orders.', true);
 }
 
@@ -121,8 +123,8 @@ function isValidJSON(jsonString) {
  */
 function findDuplicateCountrySelectionsPkgs() {
     // Get all select elements with name ending in ]country within .js-pkgResourceBody
-    let selectValues = $('.js-pkgResourceBody select[name$="]country"]').map(function () {
-        return $(this).val();
+    let selectValues = jQuery('.js-pkgResourceBody select[name$="]country"]').map(function () {
+        return jQuery(this).val();
     }).get();
 
     // Create an object to count occurrences of each value
@@ -149,126 +151,130 @@ function findDuplicateCountrySelectionsPkgs() {
     return duplicates; // Return the array of duplicate values
 }
 
-$(document).ready(function () {
-    $.ajax({
-        url: $('#shippingMethods').attr('href'),
-        type: 'POST',
-        dataType: 'html',
-        data: { PageSize: 'All' },
-        success: function (data, textStatus, jqXHR) {
-            // handle the response data
-            let html = $.parseHTML(data);
-            let tableRows = $(html).find('tr');
-            let result = [];
-            // eslint-disable-next-line no-undef
-            let seenIds = new Set();
-            // Iterate over each table row
-            tableRows.each(function () {
-                let cells = $(this).find('td.table_detail');
-                // Create an object for the row
-                let row = {};
-                // Iterate over each cell in the row
-                cells.each(function (cellIndex, cell) {
-                    let cellText = $(cell).text().replace(/\n|\t/g, '').trim();
-                    if (cellText === ' ') {
-                        return; // Skip empty columns
-                    }
-                    switch (cellIndex) {
-                        case 0:
-                            row.ID = cellText;
-                            break;
-                        case 1:
-                            row.Name = cellText;
-                            break;
-                        case 4:
-                            row.Status = cellText;
-                            break;
-                        case 5:
-                            row.Currency = cellText;
-                            break;
-                        default:
-                            // Ignore other columns
-                            break;
+jQuery(document).ready(function () {
+    var $shippingMethods = jQuery('#shippingMethods');
+    if ($shippingMethods.length > 0) {
+        jQuery.ajax({
+            url: $shippingMethods.attr('href'),
+            type: 'POST',
+            dataType: 'html',
+            data: { PageSize: 'All' },
+            success: function (data, textStatus, jqXHR) {
+                // handle the response data
+                let html = jQuery.parseHTML(data);
+                let tableRows = jQuery(html).find('tr');
+                let result = [];
+                // eslint-disable-next-line no-undef
+                let seenIds = new Set();
+                // Iterate over each table row
+                tableRows.each(function () {
+                    let cells = jQuery(this).find('td.table_detail');
+                    // Create an object for the row
+                    let row = {};
+                    // Iterate over each cell in the row
+                    cells.each(function (cellIndex, cell) {
+                        let cellText = jQuery(cell).text().replace(/\n|\t/g, '').trim();
+                        if (cellText === ' ') {
+                            return; // Skip empty columns
+                        }
+                        switch (cellIndex) {
+                            case 0:
+                                row.ID = cellText;
+                                break;
+                            case 1:
+                                row.Name = cellText;
+                                break;
+                            case 4:
+                                row.Status = cellText;
+                                break;
+                            case 5:
+                                row.Currency = cellText;
+                                break;
+                            default:
+                                // Ignore other columns
+                                break;
+                        }
+                    });
+                    // Add the row object to the result array
+                    if (Object.prototype.hasOwnProperty.call(row, 'Name') && !seenIds.has(row.ID)) {
+                        seenIds.add(row.ID); // To avoid duplicate entries
+                        result.push(row);
                     }
                 });
-                // Add the row object to the result array
-                if (Object.prototype.hasOwnProperty.call(row, 'Name') && !seenIds.has(row.ID)) {
-                    seenIds.add(row.ID); // To avoid duplicate entries
-                    result.push(row);
-                }
-            });
-            let reportJSON = JSON.parse($('.json-txt-lg').text());
-            reportJSON[1].GlobalConfigs.ShippingMethods = result;
-            $('.json-txt-lg').text(JSON.stringify(reportJSON, null, 2));
-        },
-        complete: function () {
-            $.ajax({
-                url: $('#orderPreferences').attr('href'),
-                type: 'GET',
-                dataType: 'html',
-                success: function (data, textStatus, jqXHR) {
-                    let GlobalConfig = {
-                        failedOrderRetention: $(data).find('input[name="FailedOrderRetention"]').val(),
-                        AutoFailOrders: $(data).find('input[name="FailNonPlacedOrdersAfter"]').val(),
-                        LimitStoreFrontOrderAccess: $(data).find('select[name="StorefrontOrderAccess"]').val(),
-                        FilterStorefrontOrdersByCustomerSession: $(data).find('select[name="StorefrontOrderFiltering"]').val()
-                    };
-                    let pimJSON = JSON.parse($('.json-txt-lg').text());
-                    pimJSON[1].GlobalConfigs.OrderConfigs = GlobalConfig;
-                    $('.json-txt-lg').text((JSON.stringify(pimJSON, null, 2)));
-                },
-                complete: function () {
-                    // Export file
-                    let jsonData = $('.json-txt-lg').text().trim();
-                    if (isValidJSON(jsonData)) {
-                        let encodedData = encodeURIComponent(jsonData);
-                        let lastModified = $('.input-container').data('lastmodified');
-                        let encDataType = "data:text/json;charset=utf-8," + encodedData;
-                        $('<a href="' + encDataType + '" id="downloadReport" class="button input-container" download="PIM-Report-' + lastModified + '.json">Export</a>').appendTo(".esw-report-header");
+                let reportJSON = JSON.parse(jQuery('.json-txt-lg').text());
+                reportJSON[1].GlobalConfigs.ShippingMethods = result;
+                jQuery('.json-txt-lg').text(JSON.stringify(reportJSON, null, 2));
+            },
+            complete: function () {
+                jQuery.ajax({
+                    url: jQuery('#orderPreferences').attr('href'),
+                    type: 'GET',
+                    dataType: 'html',
+                    success: function (data, textStatus, jqXHR) {
+                        let GlobalConfig = {
+                            failedOrderRetention: jQuery(data).find('input[name="FailedOrderRetention"]').val(),
+                            AutoFailOrders: jQuery(data).find('input[name="FailNonPlacedOrdersAfter"]').val(),
+                            LimitStoreFrontOrderAccess: jQuery(data).find('select[name="StorefrontOrderAccess"]').val(),
+                            FilterStorefrontOrdersByCustomerSession: jQuery(data).find('select[name="StorefrontOrderFiltering"]').val()
+                        };
+                        let pimJSON = JSON.parse(jQuery('.json-txt-lg').text());
+                        pimJSON[1].GlobalConfigs.OrderConfigs = GlobalConfig;
+                        jQuery('.json-txt-lg').text((JSON.stringify(pimJSON, null, 2)));
+                    },
+                    complete: function () {
+                        // Export file
+                        let jsonData = jQuery('.json-txt-lg').text().trim();
+                        if (isValidJSON(jsonData)) {
+                            let encodedData = encodeURIComponent(jsonData);
+                            let lastModified = jQuery('.input-container').data('lastmodified');
+                            let encDataType = "data:text/json;charset=utf-8," + encodedData;
+                            jQuery('<a href="' + encDataType + '" id="downloadReport" class="button input-container" download="PIM-Report-' + lastModified + '.json">Export</a>').appendTo(".esw-report-header");
+                        }
+                        jQuery('#downloadReport').css({
+                            position: 'sticky',
+                            float: 'right'
+                        });
                     }
-                    $('#downloadReport').css({
-                        position: 'sticky',
-                        float: 'right'
-                    });
-                }
-            });
-        }
+                });
+            }
 
-    });
+        });
+    }
+
     // Left menu
-    $(".esw-menu > a").click(function () {
-        $(this).next('.esw-submenu').slideToggle(function () {
-            if ($(this).is(":visible")) {
-                $(this).parent('.esw-menu').addClass('selected');
+    jQuery(".esw-menu > a").click(function () {
+        jQuery(this).next('.esw-submenu').slideToggle(function () {
+            if (jQuery(this).is(":visible")) {
+                jQuery(this).parent('.esw-menu').addClass('selected');
             } else {
-                $(this).parent('.esw-menu').removeClass('selected');
+                jQuery(this).parent('.esw-menu').removeClass('selected');
             }
         });
     });
     // form selection
-    if ($('#productGridForm')) {
-        let $productGridForm = $('#productGridForm');
-        $(document).on('click', '.SyncSlected', function (e) {
+    if (jQuery('#productGridForm')) {
+        let $productGridForm = jQuery('#productGridForm');
+        jQuery(document).on('click', '.SyncSlected', function (e) {
             e.preventDefault();
             submitForm($productGridForm, 'SyncSlected');
         });
-        $(document).on('click', '.SyncAll', function (e) {
+        jQuery(document).on('click', '.SyncAll', function (e) {
             e.preventDefault();
             submitForm($productGridForm, 'SyncAll');
         });
     }
     // Submit configuration form only
-    if ($('#esw-bm-config-form')) {
-        $('#esw-bm-config-form').submit(function (e) {
-            let serializeForm = $('#esw-bm-config-form').serializeArray();
-            $(".esw-frm-submit-btn").attr('disabled', true);
+    if (jQuery('#esw-bm-config-form')) {
+        jQuery('#esw-bm-config-form').submit(function (e) {
+            let serializeForm = jQuery('#esw-bm-config-form').serializeArray();
+            jQuery(".esw-frm-submit-btn").attr('disabled', true);
             e.preventDefault();
             let formData = { arrInput: [] };
 
             // Pkg config form
-            if ($(".js-pkg-tbl-tbody").length) {
+            if (jQuery(".js-pkg-tbl-tbody").length) {
                 // Set initial color to green
-                $("#esw-snackbar").css('background-color', '#04844b');
+                jQuery("#esw-snackbar").css('background-color', '#04844b');
                 let pkgAsnFormMapping = generateArrForPkgModel(serializeForm);
                 if (pkgAsnFormMapping.length > 0) {
                     formData.pkgConfig = true;
@@ -276,22 +282,21 @@ $(document).ready(function () {
                 }
                 let duplicateCountries = findDuplicateCountrySelectionsPkgs();
                 if (duplicateCountries.length > 0) {
-                    $('#esw-snackbar').html('One country cannot have more than one package model.');
-                    $("#esw-snackbar").addClass('show');
-                    $("#esw-snackbar").css('background-color', 'red');
-                    setTimeout(function () { $("#esw-snackbar").removeClass('show'); }, 3000);
-                    $(".esw-frm-submit-btn").attr('disabled', false);
+                    jQuery('#esw-snackbar').html('One country cannot have more than one package model.');
+                    jQuery("#esw-snackbar").addClass('show');
+                    jQuery("#esw-snackbar").css('background-color', 'red');
+                    setTimeout(function () { jQuery("#esw-snackbar").removeClass('show'); }, 3000);
+                    jQuery(".esw-frm-submit-btn").attr('disabled', false);
                     throw new Error('One country cannot have more than one package model.');
                 }
             }
 
-            $('.esw-pref-input').each(function (index) {
-                // req.form on server is removing empty values
-                if ($(this).attr('name').indexOf('[') === -1) {
-                    formData[$(this).attr('name')] = ($(this).val().length === 0) ? ' ' : $(this).val();
+            jQuery('.esw-pref-input').each(function (index) {
+                if (jQuery(this).attr('name').indexOf('[') === -1) {
+                    formData[jQuery(this).attr('name')] = (jQuery(this).val().length === 0) ? ' ' : jQuery(this).val();
                 }
             });
-            let formAction = $(this).attr('action');
+            let formAction = jQuery(this).attr('action');
             sendAjax(formAction, formData, 'The custom preferences were saved.', true);
         });
     }

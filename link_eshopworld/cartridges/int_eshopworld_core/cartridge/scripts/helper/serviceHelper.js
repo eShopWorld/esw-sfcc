@@ -14,6 +14,7 @@ const BasketMgr = require('dw/order/BasketMgr');
 const eswServiceHelperV3 = require('*/cartridge/scripts/helper/serviceHelperV3');
 const StringUtils = require('dw/util/StringUtils');
 const URLUtils = require('dw/web/URLUtils');
+const Constants = require('*/cartridge/scripts/util/Constants');
 
 /**
  * function to prepare pre order request object for API Version 2
@@ -415,11 +416,21 @@ function getExpansionPairs() {
     let urlExpansionPairs = eswHelper.getUrlExpansionPairs(),
         obj = {},
         i = 0;
-    // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    if (empty(urlExpansionPairs)) {
+        urlExpansionPairs = [
+            'logoURL|Home-Show',
+            'BaseUrl|Home-Show',
+            'ContinueShoppingUrl|Home-Show',
+            'BackToCartUrl|EShopWorld-GetCart',
+            'InventoryCheckFailurePageUrl|EShopWorld-GetCart'
+        ];
+    }
+        // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (let index in urlExpansionPairs) {
         i = urlExpansionPairs[index].indexOf('|');
         obj[urlExpansionPairs[index].substring(0, i)] = eswHelper.buildUrlFromExpansionPairs(urlExpansionPairs[index], request.httpCookies['esw.LanguageIsoCode'].value);
     }
+
     obj.metadataItems = getRetailerCheckoutMetadataItems();
     return obj;
 }
@@ -465,39 +476,62 @@ function getPWAHLExpansionPairs(shopperLocale, shopperCountry) {
      * @returns {Object} target object
      */
 function getRetailerCheckoutMetadataItems(shopperLocale) {
+    const Resource = require('dw/web/Resource');
     let metadataItems = eswHelper.getMetadataItems(),
         currentInstance = eswHelper.getSelectedInstance(),
         obj = {},
         arr = [],
         i = 0;
-    // eslint-disable-next-line guard-for-in, no-restricted-syntax
-    for (let item in metadataItems) {
-        let metadataItem = metadataItems[item];
-        i = metadataItem.indexOf('|');
-        if (currentInstance === 'production' && (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') != -1 || metadataItem.indexOf('OrderConfirmationUri') != -1)) {
-            // eslint-disable-next-line no-continue
-            continue;
-        } else {
-            if (!eswHelper.getEnableInventoryCheck() && (metadataItem.indexOf('InventoryCheckUri') !== -1 || metadataItem.indexOf('InventoryCheckBase64EncodedAuth') !== -1)) {
+    let currentSiteArchitecture = Resource.msg('sfcc.cartridge', 'esw', null);
+    if (empty(metadataItems) && currentInstance !== 'production') {
+        const defaultMetadataItems = [];
+        if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+            defaultMetadataItems.push('OrderConfirmationUri_TestOnly|EShopWorld-EswEmbeddedCheckoutNotify');
+            defaultMetadataItems.push('InventoryCheckUri_TestOnly|EShopWorld-ValidateInventory');
+        } else if (currentSiteArchitecture === 'SFRA' || currentSiteArchitecture === 'HL') {
+            defaultMetadataItems.push('OrderConfirmationUri_TestOnly|EShopWorld-Notify');
+            defaultMetadataItems.push('InventoryCheckUri_TestOnly|EShopWorld-ValidateInventory');
+        } else if (currentSiteArchitecture === 'SG') {
+            defaultMetadataItems.push('OrderConfirmationUri_TestOnly|EShopWorldSG-Notify');
+            defaultMetadataItems.push('InventoryCheckUri_TestOnly|EShopWorldSG-ValidateInventory');
+        }
+        defaultMetadataItems.forEach((item, idx) => {
+            i = item.indexOf('|');
+            obj.Name = item.substring(0, i);
+            obj.Value = URLUtils.https(new dw.web.URLAction(item.substring(i + 1), Site.ID, shopperLocale || request.httpCookies['esw.LanguageIsoCode'].value)).toString();
+            arr.push(obj);
+            obj = {};
+        });
+    } else {
+        // eslint-disable-next-line guard-for-in, no-restricted-syntax
+        for (let item in metadataItems) {
+            let metadataItem = metadataItems[item];
+            i = metadataItem.indexOf('|');
+            if (currentInstance === 'production' && (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') != -1 || metadataItem.indexOf('OrderConfirmationUri') != -1)) {
                 // eslint-disable-next-line no-continue
                 continue;
-            }
-            obj.Name = metadataItem.substring(0, i);
-            if (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') != -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
-                obj.Value = eswHelper.encodeBasicAuth();
-            } else if (metadataItem.indexOf('OrderConfirmationUri') != -1) {
-                obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale || request.httpCookies['esw.LanguageIsoCode'].value)).toString();
-            } else if (metadataItem.indexOf('InventoryCheckUri') != -1) {
-                obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale || request.httpCookies['esw.LanguageIsoCode'].value)).toString();
-            } else if (metadataItem.indexOf('InventoryCheckBase64EncodedAuth') != -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
-                obj.Value = eswHelper.encodeBasicAuth();
             } else {
-                obj.Value = metadataItem.substring(i + 1);
+                if (!eswHelper.getEnableInventoryCheck() && (metadataItem.indexOf('InventoryCheckUri') !== -1 || metadataItem.indexOf('InventoryCheckBase64EncodedAuth') !== -1)) {
+                    // eslint-disable-next-line no-continue
+                    continue;
+                }
+                obj.Name = metadataItem.substring(0, i);
+                if (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') != -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
+                    obj.Value = eswHelper.encodeBasicAuth();
+                } else if (metadataItem.indexOf('OrderConfirmationUri') != -1) {
+                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale || request.httpCookies['esw.LanguageIsoCode'].value)).toString();
+                } else if (metadataItem.indexOf('InventoryCheckUri') != -1) {
+                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale || request.httpCookies['esw.LanguageIsoCode'].value)).toString();
+                } else if (metadataItem.indexOf('InventoryCheckBase64EncodedAuth') != -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
+                    obj.Value = eswHelper.encodeBasicAuth();
+                } else {
+                    obj.Value = metadataItem.substring(i + 1);
+                }
             }
-        }
 
-        arr.push(obj);
-        obj = {};
+            arr.push(obj);
+            obj = {};
+        }
     }
     return arr;
 }
@@ -544,7 +578,7 @@ function getContactDetails(shopperEmail, shopperCountry) {
                     'firstName': addr.firstName,
                     'lastName': addr.lastName,
                     'metadataItems': metaDataArr,
-                    'isSelected': !empty(addr.custom.eswIsSelected) ? addr.custom.eswIsSelected : '',
+                    'isSelected': true,
                     'isDefault': true
                 };
                 addressObj.push(address);
@@ -856,6 +890,7 @@ function applyDefaultShippingMethod(shippingMethods, defaultShippingMethod) {
  * @param {Object} cart object
  */
 function updatePaymentInstrument(cart) {
+    let siteTaxationModel = eswHelper.getTaxationModel();
     let PaymentMgr = require('dw/order/PaymentMgr');
     let paymentInstruments = cart.getPaymentInstruments('ESW_PAYMENT');
     let oldInstrument = null;
@@ -865,7 +900,7 @@ function updatePaymentInstrument(cart) {
             oldInstrument = pi;
             cart.removePaymentInstrument(pi);
         }
-        let paymentInstrument = cart.createPaymentInstrument('ESW_PAYMENT', cart.totalGrossPrice);
+        let paymentInstrument = cart.createPaymentInstrument('ESW_PAYMENT', (siteTaxationModel === Constants.NET_TAXATION_MODEL ? cart.totalNetPrice : cart.totalGrossPrice));
         // eslint-disable-next-line no-param-reassign
         cart.paymentInstruments[0].paymentTransaction.paymentProcessor = PaymentMgr.getPaymentMethod(oldInstrument.getPaymentMethod()).getPaymentProcessor();
     }
@@ -895,6 +930,7 @@ function getShipmentShippingAddress(shipment) {
  * @returns {Object} target object
  */
 function getNonGiftCertificateAmount(cart) {
+    let siteTaxationModel = eswHelper.getTaxationModel();
     let Money = require('dw/value/Money');
 
     // The total redemption amount of all gift certificate payment instruments in the basket.
@@ -912,7 +948,7 @@ function getNonGiftCertificateAmount(cart) {
     }
 
     // Gets the order total.
-    let orderTotal = cart.getTotalGrossPrice();
+    let orderTotal = siteTaxationModel === Constants.NET_TAXATION_MODEL ? cart.getTotalNetPrice() : cart.getTotalGrossPrice();
 
     // Calculates the amount to charge for the payment instrument.
     // This is the remaining open order total that must be paid.

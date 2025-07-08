@@ -43,6 +43,20 @@ function PriceConversion() {
     }).render('eswPrice');
 }
 
+/**
+ * Function to return basket from order created
+ */
+function rebuildBasketFromOrder() {
+    let Response = require('*/cartridge/scripts/util/Response');
+    let eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+    let param = request.httpParameterMap,
+        eswClientLastOrderId = param.eswClientLastOrderId.stringValue;
+    let response = eswHelperHL.generateBasketFromOrder(eswClientLastOrderId, true);
+    Response.renderJSON(response);
+}
+/** Exports of the controller
+ * @see {@link module:controllers/EswHL~rebuildBasketFromOrder} */
+exports.RebuildBasketFromOrder = guard.ensure(['post'], rebuildBasketFromOrder);
 
 /** Exports of the controller
  * @see {@link module:controllers/EswHL~PriceConversion} */

@@ -16,8 +16,9 @@ const Site = require('dw/system/Site');
  */
 function getAlternateCurrency(selectedCountry) {
     const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    // eslint-disable-next-line no-nested-ternary
     return !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value :
-        eswHelper.getDefaultCurrencyForCountry(selectedCountry);
+        !empty(request.httpCookies['esw.location']) ? eswHelper.applyDefaultCurrencyForCountry() : eswHelper.getDefaultCurrencyForCountry(selectedCountry);
 }
 
 /**

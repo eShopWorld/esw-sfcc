@@ -524,3 +524,29 @@ input[type="checkbox"]:checked {
   visibility: visible;
   opacity: 1;
 }
+.customModule-main{ background-color: white;}
+.dwClassic table.esw-wrapper{
+  font-family: "Helvetica Neue", Helvetica, Arial, Verdana, sans-serif;
+  font-size:13px;
+  padding:0 20px 0 0;
+}
+.dwClassic .table_header{
+  top: 0px !important;
+}
+.dwClassic .table_detail a{
+  font-weight: 700;;
+}
+.dwClassic .esw-menu-items{
+  width:280px;
+  max-width: 100%;
+}
+div.customModule-wrapper .customModule-card.dwClassic{
+  padding:0px;margin:0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+@media (max-width: 1320px) {
+  div.customModule-wrapper .customModule-card.dwClassic {
+    overflow-x: auto;
+  }
+}

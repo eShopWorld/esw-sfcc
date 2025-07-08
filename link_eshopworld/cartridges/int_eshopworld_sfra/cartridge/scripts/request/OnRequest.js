@@ -15,7 +15,7 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
  * The OnRequest hook function.
  */
 exports.onRequest = function () {
-    if (!request.includeRequest && request.httpRequest && request.httpPath.indexOf(staticBaseUrl.toString()) < 0) {
+    if (!request.includeRequest && !empty(request.getHttpProtocol()) && request.httpPath.indexOf(staticBaseUrl.toString()) < 0) {
         if (eswHelper.getEShopWorldModuleEnabled()) {
             eswHelper.setLocation(request.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')));
         }

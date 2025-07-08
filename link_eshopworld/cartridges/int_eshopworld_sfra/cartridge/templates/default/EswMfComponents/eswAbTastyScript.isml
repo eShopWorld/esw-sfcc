@@ -1,0 +1,3 @@
+<isif condition="${!empty(pdict.eswAbTastyScriptPathsUrl)}">
+    <script type="text/javascript" src="${pdict.eswAbTastyScriptPathsUrl}"></script>
+</isif>

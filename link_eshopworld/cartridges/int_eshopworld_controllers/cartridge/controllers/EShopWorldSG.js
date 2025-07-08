@@ -166,7 +166,7 @@ function getDefaultCurrency() {
  */
 function getEswAppResources() {
     let Currency = require('dw/util/Currency'),
-        selectedCurrency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry()),
+        selectedCurrency = !empty(request.httpCookies['esw.currency']) && !empty(request.httpCookies['esw.currency'].value) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry()),
         selectedCountry = eswHelper.getSelectedCountryDetail(eswHelper.getAvailableCountry());
     app.getView({
         isEswRoundingsEnabled: eswHelper.isEswRoundingsEnabled(),
@@ -187,8 +187,12 @@ function getConvertedPrice() {
     let lineItemId = request.httpParameterMap.lineItemID.value;
     let convertedPrice;
     if (noConversion) {
+        let shopperCurrency;
+        if (empty(request.httpCookies['esw.currency'])) {
+            shopperCurrency = eswHelper.applyDefaultCurrencyForCountry();
+        }
         let formatMoney = require('dw/util/StringUtils').formatMoney;
-        convertedPrice = formatMoney(new dw.value.Money(price, request.httpCookies['esw.currency'].value));
+        convertedPrice = formatMoney(new dw.value.Money(price, (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value)));
     } else if (ranged) {
         convertedPrice = eswHelper.getMoneyObject(price.substring(0, price.indexOf(' - '))) + ' - ' + eswHelper.getMoneyObject(price.substring(price.indexOf(' - ') + 3));
     } else if (!empty(lineItemId)) {
@@ -345,6 +349,17 @@ function eswBackToHome() {
     eswHelper.rebuildCart();
     // Rebuild cart ends here
     response.redirect(URLUtils.httpHome());
+}
+
+/**
+ * Renders the view for ESW AB Tasty script paths.
+ * This function retrieves the ESW AB Tasty script paths using the `eswHelper` module
+ * and renders the 'EswComponents/eswAbTastyScripts' template with the retrieved paths.
+ */
+function getEswAbTastyScriptPath() {
+    app.getView({
+        eswAbTastyScriptPathsUrls: eswHelper.getEswAbTastyScriptPaths()
+    }).render('EswComponents/eswAbTastyScripts');
 }
 
 /**
@@ -547,6 +562,8 @@ function notify() {
                     ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
                     // update ESW Payment instrument custom attributes
                     ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
+                    // Update SFCC promotion price upon order confirmation
+                    ocHelper.updateSfccPromotionPriceUponOrderConfirmation(order);
 
                     OrderMgr.placeOrder(order);
                     order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
@@ -812,6 +829,9 @@ exports.Notify = guard.ensure(['post', 'https'], notify);
  /** Process the webhook for Logistic return portal.
   * @see module:controllers/EShopWorld~processWebHooks */
 exports.ProcessWebHooks = guard.ensure(['post'], processWebHooks);
+ /** Renders the view for ESW AB Tasty script paths.
+  * @see module:controllers/EShopWorld~GetEswAbTastyScriptPath */
+exports.GetEswAbTastyScriptPath = guard.ensure(['get'], getEswAbTastyScriptPath);
 
 /** Renders the Embeded checkout
  * @see module:controllers/EShopWorldSG~eswEmbeddedCheckout */
@@ -819,7 +839,7 @@ exports.EswEmbeddedCheckout = guard.ensure(['get'], eswEmbeddedCheckout);
 
 /** Handles the order confirmation request
  * @see module:controllers/EShopWorldSG~EsWEmbeddedCheckoutNotify */
-exports.EsWEmbeddedCheckoutNotify = guard.ensure(['post'], eswEmbeddedCheckoutNotify);
+exports.EswEmbeddedCheckoutNotify = guard.ensure(['post'], eswEmbeddedCheckoutNotify);
 
 /** Handles the pre order request
  * @see module:controllers/EShopWorldSG~EswEmbeddedCheckoutPreOrderRequest */

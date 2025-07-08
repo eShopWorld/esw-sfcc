@@ -112,24 +112,42 @@ const getEswHelper = {
     getCatalogUploadMethod: function () {
         let LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
         let uploadMethod = Constants.UNKNOWN;
-        let serviceUrl = '';
-        if (!this.isEswCatalogFeatureEnabled()) {
-            return uploadMethod;
-        }
+
         try {
-            let serviceCreds = LocalServiceRegistry.createService('ESWCatalogService', {
-                parseResponse: function (service) {
-                    return service;
+            if (this.isEswCatalogFeatureEnabled()) {
+                // Check API service first
+                try {
+                    let apiServiceCreds = LocalServiceRegistry.createService('ESWCatalogService', {
+                        parseResponse: function (service) {
+                            return service;
+                        }
+                    });
+                    let apiServiceUrl = apiServiceCreds.getURL();
+                    if (!empty(apiServiceUrl) && apiServiceUrl.endsWith('/RetailerCatalog')) {
+                        uploadMethod = Constants.API;
+                        return uploadMethod;
+                    }
+                } catch (apiErr) {
+                    logger.error('getCatalogUploadMethod: Failed to load ESWCatalogService → ' + apiErr);
                 }
-            });
-            serviceUrl = serviceCreds.getURL();
-            if (!empty(serviceUrl) && serviceUrl.indexOf('/RetailerCatalog') !== -1) {
-                uploadMethod = Constants.API;
-            } else {
-                uploadMethod = Constants.SFTP;
+            }
+
+            // Always check SFTP if API wasn't selected
+            try {
+                let sftpServiceCreds = LocalServiceRegistry.createService('ESWSFTP', {
+                    parseResponse: function (service) {
+                        return service;
+                    }
+                });
+                let sftpServiceUrl = sftpServiceCreds.getURL();
+                if (!empty(sftpServiceUrl) && sftpServiceUrl.indexOf('sftp2') === 0) {
+                    uploadMethod = Constants.SFTP;
+                }
+            } catch (sftpErr) {
+                logger.error('getCatalogUploadMethod: Failed to load ESWSFTP → ' + sftpErr);
             }
         } catch (e) {
-            uploadMethod = Constants.UNKNOWN;
+            logger.error('getCatalogUploadMethod: Unexpected error → ' + e);
         }
         return uploadMethod;
     },
@@ -807,12 +825,16 @@ const getEswHelper = {
             });
         }
         if (freeDiscountFlag) {
-            totalDiscount = this.getMoneyObject(cart.defaultShipment.shippingTotalNetPrice, true, false, false).value;
+            totalDiscount = this.getMoneyObject(cart.defaultShipment.shippingTotalPrice, true, false, false).value;
         }
         if (totalDiscount < 0) {
             totalDiscount *= -1;
         }
-        return new dw.value.Money(totalDiscount, request.httpCookies['esw.currency'].value);
+        let shopperCurrency;
+        if (empty(request.httpCookies['esw.currency'])) {
+            shopperCurrency = this.applyDefaultCurrencyForCountry();
+        }
+        return new dw.value.Money(totalDiscount, (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value));
     },
     /**
      * This function is used to get order discount if it exist
@@ -822,18 +844,19 @@ const getEswHelper = {
      */
     getOrderDiscount: function (cart, localizeCountryObj) {
         let orderLevelProratedDiscount = 0;
-        let siteId = Site.getID();
         try {
             if (!empty(localizeCountryObj) && 'localizeCountryObj' in localizeCountryObj) {
                 localizeCountryObj = localizeCountryObj.localizeCountryObj;
             }
             let Money = require('dw/value/Money');
             let that = this;
-            if (siteId === Constants.SITE_GENESIS_SITE_ID) {
-                that.removeThresholdPromo(cart);
-            }
             orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
-            return new Money(orderLevelProratedDiscount, !empty(localizeCountryObj) && !empty(localizeCountryObj.currencyCode) ? localizeCountryObj.currencyCode : request.httpCookies['esw.currency'].value);
+            let shopperCurrency;
+            if (empty(request.httpCookies['esw.currency'])) {
+                shopperCurrency = this.applyDefaultCurrencyForCountry();
+            }
+            // eslint-disable-next-line no-nested-ternary
+            return new Money(orderLevelProratedDiscount, !empty(localizeCountryObj) && !empty(localizeCountryObj.currencyCode) ? localizeCountryObj.currencyCode : (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value));
         } catch (e) {
             logger.error('Error while calculating order discount: {0} {1}', e.message, e.stack);
             return null;
@@ -889,7 +912,11 @@ const getEswHelper = {
         try {
             let BasketMgr = require('dw/order/BasketMgr');
             let Money = require('dw/value/Money');
-            return new Money(this.getSubtotalObject(BasketMgr.currentBasket, true).value - (this.getOrderDiscount(BasketMgr.currentBasket).value), request.httpCookies['esw.currency'].value);
+            let shopperCurrency;
+            if (empty(request.httpCookies['esw.currency'])) {
+                shopperCurrency = this.applyDefaultCurrencyForCountry();
+            }
+            return new Money(this.getSubtotalObject(BasketMgr.currentBasket, true).value - (this.getOrderDiscount(BasketMgr.currentBasket).value), (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value));
         } catch (e) {
             logger.error('Error while calculating order total: {0} {1}', e.message, e.stack);
             return null;
@@ -1183,7 +1210,11 @@ const getEswHelper = {
         return StringUtils.encodeBase64(concatenatedString);
     },
     getUnitPriceCost: function (lineItem) {
-        return new dw.value.Money((this.getSubtotalObject(lineItem, false).value / lineItem.quantity.value), request.httpCookies['esw.currency'].value);
+        let shopperCurrency;
+        if (empty(request.httpCookies['esw.currency'])) {
+            shopperCurrency = this.applyDefaultCurrencyForCountry();
+        }
+        return new dw.value.Money((this.getSubtotalObject(lineItem, false).value / lineItem.quantity.value), (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value));
     },
     /**
      * Check if it is esw supported country or not,
@@ -1201,7 +1232,11 @@ const getEswHelper = {
      * @return {string} - Currency code
      */
     getCurrentEswCurrencyCode: function () {
-        return request.httpCookies['esw.currency'].value;
+        let shopperCurrency;
+        if (empty(request.httpCookies['esw.currency'])) {
+            shopperCurrency = this.applyDefaultCurrencyForCountry();
+        }
+        return !empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value;
     },
     /**
      * Merges properties from source object to target object
@@ -1351,6 +1386,28 @@ const getEswHelper = {
                     }
                 }
             }
+            if (currentBasket.defaultShipment && currentBasket.defaultShipment.adjustedShippingTotalPrice.value === 0.1) {
+                const PromotionMgr = require('dw/campaign/PromotionMgr');
+                if (!empty(currentBasket.defaultShipment)) {
+                    shippingLineItemIter = currentBasket.defaultShipment.getShippingLineItems().iterator();
+                } else {
+                    shippingLineItemIter = currentBasket.object.defaultShipment.getShippingLineItems().iterator();
+                }
+                shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
+                if (shippingLineItem) {
+                    collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
+                        if (lineItemAdjustment.promotionID === 'thresholdPromo') {
+                            shippingLineItem.removeShippingPriceAdjustment(lineItemAdjustment);
+                        }
+                    });
+                }
+                let shippingPrice = !empty(currentBasket.defaultShipment) ? currentBasket.defaultShipment.adjustedShippingTotalPrice : currentBasket.object.defaultShipment.adjustedShippingTotalPrice;
+                // eslint-disable-next-line new-cap
+                let newPriceAdjustment = shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(shippingPrice.value));
+                newPriceAdjustment.custom.thresholdDiscountType = 'free';
+                PromotionMgr.applyDiscounts(currentBasket);
+                this.removeThresholdPromo(currentBasket);
+            }
         } catch (error) {
             logger.error('Error while removing threshold promo {0} {1}', error.message, error.stack);
         }
@@ -1381,10 +1438,10 @@ const getEswHelper = {
     * @return {string} - discount type
     */
     getPromoThresholdAmount: function (orderTotal, promotion) {
+        let discount = '0.1',
+            maxTotalThreshold = 0;
         try {
-            let thresholds = promotion.custom.eswMinThresholdAmount[0].split(','),
-                discount = '0.1',
-                maxTotalThreshold = 0;
+            let thresholds = promotion.custom.eswMinThresholdAmount[0].split(',');
             for (let i = 0; i < thresholds.length; i++) {
                 let thresholdAmount = thresholds[i].split(':');
                 if (orderTotal >= Number(thresholdAmount[0]) && Number(thresholdAmount[0]) > Number(maxTotalThreshold)) {
@@ -1402,103 +1459,106 @@ const getEswHelper = {
      * @param {Object} currentBasket - Basket
      */
     adjustThresholdDiscounts: function (currentBasket) {
-        if (empty(currentBasket.priceAdjustments) && empty(currentBasket.getShippingPriceAdjustments())) {
-            return;
-        }
+        let discountType,
+            Discount,
+            percentangeDiscountValue,
+            orderPriceAdjustment;
+        let allLineItemIter;
+        let shippingLineItem;
+        let shippingLineItemIter;
         let countryCode = null;
         let allShippingPriceAdjustmentsIter = currentBasket.getAllShippingPriceAdjustments().iterator();
         let cartTotals = this.getSubtotalObject(currentBasket, true);
         let collections = require('*/cartridge/scripts/util/collections');
         let fxRate = 1;
-        if (!empty(JSON.parse(session.privacy.fxRate))) {
-            let country = this.getAvailableCountry();
-            if (!this.getSelectedCountryDetail(country).isFixedPriceModel) {
-                fxRate = JSON.parse(session.privacy.fxRate).rate;
-            }
-        } else {
+        try {
+            if (!empty(JSON.parse(session.privacy.fxRate))) {
+                let country = this.getAvailableCountry();
+                if (!this.getSelectedCountryDetail(country).isFixedPriceModel) {
+                    fxRate = JSON.parse(session.privacy.fxRate).rate;
+                }
+            } else {
             // Fix for headless architect
-            countryCode = request.httpParameters.get('country-code');
-            if (!empty(countryCode)) {
-                let cDetail = this.getSelectedCountryDetail(countryCode[0]);
-                let countryFxDetail = this.getESWCurrencyFXRate(cDetail.defaultCurrencyCode, cDetail.countryCode);
-                if (countryFxDetail.length > 0) {
-                    fxRate = countryFxDetail[0].rate;
+                countryCode = request.httpParameters.get('country-code');
+                if (!empty(countryCode)) {
+                    let cDetail = this.getSelectedCountryDetail(countryCode[0]);
+                    let countryFxDetail = this.getESWCurrencyFXRate(cDetail.defaultCurrencyCode, cDetail.countryCode);
+                    if (countryFxDetail.length > 0) {
+                        fxRate = countryFxDetail[0].rate;
+                    }
                 }
             }
-        }
-        if (allShippingPriceAdjustmentsIter.hasNext()) {
-            let shippingLineItemIter;
-            if (!empty(currentBasket.defaultShipment)) {
-                shippingLineItemIter = currentBasket.defaultShipment.getShippingLineItems().iterator();
-            } else {
-                shippingLineItemIter = currentBasket.object.defaultShipment.getShippingLineItems().iterator();
-            }
-            let shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
+            if (allShippingPriceAdjustmentsIter.hasNext()) {
+                if (!empty(currentBasket.defaultShipment)) {
+                    shippingLineItemIter = currentBasket.defaultShipment.getShippingLineItems().iterator();
+                } else {
+                    shippingLineItemIter = currentBasket.object.defaultShipment.getShippingLineItems().iterator();
+                }
+                shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
             /* Check if threshold Promo Already exists */
-            if (shippingLineItem) {
-                collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
-                    if (lineItemAdjustment.promotionID === 'thresholdPromo') {
-                        shippingLineItem.removeShippingPriceAdjustment(lineItemAdjustment);
-                    }
-                });
+                if (shippingLineItem) {
+                    collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
+                        if (lineItemAdjustment.promotionID === 'thresholdPromo') {
+                            shippingLineItem.removeShippingPriceAdjustment(lineItemAdjustment);
+                        }
+                    });
+                }
             }
-        }
-        collections.forEach(currentBasket.priceAdjustments, function (eachPriceAdjustment) {
-            if (eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
-                currentBasket.removePriceAdjustment(eachPriceAdjustment);
-            }
-        });
-        let allLineItemIter = currentBasket.getAllLineItems().iterator();
-        let discountType,
-            Discount,
-            percentangeDiscountValue,
-            orderPriceAdjustment;
-        while (allLineItemIter.hasNext()) {
-            let priceAdjustment = allLineItemIter.next();
-            if (!(priceAdjustment instanceof dw.order.PriceAdjustment)) {
+            collections.forEach(currentBasket.priceAdjustments, function (eachPriceAdjustment) {
+                if (eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
+                    currentBasket.removePriceAdjustment(eachPriceAdjustment);
+                }
+            });
+            allLineItemIter = currentBasket.getAllLineItems().iterator();
+            while (allLineItemIter.hasNext()) {
+                let priceAdjustment = allLineItemIter.next();
+                if (!(priceAdjustment instanceof dw.order.PriceAdjustment)) {
                 /* eslint-disable no-continue */
-                continue;
-            }
-            if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER && this.isThresholdEnabled(priceAdjustment.promotion)) {
-                discountType = this.getDiscountType(priceAdjustment.promotion);
-                Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
-                if (Discount === '0.1') {
-                    /* eslint-disable no-continue */
                     continue;
                 }
-                /* eslint-disable eqeqeq */
-                if (discountType == 'amount_off') {
-                    orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(Discount / fxRate));
-                    orderPriceAdjustment.custom.thresholdDiscountType = 'order';
-                } else if (discountType == 'percentage_off') {
-                    percentangeDiscountValue = (cartTotals / 100) * Discount;
-                    orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(percentangeDiscountValue / fxRate));
-                    orderPriceAdjustment.custom.thresholdDiscountType = 'order';
-                }
-            } else if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_SHIPPING) {
-                if (this.isThresholdEnabled(priceAdjustment.promotion)) {
+                if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER && this.isThresholdEnabled(priceAdjustment.promotion)) {
                     discountType = this.getDiscountType(priceAdjustment.promotion);
                     Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
                     if (Discount === '0.1') {
-                        /* eslint-disable no-continue */
+                    /* eslint-disable no-continue */
                         continue;
                     }
-                    let shippingPrice = !empty(currentBasket.defaultShipment) ? currentBasket.defaultShipment.adjustedShippingTotalPrice : currentBasket.object.defaultShipment.adjustedShippingTotalPrice;
                     /* eslint-disable eqeqeq */
-                    /* eslint-disable new-cap */
-                    if (discountType == 'free' || Discount == '0') {
-                        let newPriceAdjustment = shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(shippingPrice.value));
-                        newPriceAdjustment.custom.thresholdDiscountType = 'free';
-                    } else if (discountType == 'amount_off') {
-                        shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(Discount / fxRate));
+                    if (discountType == 'amount_off') {
+                        orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(Discount / fxRate));
+                        orderPriceAdjustment.custom.thresholdDiscountType = 'order';
                     } else if (discountType == 'percentage_off') {
-                        let shippingRate = shippingPrice * fxRate;
-                        percentangeDiscountValue = (shippingRate / 100) * Discount;
-                        shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(percentangeDiscountValue / fxRate));
+                        percentangeDiscountValue = (cartTotals / 100) * Discount;
+                        orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(percentangeDiscountValue / fxRate));
+                        orderPriceAdjustment.custom.thresholdDiscountType = 'order';
+                    }
+                } else if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_SHIPPING) {
+                    if (this.isThresholdEnabled(priceAdjustment.promotion)) {
+                        discountType = this.getDiscountType(priceAdjustment.promotion);
+                        Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
+                        if (Discount === '0.1') {
+                        /* eslint-disable no-continue */
+                            continue;
+                        }
+                        let shippingPrice = !empty(currentBasket.defaultShipment) ? currentBasket.defaultShipment.adjustedShippingTotalPrice : currentBasket.object.defaultShipment.adjustedShippingTotalPrice;
+                        /* eslint-disable eqeqeq */
+                        /* eslint-disable new-cap */
+                        if (discountType == 'free' || Discount == '0') {
+                            let newPriceAdjustment = shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(shippingPrice.value));
+                            newPriceAdjustment.custom.thresholdDiscountType = 'free';
+                        } else if (discountType == 'amount_off') {
+                            shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount((Discount / fxRate)));
+                        } else if (discountType == 'percentage_off') {
+                            let shippingRate = shippingPrice * fxRate;
+                            percentangeDiscountValue = (shippingRate / 100) * Discount;
+                            shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(percentangeDiscountValue / fxRate));
+                        }
                     }
                 }
+                currentBasket.updateTotals();
             }
-            currentBasket.updateTotals();
+        } catch (e) {
+            this.eswInfoLogger('Error while adjusting threshold discounts', e.message + ' ' + e.stack);
         }
     },
     /**
@@ -2508,13 +2568,13 @@ const getEswHelper = {
         let isPWA = this.isEswPwa(request.httpParameters);
 
         if (!localizeObj && !conversionPrefs) {
-            return this.getMoneyObject(cart.defaultShipment.shippingTotalNetPrice.value, true, false, false).value;
+            return this.getMoneyObject(cart.defaultShipment.shippingTotalPrice.value, true, false, false).value;
         }
         if (isPWA) {
             let selectedCountryDetail = this.getCountryDetailByParam(localizeObj.localizeCountryObj.countryCode);
             let selectedCountryLocalizeObj = this.getCountryLocalizeObj(selectedCountryDetail);
             return this.getMoneyObject(
-                Number(cart.defaultShipment.shippingTotalNetPrice),
+                Number(cart.defaultShipment.shippingTotalPrice),
                 false,
                 false,
                 !selectedCountryLocalizeObj.applyRoundingModel,
@@ -2522,7 +2582,7 @@ const getEswHelper = {
             ).value;
         }
         return eswPricingHelper.getConvertedPrice(
-            Number(cart.defaultShipment.shippingTotalNetPrice),
+            Number(cart.defaultShipment.shippingTotalPrice),
             localizeObj,
             conversionPrefs
         );
@@ -2842,7 +2902,11 @@ const getEswHelper = {
                 currency = require('dw/util/Currency').getCurrency(selectedCountryDetail.defaultCurrencyCode);
                 isFixedPriceModel = selectedCountryDetail.isFixedPriceModel;
             } else {
-                let currencyCode = request.httpCookies['esw.currency'].value;
+                let shopperCurrency;
+                if (empty(request.httpCookies['esw.currency'])) {
+                    shopperCurrency = this.applyDefaultCurrencyForCountry();
+                }
+                let currencyCode = !empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value;
                 let locationCode = request.httpCookies['esw.location'].value;
                 currency = require('dw/util/Currency').getCurrency(currencyCode);
                 isFixedPriceModel = this.getSelectedCountryDetail(locationCode).isFixedPriceModel;
@@ -2898,6 +2962,31 @@ const getEswHelper = {
         }
     },
     /**
+     * Retrieves the AB Tasty script path from site preferences.
+     *
+     * @returns {string|null} The script path if set, otherwise null.
+     */
+    getEswAbTastyScriptPaths: function () {
+        return Site.getCustomPreferenceValue('eswAbTastyScriptPath');
+    },
+    /**
+     * Checks if the AB Tasty feature is enabled based on the script path presence.
+     *
+     * @returns {boolean} True if the script path exists, otherwise false.
+     */
+    isEswEnabledAbTasty: function () {
+        return !empty(this.getEswAbTastyScriptPaths());
+    },
+    getTaxationModel: function () {
+        let TaxMgr = require('dw/order/TaxMgr');
+        let taxationType = TaxMgr.getTaxationPolicy();
+        if (taxationType === TaxMgr.TAX_POLICY_GROSS) {
+            return 'GROSS';
+        } else {
+            return 'NET';
+        }
+    },
+    /**
      * Get all request HTTP headers.
      *
      * @param {dw.system.Request} request - The current request object.
@@ -2914,6 +3003,26 @@ const getEswHelper = {
             headersArr.push(headerObj);
         });
         return headersArr;
+    },
+    /**
+      * Get default currency for selected country and set currency
+      * @return {string} - defaultCurrencyCode - payment Information
+      */
+    applyDefaultCurrencyForCountry: function () {
+        let countryCode = this.getAvailableCountry(),
+            selectedCountryCO = this.getCustomObjectDetails('ESW_COUNTRIES', countryCode),
+            defaultCurrencyCode;
+
+        if (selectedCountryCO) {
+            defaultCurrencyCode = selectedCountryCO.getCustom().defaultCurrencyCode;
+            if (empty(request.httpCookies['esw.currency']) && !empty(defaultCurrencyCode)) {
+                this.createCookie('esw.currency', defaultCurrencyCode, '/');
+            } else if (!empty(defaultCurrencyCode) && request.httpCookies['esw.currency'] !== null && request.httpCookies['esw.currency'].value !== defaultCurrencyCode) {
+                this.updateCookieValue(request.getHttpCookies()['esw.currency'], defaultCurrencyCode);
+            }
+        }
+
+        return defaultCurrencyCode;
     }
 };
 
