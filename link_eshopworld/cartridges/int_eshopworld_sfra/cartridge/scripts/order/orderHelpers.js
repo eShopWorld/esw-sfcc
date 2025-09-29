@@ -21,16 +21,7 @@ const formatCurrency = require('*/cartridge/scripts/util/formatting').formatCurr
 * @returns {Object} - orderModel of the current dw order object
 * */
 function getOrders(currentCustomer, querystring, locale) {
-    // get all orders for this user
-    let orderHistory = currentCustomer.raw.getOrderHistory();
-    let customerOrders = orderHistory.getOrders(
-        'status!={0}',
-        'creationDate desc',
-        Order.ORDER_STATUS_REPLACED
-    );
-
     let orders = [];
-
     let filterValues = [
         {
             displayValue: Resource.msg('orderhistory.sixmonths.option', 'order', null),
@@ -41,63 +32,75 @@ function getOrders(currentCustomer, querystring, locale) {
             optionValue: URLUtils.url('Order-Filtered', 'orderFilter', '12').abs().toString()
         }
     ];
-    let orderYear;
-    let years = [];
-    let customerOrder;
-    let SIX_MONTHS_AGO = Date.now() - 15778476000;
-    let YEAR_AGO = Date.now() - 31556952000;
-    let orderModel;
+    try {
+        // get all orders for this user
+        let orderHistory = currentCustomer.raw.getOrderHistory();
+        let customerOrders = orderHistory.getOrders(
+            'status!={0}',
+            'creationDate desc',
+            Order.ORDER_STATUS_REPLACED
+        );
 
-    let currentLocale = Locale.getLocale(locale);
+        let orderYear;
+        let years = [];
+        let customerOrder;
+        let SIX_MONTHS_AGO = Date.now() - 15778476000;
+        let YEAR_AGO = Date.now() - 31556952000;
+        let orderModel;
 
-    while (customerOrders.hasNext()) {
-        customerOrder = customerOrders.next();
-        if (eswHelper.isOrderDetailEnabled() && (customerOrder.status.value === 0 || customerOrder.status.value === 8)) {
-            /* eslint-disable no-continue */
-            continue;
-        }
-        let config = {
-            numberOfLineItems: 'single'
-        };
+        let currentLocale = Locale.getLocale(locale);
 
-        orderYear = customerOrder.getCreationDate().getFullYear().toString();
-        let orderTime = customerOrder.getCreationDate().getTime();
+        while (customerOrders.hasNext()) {
+            customerOrder = customerOrders.next();
+            if (eswHelper.isOrderDetailEnabled() && (customerOrder.status.value === 0 || customerOrder.status.value === 8)) {
+                /* eslint-disable no-continue */
+                continue;
+            }
+            let config = {
+                numberOfLineItems: 'single'
+            };
 
-        if (years.indexOf(orderYear) === -1) {
-            let optionURL =
-                URLUtils.url('Order-Filtered', 'orderFilter', orderYear).abs().toString();
-            filterValues.push({
-                displayValue: orderYear,
-                optionValue: optionURL
-            });
-            years.push(orderYear);
-        }
+            orderYear = customerOrder.getCreationDate().getFullYear().toString();
+            let orderTime = customerOrder.getCreationDate().getTime();
 
-        if (querystring.orderFilter
-            && querystring.orderFilter !== '12'
-            && querystring.orderFilter !== '6') {
-            if (orderYear === querystring.orderFilter) {
+            if (years.indexOf(orderYear) === -1) {
+                let optionURL =
+                    URLUtils.url('Order-Filtered', 'orderFilter', orderYear).abs().toString();
+                filterValues.push({
+                    displayValue: orderYear,
+                    optionValue: optionURL
+                });
+                years.push(orderYear);
+            }
+
+            if (querystring.orderFilter
+                && querystring.orderFilter !== '12'
+                && querystring.orderFilter !== '6') {
+                if (orderYear === querystring.orderFilter) {
+                    orderModel = new OrderModel(
+                        customerOrder,
+                        { config: config, countryCode: currentLocale.country }
+                    );
+                    orders.push(orderModel);
+                }
+            } else if (querystring.orderFilter
+                && YEAR_AGO < orderTime
+                && querystring.orderFilter === '12') {
+                orderModel = new OrderModel(
+                    customerOrder,
+                    { config: config, countryCode: currentLocale.country }
+                );
+                orders.push(orderModel);
+            } else if (SIX_MONTHS_AGO < orderTime) {
                 orderModel = new OrderModel(
                     customerOrder,
                     { config: config, countryCode: currentLocale.country }
                 );
                 orders.push(orderModel);
             }
-        } else if (querystring.orderFilter
-            && YEAR_AGO < orderTime
-            && querystring.orderFilter === '12') {
-            orderModel = new OrderModel(
-                customerOrder,
-                { config: config, countryCode: currentLocale.country }
-            );
-            orders.push(orderModel);
-        } else if (SIX_MONTHS_AGO < orderTime) {
-            orderModel = new OrderModel(
-                customerOrder,
-                { config: config, countryCode: currentLocale.country }
-            );
-            orders.push(orderModel);
         }
+    } catch (error) {
+        eswHelper.eswInfoLogger('getOrders Error', error, error.message, error.stack);
     }
 
     return {
@@ -113,29 +116,32 @@ function getOrders(currentCustomer, querystring, locale) {
  */
 function getLastOrder(req) {
     let orderModel = null;
-    let orderHistory = req.currentCustomer.raw.getOrderHistory();
-    let customerOrders = eswHelper.isOrderDetailEnabled() ? orderHistory.getOrders(
-        'status!={0} AND status!={1} AND status!={2}',
-        'creationDate desc',
-        Order.ORDER_STATUS_REPLACED, Order.ORDER_STATUS_FAILED, Order.ORDER_STATUS_CREATED
-    ) : orderHistory.getOrders(
-        'status!={0}',
-        'creationDate desc',
-        Order.ORDER_STATUS_REPLACED
-    );
+    try {
+        let orderHistory = req.currentCustomer.raw.getOrderHistory();
+        let customerOrders = eswHelper.isOrderDetailEnabled() ? orderHistory.getOrders(
+            'status!={0} AND status!={1} AND status!={2}',
+            'creationDate desc',
+            Order.ORDER_STATUS_REPLACED, Order.ORDER_STATUS_FAILED, Order.ORDER_STATUS_CREATED
+        ) : orderHistory.getOrders(
+            'status!={0}',
+            'creationDate desc',
+            Order.ORDER_STATUS_REPLACED
+        );
 
-    let order = customerOrders.first();
+        let order = customerOrders.first();
 
-    if (order) {
-        let currentLocale = Locale.getLocale(req.locale.id);
+        if (order) {
+            let currentLocale = Locale.getLocale(req.locale.id);
 
-        let config = {
-            numberOfLineItems: 'single'
-        };
+            let config = {
+                numberOfLineItems: 'single'
+            };
 
-        orderModel = new OrderModel(order, { config: config, countryCode: currentLocale.country });
+            orderModel = new OrderModel(order, { config: config, countryCode: currentLocale.country });
+        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('getLastOrder Error', error, error.message, error.stack);
     }
-
     return orderModel;
 }
 
@@ -205,22 +211,27 @@ function createEswPackageJson(eswOrderPkgJson, order) {
  * @returns {Object} an object of the customer's order
  */
 function getOrderDetails(req) {
-    let order = OrderMgr.getOrder(req.querystring.orderID);
+    let orderModel;
+    try {
+        let order = OrderMgr.getOrder(req.querystring.orderID);
 
-    let config = {
-        numberOfLineItems: '*'
-    };
+        let config = {
+            numberOfLineItems: '*'
+        };
 
-    let currentLocale = Locale.getLocale(req.locale.id);
+        let currentLocale = Locale.getLocale(req.locale.id);
 
-    let orderModel = new OrderModel(
-        order,
-        { config: config, countryCode: currentLocale.country, containerView: 'order' }
-    );
-    orderModel.isEswOrder = 'custom' in order && 'eswOrderNo' in order.custom && !empty(order.custom.eswOrderNo);
-    if (eswHelper.isEswSplitShipmentEnabled() && ('eswPackageJSON' in order.custom && !empty(order.custom.eswPackageJSON))) {
-        let eswOrderPkgJson = eswHelper.strToJson(order.custom.eswPackageJSON);
-        orderModel.eswPackageJSON = createEswPackageJson(eswOrderPkgJson, order);
+        orderModel = new OrderModel(
+            order,
+            { config: config, countryCode: currentLocale.country, containerView: 'order' }
+        );
+        orderModel.isEswOrder = 'custom' in order && 'eswOrderNo' in order.custom && !empty(order.custom.eswOrderNo);
+        if (eswHelper.isEswSplitShipmentEnabled() && ('eswPackageJSON' in order.custom && !empty(order.custom.eswPackageJSON))) {
+            let eswOrderPkgJson = eswHelper.strToJson(order.custom.eswPackageJSON);
+            orderModel.eswPackageJSON = createEswPackageJson(eswOrderPkgJson, order);
+        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('getOrderDetails Error', error, error.message, error.stack);
     }
 
     return orderModel;

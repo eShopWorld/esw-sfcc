@@ -354,9 +354,11 @@ function handleOrderRequest(orderJson, req) {
                 responseObj.success = false;
             }
         } catch (error) {
+            const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
             Logger.error('Error while creating order Error: ' + error.toString());
             responseObj.success = false;
             responseObj.error = error.toString();
+            eswHelper.eswInfoLogger('handleOrderRequest Error', error, error.message, error.stack);
         }
     } else {
         responseObj.error = 'Expected request not available';

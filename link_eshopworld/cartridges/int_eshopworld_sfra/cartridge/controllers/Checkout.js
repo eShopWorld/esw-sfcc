@@ -27,20 +27,24 @@ server.prepend(
     'Begin',
     function (req, res, next) {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        let session = req.session.raw;
-        if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
-            let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
-            if (session.privacy.orderNo && !empty(session.privacy.orderNo)) {
-                eswServiceHelper.failOrder();
+        try {
+            let session = req.session.raw;
+            if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
+                let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
+                if (session.privacy.orderNo && !empty(session.privacy.orderNo)) {
+                    eswServiceHelper.failOrder();
+                }
+                let BasketMgr = require('dw/order/BasketMgr'),
+                    currentBasket = BasketMgr.getCurrentBasket();
+                if (currentBasket) {
+                    let viewData = res.getViewData();
+                    // Set override shipping methods if configured
+                    eswHelper.applyShippingOverrideMethod(currentBasket);
+                    res.setViewData(viewData);
+                }
             }
-            let BasketMgr = require('dw/order/BasketMgr'),
-                currentBasket = BasketMgr.getCurrentBasket();
-            if (currentBasket) {
-                let viewData = res.getViewData();
-                // Set override shipping methods if configured
-                eswHelper.applyShippingOverrideMethod(currentBasket);
-                res.setViewData(viewData);
-            }
+        } catch (error) {
+            eswHelper.eswInfoLogger('Checkout-Begin Error', error, error.message, error.stack);
         }
         return next();
     }
@@ -50,15 +54,18 @@ server.append(
     'Begin',
     function (req, res, next) {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
-            let BasketMgr = require('dw/order/BasketMgr'),
-                currentBasket = BasketMgr.getCurrentBasket();
-
-            if (currentBasket) {
-                let viewData = res.getViewData();
-                viewData.currentStage = 'customer';
-                res.setViewData(viewData);
+        try {
+            if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
+                let BasketMgr = require('dw/order/BasketMgr');
+                let currentBasket = BasketMgr.getCurrentBasket();
+                if (currentBasket) {
+                    let viewData = res.getViewData();
+                    viewData.currentStage = 'customer';
+                    res.setViewData(viewData);
+                }
             }
+        } catch (error) {
+            eswHelper.eswInfoLogger('Checkout-Begin Error', error, error.message, error.stack);
         }
         return next();
     }
@@ -78,24 +85,28 @@ server.get(
     server.middleware.https,
     function (req, res, next) {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        let Resource = require('dw/web/Resource');
-        let language = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
-        let currency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
-        let selectedCountry = req.querystring.country;
-        let flag = false;
+        try {
+            let Resource = require('dw/web/Resource');
+            let language = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
+            let currency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
+            let selectedCountry = req.querystring.country;
+            let flag = false;
 
-        if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.checkIsEswAllowedCountry(selectedCountry)) {
-            flag = true;
+            if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.checkIsEswAllowedCountry(selectedCountry)) {
+                flag = true;
+            }
+            res.json({
+                success: flag,
+                country: selectedCountry,
+                language: language,
+                currency: currency,
+                redirect: URLUtils.https('Cart-Show').toString(),
+                url: URLUtils.https('Page-SetLocale').toString(),
+                successMsg: Resource.msg('shipping.esw.country.change.msg', 'esw', null)
+            });
+        } catch (error) {
+            eswHelper.eswInfoLogger('Checkout-GetAllowedCountry Error', error, error.message, error.stack);
         }
-        res.json({
-            success: flag,
-            country: selectedCountry,
-            language: language,
-            currency: currency,
-            redirect: URLUtils.https('Cart-Show').toString(),
-            url: URLUtils.https('Page-SetLocale').toString(),
-            successMsg: Resource.msg('shipping.esw.country.change.msg', 'esw', null)
-        });
         next();
     }
 );

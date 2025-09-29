@@ -9,6 +9,10 @@ server.extend(module.superModule);
 
 const cache = require('*/cartridge/scripts/middleware/cache');
 
+server.prepend('Show', cache.applyCachedCountryVariations, function (req, res, next) {
+    return next();
+});
+
 /**
  * Tile-Show : Used to return data for rendering a product tile
  * @name esw/Tile-Show
@@ -27,19 +31,24 @@ const cache = require('*/cartridge/scripts/middleware/cache');
  * @param {serverfunction} - get
  */
 server.append('Show', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    let URLUtils = require('dw/web/URLUtils');
-    let viewData = res.getViewData();
-    viewData.tileShow = true;
-    if (
-        ('product' in viewData)
-        && (viewData.product !== false)
-        && ('urls' in viewData)
-        && ('quickView' in viewData.urls)
-        && viewData.urls.quickView
-    ) {
-        viewData.urls.quickView = URLUtils.url('EShopWorld-Cache', 'remoteIncludeUrl', 'Product-ShowQuickView', 'pid', req.querystring.pid, 'ajax', 'true').toString();
+    try {
+        let URLUtils = require('dw/web/URLUtils');
+        let viewData = res.getViewData();
+        viewData.tileShow = true;
+        if (
+            ('product' in viewData)
+            && (viewData.product !== false)
+            && ('urls' in viewData)
+            && ('quickView' in viewData.urls)
+            && viewData.urls.quickView
+        ) {
+            viewData.urls.quickView = URLUtils.url('EShopWorld-Cache', 'remoteIncludeUrl', 'Product-ShowQuickView', 'pid', req.querystring.pid, 'ajax', 'true').toString();
+        }
+        res.setViewData(viewData);
+    } catch (error) {
+        const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+        eswHelper.eswInfoLogger('ESW Tile-Show Error', error, error.message, error.stack);
     }
-    res.setViewData(viewData);
     next();
 });
 

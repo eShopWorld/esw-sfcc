@@ -95,9 +95,14 @@ const getEswCalculationHelper = {
                     billingPrice = eswHelper.applyRoundingModel(billingPrice, selectedRoundingRule);
                 }
             }
+            if (isNaN(billingPrice)) {
+                logger.error('Invalid billing price after conversion: {0}', billingPrice);
+                billingPrice = 0;
+            }
             billingPrice = new Money(billingPrice, selectedFxRate.toShopperCurrencyIso);
             return (formatted == null) ? formatMoney(billingPrice) : billingPrice;
         } catch (e) {
+            eswHelper.eswInfoLogger('Price calculation error', e, e.message, e.stack);
             logger.error('Error converting price {0} {1}', e.message, e.stack);
             return typeof billingPrice !== 'undefined' ? billingPrice : null;
         }

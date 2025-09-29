@@ -24,75 +24,79 @@ server.append(
     'SetLocale',
     function (req, res, next) {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        let URLUtils = require('dw/web/URLUtils');
-        let session = req.session.raw;
-        let QueryString = server.querystring;
-        let queryStringObj = new QueryString(req.querystring.queryString || '');
-        let currentLocale = request.getLocale();
+        try {
+            let URLUtils = require('dw/web/URLUtils');
+            let session = req.session.raw;
+            let QueryString = server.querystring;
+            let queryStringObj = new QueryString(req.querystring.queryString || '');
+            let currentLocale = request.getLocale();
 
-        if (eswHelper.getEShopWorldModuleEnabled()) {
-            let currencyCode = req.querystring.currency || null;
-            let selectedCountry = req.querystring.country || null;
-            let language = req.querystring.language || null;
+            if (eswHelper.getEShopWorldModuleEnabled()) {
+                let currencyCode = req.querystring.currency || null;
+                let selectedCountry = req.querystring.country || null;
+                let language = req.querystring.language || null;
 
-            if (eswHelper.checkIsEswAllowedCountry(selectedCountry)) {
-                if (req.setLocale(language)) {
-                    if (!eswHelper.overridePrice(req, selectedCountry, currencyCode)) {
-                        eswHelper.setAllAvailablePriceBooks();
-                        eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());
+                if (eswHelper.checkIsEswAllowedCountry(selectedCountry)) {
+                    if (req.setLocale(language)) {
+                        if (!eswHelper.overridePrice(req, selectedCountry, currencyCode)) {
+                            eswHelper.setAllAvailablePriceBooks();
+                            eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());
+                        }
                     }
-                }
-                eswHelper.selectCountry(selectedCountry, currencyCode, language);
-            } else {
-                delete session.privacy.fxRate;
-                let selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry);
-                let foundCountry;
-                if (!empty(selectedCountryDetail.name)) {
-                    eswHelper.createCookie('esw.location', selectedCountry, '/');
-                    // Set cookies
-                    eswHelper.createCookie('esw.currency', selectedCountryDetail.defaultCurrencyCode, '/');
-                    eswHelper.createCookie('esw.LanguageIsoCode', language, '/');
+                    eswHelper.selectCountry(selectedCountry, currencyCode, language);
+                } else {
+                    delete session.privacy.fxRate;
+                    let selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry);
+                    let foundCountry;
+                    if (!empty(selectedCountryDetail.name)) {
+                        eswHelper.createCookie('esw.location', selectedCountry, '/');
+                        // Set cookies
+                        eswHelper.createCookie('esw.currency', selectedCountryDetail.defaultCurrencyCode, '/');
+                        eswHelper.createCookie('esw.LanguageIsoCode', language, '/');
 
-                    // Set Base currency Pricebook
-                    eswHelper.setAllAvailablePriceBooks();
-                    eswHelper.setBaseCurrencyPriceBook(req, selectedCountryDetail.defaultCurrencyCode);
+                        // Set Base currency Pricebook
+                        eswHelper.setAllAvailablePriceBooks();
+                        eswHelper.setBaseCurrencyPriceBook(req, selectedCountryDetail.defaultCurrencyCode);
 
-                    // Set locale
-                    req.setLocale(language);
-                    foundCountry = true;
+                        // Set locale
+                        req.setLocale(language);
+                        foundCountry = true;
+                    }
+                    // Set Default Currency and Locale if esw not allowed country not found
+                    eswHelper.setDefaultCurrencyLocal(req, foundCountry);
                 }
-                // Set Default Currency and Locale if esw not allowed country not found
-                eswHelper.setDefaultCurrencyLocal(req, foundCountry);
+
+                if (Object.hasOwnProperty.call(queryStringObj, 'lang')) {
+                    delete queryStringObj.lang;
+                }
+
+                let redirectUrl = URLUtils.url(req.querystring.action).toString();
+
+                if (Object.hasOwnProperty.call(request, 'httpReferer') && !empty(request.httpReferer) &&
+                    !eswHelper.isEnableLandingPageRedirect()) {
+                    let newLocale = request.httpLocale;
+                    let httpReferer = request.getHttpReferer();
+                    let qsConnectStr = httpReferer.indexOf('?') >= 0 ? '&' : '?';
+                    if (httpReferer.indexOf('lang') === -1) {
+                        httpReferer += qsConnectStr + 'lang=' + currentLocale || language || newLocale;
+                    }
+                    redirectUrl = httpReferer;
+                    if (!empty(currentLocale) && (!empty(newLocale) || !empty(language))) {
+                        redirectUrl = httpReferer.replace(currentLocale, language || newLocale);
+                    }
+                } else {
+                    let qsConnector = redirectUrl.indexOf('?') >= 0 ? '&' : '?';
+                    redirectUrl = Object.keys(queryStringObj).length === 0
+                        ? redirectUrl += queryStringObj.toString()
+                        : redirectUrl += qsConnector + queryStringObj.toString();
+                }
+                res.json({
+                    success: true,
+                    redirectUrl: redirectUrl
+                });
             }
-
-            if (Object.hasOwnProperty.call(queryStringObj, 'lang')) {
-                delete queryStringObj.lang;
-            }
-
-            let redirectUrl = URLUtils.url(req.querystring.action).toString();
-
-            if (Object.hasOwnProperty.call(request, 'httpReferer') && !empty(request.httpReferer) &&
-                !eswHelper.isEnableLandingPageRedirect()) {
-                let newLocale = request.httpLocale;
-                let httpReferer = request.getHttpReferer();
-                let qsConnectStr = httpReferer.indexOf('?') >= 0 ? '&' : '?';
-                if (httpReferer.indexOf('lang') === -1) {
-                    httpReferer += qsConnectStr + 'lang=' + currentLocale || language || newLocale;
-                }
-                redirectUrl = httpReferer;
-                if (!empty(currentLocale) && (!empty(newLocale) || !empty(language))) {
-                    redirectUrl = httpReferer.replace(currentLocale, language || newLocale);
-                }
-            } else {
-                let qsConnector = redirectUrl.indexOf('?') >= 0 ? '&' : '?';
-                redirectUrl = Object.keys(queryStringObj).length === 0
-                    ? redirectUrl += queryStringObj.toString()
-                    : redirectUrl += qsConnector + queryStringObj.toString();
-            }
-            res.json({
-                success: true,
-                redirectUrl: redirectUrl
-            });
+        } catch (error) {
+            eswHelper.eswInfoLogger('ESW SetLocale Error', error, error.message, error.stack);
         }
         next();
     }

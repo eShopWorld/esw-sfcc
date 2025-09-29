@@ -135,7 +135,7 @@ const CatalogUtils = {
 /**
  * Script file for executing Catalog Feed and
  * sending Initial Full Catalog/ Catalog updates to ESW
- * @return {boolean} - returns execute result
+ * @return {any} - returns execute result
  */
 function execute() {
     let saleableProducts;

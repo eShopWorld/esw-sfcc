@@ -4,8 +4,14 @@
 
 // API Includes
 const Site = require('dw/system/Site').getCurrent();
+const Logger = require('dw/system/Logger');
+const Resource = require('dw/web/Resource');
 
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const collections = require('*/cartridge/scripts/util/collections');
+const baseCartHelpers = require('app_storefront_base/cartridge/scripts/cart/cartHelpers');
+const productHelper = require('app_storefront_base/cartridge/scripts/helpers/productHelpers');
+const coreApiHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper');
 
 // Script Includes
 const priceBookKeyWords = Site.getCustomPreferenceValue('eswPriceBookKeyWords');
@@ -213,7 +219,6 @@ const OCAPIHelper = {
             let shopperCurrency = !empty(param['currency-code']) ? param['currency-code'][0] : pricingHelper.getShopperCurrency(shopperCountry);
             if (!empty(shopperCurrency)) {
                 // API Includes
-                let Logger = require('dw/system/Logger');
                 let shopperLocale;
                 if (eswHelper.isEswEnabledEmbeddedCheckout()) {
                     shopperLocale = request.locale;
@@ -233,6 +238,196 @@ const OCAPIHelper = {
                 }
             }
         }
+    },
+    getMatchingProducts: function (productId, productLineItems, originIso) {
+        let matchingProducts = [];
+        let uuid;
+        collections.forEach(productLineItems, function (item) {
+            if (item.productID === productId && (item.custom.eswFulfilmentCountryIso === originIso || empty(originIso))) {
+                matchingProducts.push(item);
+                uuid = item.UUID;
+            }
+        });
+        return {
+            matchingProducts: matchingProducts,
+            uuid: uuid
+        };
+    },
+    getExistingProductLineItemsInCart: function (product, productId, productLineItems, childProducts, options, originIso) {
+        let matchingProductsObj = OCAPIHelper.getMatchingProducts(productId, productLineItems, originIso);
+        let matchingProducts = matchingProductsObj.matchingProducts;
+        let productLineItemsInCart = matchingProducts.filter(function (matchingProduct) {
+            return product.bundle
+                ? baseCartHelpers.allBundleItemsSame(matchingProduct.bundledProductLineItems, childProducts)
+                : baseCartHelpers.hasSameOptions(matchingProduct.optionProductLineItems, options || []);
+        });
+
+        return productLineItemsInCart;
+    },
+    getExistingProductLineItemInCart: function (product, productId, productLineItems, childProducts, options, originIso) {
+        return OCAPIHelper.getExistingProductLineItemsInCart(product, productId, productLineItems, childProducts, options, originIso)[0];
+    },
+    countMultiOriginProductInCart: function (productId, originIso, productLineItems) {
+        let moProductCount = 0;
+        if (!empty(productLineItems)) {
+            collections.forEach(productLineItems, function (item) {
+                if (item.productID === productId && item.custom.eswFulfilmentCountryIso === originIso) {
+                    moProductCount += item.quantity.value;
+                }
+            });
+        }
+        return moProductCount;
+    },
+    getLineItemByUUid: function (basket, itemuuId) {
+        return collections.find(basket.productLineItems, function (item) {
+            return item.UUID === itemuuId;
+        });
+    },
+    addMultiOriginInfoToPLI: function (basket, items) {
+        let result = {};
+        try {
+            const eswMultiOriginHelper = require('*/cartridge/scripts/helper/eswMultiOriginHelper');
+            if (eswHelper.isEnabledMultiOrigin()) {
+                let ProductMgr = require('dw/catalog/ProductMgr');
+                for (let index = 0; index < items.length; index++) {
+                    let element = items[index];
+                    if (items && element.quantity) {
+                        let availableToSell;
+                        let defaultShipment = basket.defaultShipment;
+                        let addedEswPlis = basket.productLineItems;
+                        let productId = element.productId;
+                        let product = ProductMgr.getProduct(productId);
+                        let optionModel = productHelper.getCurrentOptionModel(product.optionModel, []);
+                        let eswAtsValue = product.availabilityModel.inventoryRecord.ATS.value;
+                        let perpetual = product.availabilityModel.inventoryRecord.perpetual;
+                        let totalQtyRequested = 0;
+                        let childProducts = [];
+                        let moQtyIssue = false;
+                        let canBeAdded;
+                        let productInCart;
+                        let productQuantityInCart;
+                        let quantityToSet;
+                        let options = optionModel ? optionModel.options : [];
+                        let matchingLineItem;
+                        // eslint-disable-next-line no-loop-func
+                        collections.forEach(basket.productLineItems, function (item) {
+                            if (item.productID === productId) {
+                                matchingLineItem = item;
+                                totalQtyRequested += item.quantity.value;
+                            }
+                        });
+                        if ('updateQuantity' in element && 'uuid' in element) {
+                            matchingLineItem = OCAPIHelper.getLineItemByUUid(basket, element.uuid);
+                            optionModel = matchingLineItem.optionModel;
+                            options = optionModel ? optionModel.options : [];
+                        }
+                        if (matchingLineItem.product.bundle) {
+                            childProducts = collections.map(matchingLineItem.getBundledProductLineItems(), item => ({
+                                pid: item.getProductID(),
+                                quantity: item.getQuantity().getValue()
+                            }));
+                        }
+                        let inventoryInfo = eswMultiOriginHelper.getProductOriginDetails({ productId: productId, quantity: totalQtyRequested });
+                        if (!empty(inventoryInfo) && eswMultiOriginHelper.isProductAvailableInMultiOrigin(inventoryInfo, productId)) {
+                            // Get value of origin from multi origin response
+                            eswAtsValue = eswMultiOriginHelper.getInventoryAtsFromMultiOriginResponse(inventoryInfo, productId);
+                        }
+                        if (!(perpetual || totalQtyRequested <= eswAtsValue)) {
+                            moQtyIssue = true;
+                        }
+                        canBeAdded = (perpetual || totalQtyRequested <= eswAtsValue);
+                        let productLineItem;
+                        if (!canBeAdded) {
+                            // In case product cannot be added removing added product from basket because hook is implemented in afterPost
+                            let existingLineItemsOfProduct = OCAPIHelper.getExistingProductLineItemsInCart(product, productId, addedEswPlis, childProducts, options, null);
+                            if (!empty(existingLineItemsOfProduct)) {
+                                existingLineItemsOfProduct.slice(0, Number(element.quantity));
+                            }
+                            if (!empty(existingLineItemsOfProduct) && !('updateQuantity' in element)) {
+                                eswMultiOriginHelper.removeProductLineitemFromBasket(existingLineItemsOfProduct, basket);
+                            }
+                            result.error = true;
+                            if (moQtyIssue) {
+                                result.message = Resource.msgf(
+                                    'esw.mo.qty.error.message',
+                                    'esw',
+                                    null,
+                                    product.name
+                                );
+                            } else {
+                                result.message = Resource.msgf(
+                                    'error.alert.selected.quantity.cannot.be.added.for',
+                                    'product',
+                                    null,
+                                    eswAtsValue,
+                                    product.name
+                                );
+                            }
+                            continue;
+                        }
+                        let executeMultiOriginLogic = (eswHelper.isEnabledMultiOrigin() && !empty(inventoryInfo) && inventoryInfo.length > 0);
+                        if (!executeMultiOriginLogic) {
+                            inventoryInfo = [{
+                                productId: productId,
+                                originIso: null,
+                                quantity: totalQtyRequested
+                            }];
+                        } else {
+                            // We’re getting the full required quantity from getProductOriginDetails(),
+                            // so we’re removing the already added quantities from the basket.
+                            let existingLineItemsOfProduct = OCAPIHelper.getExistingProductLineItemsInCart(product, productId, addedEswPlis, childProducts, options, null);
+                            eswMultiOriginHelper.removeProductLineitemFromBasket(existingLineItemsOfProduct, basket);
+                            addedEswPlis = basket.productLineItems;
+                        }
+                        for (let i = 0; i < inventoryInfo.length; i++) {
+                            productInCart = OCAPIHelper.getExistingProductLineItemInCart(
+                                product, productId, addedEswPlis, childProducts, options,
+                                (executeMultiOriginLogic) ? inventoryInfo[i].originIso : null
+                            );
+                            let moProductCountInCart = OCAPIHelper.countMultiOriginProductInCart(productId, inventoryInfo[i].originIso, addedEswPlis);
+                            // If the product is already in the cart, increase the quantity
+                            if ((!executeMultiOriginLogic && productInCart) || (executeMultiOriginLogic && productInCart && moProductCountInCart > 0)) {
+                                productQuantityInCart = (!executeMultiOriginLogic) ? productInCart.quantity.value : moProductCountInCart;
+                                if (executeMultiOriginLogic) {
+                                    quantityToSet = moProductCountInCart + inventoryInfo[i].quantity;
+                                } else {
+                                    quantityToSet = totalQtyRequested ? totalQtyRequested + productQuantityInCart : productQuantityInCart + 1;
+                                }
+                                availableToSell = eswAtsValue;
+
+                                if (availableToSell >= quantityToSet || perpetual) {
+                                    productInCart.setQuantityValue(quantityToSet);
+                                    result.uuid = productInCart.UUID;
+                                } else {
+                                    result.error = true;
+                                    result.message = availableToSell === productQuantityInCart
+                                        ? Resource.msg('error.alert.max.quantity.in.cart', 'product', null)
+                                        : Resource.msg('error.alert.selected.quantity.cannot.be.added', 'product', null);
+                                }
+                            } else {
+                                productLineItem = baseCartHelpers.addLineItem(
+                                    basket,
+                                    product,
+                                    executeMultiOriginLogic ? inventoryInfo[i].quantity : totalQtyRequested,
+                                    childProducts,
+                                    optionModel,
+                                    defaultShipment
+                                );
+                                // Need to add custom attribute only upon new basket item
+                                if (executeMultiOriginLogic && !empty(productLineItem)) {
+                                    productLineItem.custom.eswFulfilmentCountryIso = inventoryInfo[i].originIso;
+                                }
+                                result.uuid = productLineItem.UUID;
+                                addedEswPlis.add(productLineItem);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            Logger.error('ESW Multi Origin Error: {0} {1}', error.message, error.stack);
+        }
+        return result;
     },
     /**
      * Handles/ sets basket attributes and it's logic
@@ -328,6 +523,14 @@ const OCAPIHelper = {
     handleEswOrderDetailCall: function (order, orderResponse) {
         if (orderResponse.c_eswPackageJSON && !empty(orderResponse.c_eswPackageJSON)) {
             orderResponse.c_eswPackageJSON = eswHelper.strToJson(orderResponse.c_eswPackageJSON);
+        }
+    },
+    combineProductItems: function (productItems) {
+        return coreApiHelper.combineProductItems(productItems);
+    },
+    groupLineItemsByOrigin: function (response) {
+        if (!empty(response)) {
+            response.productItems = this.combineProductItems(response.productItems);
         }
     },
     /**

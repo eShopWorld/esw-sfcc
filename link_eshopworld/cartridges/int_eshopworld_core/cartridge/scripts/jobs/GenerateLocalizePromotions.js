@@ -238,8 +238,8 @@ function buildPromotionSchema(writeDirPath, basePromotionObj, localizeObj, args)
  * @returns {boolean} - returns execute result
  */
 function execute(args) {
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     try {
-        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let localizedPromotionsConfig = JSON.parse(eswHelper.getLocalizedPromotionsConfig());
         if (!empty(localizedPromotionsConfig)) {
             let writeDirPath = args.impexDirPath;
@@ -267,10 +267,12 @@ function execute(args) {
             fileReader.close();
         } else {
             Logger.error('ESW Localize Promotions Job error: Missing localize promotions configuration');
+            eswHelper.eswInfoLogger('Error', '', 'ESW Localize Promotions Job error', 'Missing localize promotions configuration');
             return new Status(Status.ERROR);
         }
     } catch (e) {
         Logger.error('ESW Localize Promotions Job error: ' + e);
+        eswHelper.eswInfoLogger('GenerateLocalizePromotions Error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);

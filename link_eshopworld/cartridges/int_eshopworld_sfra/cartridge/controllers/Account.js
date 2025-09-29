@@ -28,12 +28,14 @@ const logger = require('dw/system/Logger');
 server.append(
     'Show',
     function (req, res, next) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
         try {
             if (!empty(session.privacy.confirmedOrderID)) {
                 delete session.privacy.confirmedOrderID;
             }
         } catch (e) {
             logger.error('ESW Delete Session Attribute Error: {0} {1}', e.message, e.stack);
+            eswHelper.eswInfoLogger('Account-Show Error', e, e.message, e.stack);
         }
         return next();
     }
@@ -47,7 +49,11 @@ server.append(
  */
 server.prepend('Header', function (req, res, next) {
     let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-    eswHelper.rebuildCartUponBackFromESW();
+    try {
+        eswHelper.rebuildCartUponBackFromESW();
+    } catch (error) {
+        eswHelper.eswInfoLogger('Account-Header Error', error, error.message, error.stack);
+    }
     return next();
 });
 

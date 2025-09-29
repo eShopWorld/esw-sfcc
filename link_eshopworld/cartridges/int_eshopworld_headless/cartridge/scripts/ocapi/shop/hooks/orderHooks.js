@@ -5,7 +5,8 @@ const Status = require('dw/system/Status');
 
 // Script Includes
 const OCAPIHelper = require('*/cartridge/scripts/helper/eswOCAPIHelperHL');
-let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const basketHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper');
 
 exports.beforePOST = function (basket) {
     if (!eswHelper.isEswEnabledEmbeddedCheckout()) {
@@ -35,6 +36,9 @@ exports.modifyPOSTResponse = function (order, orderResponse) {
 exports.modifyGETResponse = function (order, orderResponse) {
     if (!eswHelper.isEswEnabledEmbeddedCheckout()) {
         OCAPIHelper.handleEswOrderDetailCall(order, orderResponse);
+    }
+    if (eswHelper.isEnabledMultiOrigin()) {
+        orderResponse.productItems = basketHelper.combineProductItems(orderResponse.productItems);
     }
     return new Status(Status.OK);
 };

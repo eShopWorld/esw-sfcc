@@ -27,7 +27,7 @@ const getEswOcHelper = {
         try {
             order.custom[attributeName] = attributeValue;
         } catch (error) {
-            eswHelper.eswInfoLogger('error on adding custom attribute on order' + error + attributeName);
+            eswHelper.eswInfoLogger('error on adding custom attribute on order' + error + attributeName, attributeName, error.message, error.stack);
         }
     },
     /**
@@ -77,7 +77,7 @@ const getEswOcHelper = {
         }
         let obj = {},
             refined = [];
-        if (deliveryOptions.deliveryOptionPriceInfo.discounts.length > 0) {
+        if (deliveryOptions.deliveryOptionPriceInfo.discounts && deliveryOptions.deliveryOptionPriceInfo.discounts.length > 0) {
             obj.deliveryOption = deliveryOptions.deliveryOption;
             obj.deliveryOptionsPriceInfo = {
                 discounts: []
@@ -423,7 +423,7 @@ const getEswOcHelper = {
                     if (!empty(contact.status) && contact.status === 'Edited') {
                         addressBook.removeAddress(existingAddress);
                         let newAddress = addressBook.createAddress(eswHelper.generateAddressName(contact));
-                        this.updateAddress(newAddress, contact);
+                        this.updateAddress(newAddress, contact, addressBook);
                     }
                 } else if (contact.contactDetailType.equalsIgnoreCase(Constants.IS_DELIVERY)) {
                     let newAddress = addressBook.createAddress(addressID);
@@ -431,7 +431,7 @@ const getEswOcHelper = {
                 }
             });
         } catch (error) {
-            eswHelper.eswInfoLogger('error on adding new address to customer addressbook' + error);
+            eswHelper.eswInfoLogger('error on adding new address to customer addressbook' + error, error, error.message, error.stack);
         }
     },
     /**
@@ -669,13 +669,15 @@ const getEswOcHelper = {
         let Logger = require('dw/system/Logger');
         let hasInventory = true;
         try {
-            collections.forEach(order.productLineItems, function (item) {
-                let availabilityLevels = item.product.availabilityModel.getAvailabilityLevels(item.quantityValue);
-                if (item.product === null || !item.product.online || availabilityLevels.notAvailable.value !== 0) {
-                    hasInventory = false;
-                    return;
-                }
-            });
+            if (!empty(order) && 'productLineItems' in order) {
+                collections.forEach(order.productLineItems, function (item) {
+                    let availabilityLevels = item.product.availabilityModel.getAvailabilityLevels(item.quantityValue);
+                    if (item.product === null || !item.product.online || availabilityLevels.notAvailable.value !== 0) {
+                        hasInventory = false;
+                        return;
+                    }
+                });
+            }
         } catch (e) {
             Logger.error('Error in getting product inventory: {0} {1}', e.message, e.stack);
         }

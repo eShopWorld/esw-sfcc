@@ -43,6 +43,7 @@ const eswOrderProcessHelper = {
         } catch (e) {
             logger.error('ESW Order Return Error: {0}', e.message);
             logger.error('Order return payload: {0}', JSON.stringify(reqBodyJson));
+            eswCoreHelper.eswInfoLogger('Order return payload', JSON.stringify(reqBodyJson), e.message, e.stack);
             return {
                 ResponseCode: 400,
                 ResponseText: 'Error: Internal Error'
@@ -77,6 +78,7 @@ const eswOrderProcessHelper = {
         } catch (e) {
             logger.error('ESW Order Return Error: {0}', e.message);
             logger.error('Order return payload: {0}', JSON.stringify(reqBodyJson));
+            eswCoreHelper.eswInfoLogger('Order return payload', JSON.stringify(reqBodyJson), e.message, e.stack);
             return {
                 ResponseCode: 400,
                 ResponseText: 'Error: Internal Error'
@@ -105,6 +107,7 @@ const eswOrderProcessHelper = {
                 }
             });
         } catch (e) {
+            eswCoreHelper.eswInfoLogger('ESW Order Appeasement Error', JSON.stringify(reqBodyJson), e.message, e.stack);
             logger.error('ESW Order Appeasement Error: {0}', e.message);
             return {
                 ResponseCode: '400',
@@ -153,6 +156,7 @@ const eswOrderProcessHelper = {
                 ResponseText: 'Order processed successfuly'
             };
         } catch (e) {
+            eswCoreHelper.eswInfoLogger('ESW Order Cancel Error', JSON.stringify(reqBodyJson), e.message, e.stack);
             logger.error('ESW Order Cancel Error: {0}', e.message);
             return {
                 OrderNumber: reqBodyJson.Request.BrandOrderReference,
@@ -187,6 +191,7 @@ const eswOrderProcessHelper = {
             });
         } catch (e) {
             logger.error('ESW Order Konbini payment failed Error: {0}', e.message);
+            eswCoreHelper.eswInfoLogger('ESW Order Konbini payment failed Error', JSON.stringify(reqBodyJson), e.message, e.stack);
             return {
                 ResponseCode: '400',
                 ResponseText: 'Error: Internal error'
@@ -197,6 +202,63 @@ const eswOrderProcessHelper = {
             ResponseCode: '200',
             ResponseText: 'Successfully processed Konbini payment'
         };
+    },
+    /**
+     * Handles ESW post-order webhook payload.
+     * @param {Object} webhookPayloadJson - The webhook payload as an object.
+     * @returns {boolean} - true if processed, false otherwise.
+     */
+    handlePostOrderOrderHook: function (webhookPayloadJson) {
+        let result = false;
+
+        if (!webhookPayloadJson || !webhookPayloadJson.Payment || !webhookPayloadJson.BrandOrderReference) {
+            eswCoreHelper.eswInfoLogger('Invalid webhook payload:', '', JSON.stringify(webhookPayloadJson), 'handlePostOrderOrderHook');
+            return false;
+        }
+        try {
+            // Get the order by BrandOrderReference (case-insensitive)
+            let orderId = webhookPayloadJson.BrandOrderReference;
+            let order = OrderMgr.getOrder(orderId);
+
+            if (!order) {
+                eswCoreHelper.eswInfoLogger('Order not found for BrandOrderReference: ' + orderId, 'handlePostOrderOrderHook');
+                return false;
+            }
+
+            let isPreAuthorized = webhookPayloadJson.Payment.PreAuthorized || false;
+            let isSettled = webhookPayloadJson.Payment.Settled || false;
+            let paymentStatus = Constants.TXT_PAYMENT_NOT_AUTHORIZED;
+
+            Transaction.wrap(function () {
+                // Update payment status
+                if (isPreAuthorized && isSettled) {
+                    paymentStatus = Constants.TXT_PAYMENT_SETTLED;
+                    order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                } else if (isPreAuthorized && !isSettled) {
+                    paymentStatus = Constants.TXT_PAYMENT_AUTHORIZED;
+                    order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+                } else if (!isPreAuthorized && !isSettled) {
+                    paymentStatus = Constants.TXT_PAYMENT_NOT_AUTHORIZED;
+                    order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+                }
+
+                order.paymentInstruments[0].paymentTransaction.custom.eswPaymentStatus = paymentStatus;
+
+                // Update confirmation and export status
+                if (isSettled) {
+                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                    order.setExportStatus(Order.EXPORT_STATUS_READY);
+                } else {
+                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+                    order.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+                }
+                result = isSettled;
+            });
+        } catch (e) {
+            eswCoreHelper.eswInfoLogger(e.message, 'handlePostOrderOrderHook');
+            eswCoreHelper.eswInfoLogger('PostOrder WebHook processing error', JSON.stringify(webhookPayloadJson), e.message, e.stack);
+        }
+        return result;
     }
 };
 

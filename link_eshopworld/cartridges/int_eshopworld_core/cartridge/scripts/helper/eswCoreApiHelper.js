@@ -2,7 +2,6 @@
 'use strict';
 
 // API Includes
-const Logger = require('dw/system/Logger');
 const Site = require('dw/system/Site').getCurrent();
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const ShippingMgr = require('dw/order/ShippingMgr');
@@ -49,37 +48,41 @@ function eswPliPriceConversions(basket, pliAttributeMap, localizeObj, conversion
 function sendOverrideShippingMethods(basket, basketResponse) {
     let param = request.httpParameters;
     let countryCode = null;
-    if (!empty(param['country-code']) && param['country-code'][0]) {
-        countryCode = param['country-code'][0];
-    } else if (param.get('locale') && param.get('locale')[0] && param.get('locale')[0].includes('-')) {
-        countryCode = param.get('locale')[0].split('-')[1];
-    } else if (basket.custom.eswShopperCurrency) {
-        countryCode = basket.custom.eswShopperCurrency;
-    }
+    try {
+        if (!empty(param['country-code']) && param['country-code'][0]) {
+            countryCode = param['country-code'][0];
+        } else if (param.get('locale') && param.get('locale')[0] && param.get('locale')[0].includes('-')) {
+            countryCode = param.get('locale')[0].split('-')[1];
+        } else if (basket.custom.eswShopperCurrency) {
+            countryCode = basket.custom.eswShopperCurrency;
+        }
 
-    // If countryCode is null, return early to avoid further errors
-    if (!countryCode) {
-        return;
-    }
+        // If countryCode is null, return early to avoid further errors
+        if (!countryCode) {
+            return;
+        }
 
-    let shippingModel = ShippingMgr.getShipmentShippingModel(basket.shipments[0]),
-        applicableShippingMethodsOnCart = shippingModel.applicableShippingMethods.toArray();
+        let shippingModel = ShippingMgr.getShipmentShippingModel(basket.shipments[0]),
+            applicableShippingMethodsOnCart = shippingModel.applicableShippingMethods.toArray();
 
-    if (eswHelper.isEswNativeShippingHidden() && eswHelper.isSelectedCountryOverrideShippingEnabled(countryCode)) {
-        let overrideShipping = eswHelper.getEswOverrideShipping(countryCode);
-        let filteredShippingMethods = applicableShippingMethodsOnCart.filter(function (method) {
-            return overrideShipping.includes(method.ID);
-        });
-        let overrideShippingMethods = filteredShippingMethods.map(function (method) {
-            return {
-                _type: 'shipping_method',
-                id: method.ID,
-                name: method.displayName,
-                price: shippingModel.getShippingCost(method).amount.value,
-                estimatedArrivalTime: (method.custom.estimatedArrivalTime) ? method.custom.estimatedArrivalTime : null
-            };
-        });
-        basketResponse.c_available_shipping_methods = overrideShippingMethods;
+        if (eswHelper.isEswNativeShippingHidden() && eswHelper.isSelectedCountryOverrideShippingEnabled(countryCode)) {
+            let overrideShipping = eswHelper.getEswOverrideShipping(countryCode);
+            let filteredShippingMethods = applicableShippingMethodsOnCart.filter(function (method) {
+                return overrideShipping.includes(method.ID);
+            });
+            let overrideShippingMethods = filteredShippingMethods.map(function (method) {
+                return {
+                    _type: 'shipping_method',
+                    id: method.ID,
+                    name: method.displayName,
+                    price: shippingModel.getShippingCost(method).amount.value,
+                    estimatedArrivalTime: (method.custom.estimatedArrivalTime) ? method.custom.estimatedArrivalTime : null
+                };
+            });
+            basketResponse.c_available_shipping_methods = overrideShippingMethods;
+        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('sendOverrideShippingMethods Error', error, error.message, error.stack);
     }
 }
 /**
@@ -137,7 +140,7 @@ function eswBasketPriceConversions(basket) {
             }
         }
     } catch (error) {
-        Logger.error('something went wrong while updating basket prices Error:', error);
+        eswHelper.eswInfoLogger('eswBasketPriceConversions Error', error, error.message, error.stack);
     }
 }
 
@@ -227,9 +230,50 @@ function compareBasketAndOcProducts(currentBasketData, ocPayloadJson) {
     return true;
 }
 
+/**
+ * Combines duplicate product items in the given ArrayList by summing their quantities and prices.
+ * @param {dw.util.ArrayList|Array<Object>} productItems - The list of product items to process.
+ * @returns {dw.util.ArrayList|Array<Object>} - The processed list with duplicates combined.
+ */
+function combineProductItems(productItems) {
+    if (!(productItems instanceof dw.util.ArrayList)) {
+        return productItems;
+    }
+    // Process original ArrayList in place
+    for (let i = 0; i < productItems.length; i++) {
+        let currentItem = productItems[i];
+        // Look ahead for duplicates of current item
+        for (let j = i + 1; j < productItems.length; j++) {
+            let nextItem = productItems[j];
+            // If we find a duplicate product_id
+            if (currentItem.product_id === nextItem.product_id) {
+                // Add quantities and prices to the first occurrence
+                currentItem.quantity += nextItem.quantity;
+                currentItem.price += nextItem.price;
+                currentItem.adjusted_tax += nextItem.adjusted_tax;
+                currentItem.tax += nextItem.tax;
+                currentItem.tax_basis += nextItem.tax_basis;
+                if (typeof nextItem.price_after_item_discount !== 'undefined') {
+                    currentItem.price_after_item_discount =
+                        (currentItem.price_after_item_discount || 0) + nextItem.price_after_item_discount;
+                }
+
+                if (typeof nextItem.price_after_order_discount !== 'undefined') {
+                    currentItem.price_after_order_discount =
+                        (currentItem.price_after_order_discount || 0) + nextItem.price_after_order_discount;
+                }
+                // Remove the duplicate item
+                productItems.removeAt(j);
+                j--; // Adjust index since we removed an item
+            }
+        }
+    }
+    return productItems;
+}
 
 module.exports = {
     eswBasketPriceConversions: eswBasketPriceConversions,
     sendOverrideShippingMethods: sendOverrideShippingMethods,
-    compareBasketAndOcProducts: compareBasketAndOcProducts
+    compareBasketAndOcProducts: compareBasketAndOcProducts,
+    combineProductItems: combineProductItems
 };

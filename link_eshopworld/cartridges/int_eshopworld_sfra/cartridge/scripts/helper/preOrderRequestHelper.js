@@ -9,6 +9,7 @@ const logger = require('dw/system/Logger');
 
 /* Script Modules */
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
 
 /**
  * Handle Pre-Order V2. It prepares Pre-Order service request and calls it.
@@ -16,25 +17,39 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
  * otherwise, renders the landing page.
  */
 function handlePreOrderRequestV2() {
-    let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-        preorderServiceObj = eswCoreService.getPreorderServiceV2(),
-        eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
-        redirectPreference = eswHelper.getRedirect();
-    if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
-        if (!customer.authenticated) {
-            session.privacy.TargetLocation = URLUtils.https('EShopWorld-PreOrderRequest').toString();
-            return {
-                status: 'REDIRECT'
-            };
+    let result;
+    try {
+        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
+            preorderServiceObj = eswCoreService.getPreorderServiceV2(),
+            eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
+            redirectPreference = eswHelper.getRedirect();
+        if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
+            if (!customer.authenticated) {
+                session.privacy.TargetLocation = URLUtils.https('EShopWorld-PreOrderRequest').toString();
+                return {
+                    status: 'REDIRECT'
+                };
+            }
         }
-    }
-    eswHelper.setOAuthToken();
+        eswHelper.setOAuthToken();
 
-    let requestObj = eswServiceHelper.preparePreOrder();
-    requestObj.retailerCartId = eswServiceHelper.createOrder();
-    eswHelper.validatePreOrder(requestObj, true);
-    session.privacy.confirmedOrderID = requestObj.retailerCartId;
-    let result = preorderServiceObj.call(JSON.stringify(requestObj));
+        let requestObj = eswServiceHelper.preparePreOrder();
+        requestObj.retailerCartId = eswServiceHelper.createOrder();
+        if (eswHelper.isEswSelfHostedOcEnabled()) {
+            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestObj.retailerCartId);
+            if (!empty(selfHostedOcMetadata)) {
+                requestObj.retailerCheckoutExperience.metadataItems.push({
+                    Name: selfHostedOcMetadata.metadataName,
+                    Value: selfHostedOcMetadata.metadataValue
+                });
+            }
+        }
+        eswHelper.validatePreOrder(requestObj, true);
+        session.privacy.confirmedOrderID = requestObj.retailerCartId;
+        result = preorderServiceObj.call(JSON.stringify(requestObj));
+    } catch (error) {
+        eswHelper.eswInfoLogger('handlePreOrderRequestV2 Error', error, error.message, error.stack);
+    }
     return result;
 }
 
@@ -59,15 +74,11 @@ function preOrderRequest(req, res) { // eslint-disable-line consistent-return
             return URLUtils.https('Cart-Show').toString();
         }
         let redirectURL = JSON.parse(result.object).redirectUrl;
-        if ('shopperAccessToken' in JSON.parse(result.object)) {
-            eswHelper.createCookie('esw-shopper-access-token', JSON.parse(result.object).shopperAccessToken, '/', 3600, eswHelper.getTopLevelDomain());
-        } else {
-            eswHelper.createCookie('esw-shopper-access-token', '', '/', 'expired', eswHelper.getTopLevelDomain());
-        }
         delete session.privacy.guestCheckout;
         return redirectURL;
     } catch (e) {
         logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
+        eswHelper.eswInfoLogger('preOrderRequest Error', e, e.message, e.stack);
         session.privacy.eswfail = true;
         delete session.privacy.guestCheckout;
         return URLUtils.https('Cart-Show').toString();

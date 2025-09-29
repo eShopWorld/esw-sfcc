@@ -25,7 +25,7 @@
 <script src="${dw.web.URLUtils.staticURL('/js/jquery-3.6.3.min.js')}"></script>
 <script src="${dw.web.URLUtils.staticURL('/js/eswCommon.js?v=2.0.0')}"></script>
 <isif
-  condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-CatalogConfig') !== -1 
+  condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-CatalogConfig') !== -1
               || dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-Start') !== -1
               ||  dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-Search') !== -1}">
   <script src="${dw.web.URLUtils.staticURL('/js/catalog.js?v=1.0.1')}"></script>
@@ -35,5 +35,8 @@
 </isif>
 <isif condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-PackageConfigurations') !== -1}">
   <script src="${dw.web.URLUtils.staticURL('/js/package.js?v=1.0.1')}"></script>
+</isif>
+<isif condition="${dw.web.URLUtils.continueURL().toString().indexOf('EShopWorldBM-LoadReports') !== -1}">
+  <script src="${dw.web.URLUtils.staticURL('/js/esw-integration-report.js?v=1.0.1')}"></script>
 </isif>
 <isinclude url="${URLUtils.url('SiteNavigationBar-IncludeFrameBottom')}" sf-toolkit="on" />

@@ -17,6 +17,7 @@ const bmHelper = require('*/cartridge/scripts/helpers/eswBmGeneralHelper');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswSyncHelpers = require('*/cartridge/scripts/helpers/eswSyncHelpers');
 const bmOrdersHelper = require('~/cartridge/scripts/helpers/eswBmOrdersHelper.js');
+const eswHCTableHelper = require('*/cartridge/scripts/helpers/eswHealthCheckTableHelper');
 
 /**
  * Function to return to cart page after rebuilding cart
@@ -259,22 +260,25 @@ server.post('SavePostedConfig', function (req, res, next) {
 });
 
 server.get('LoadReports', function (req, res, next) {
-    let csrf = request.httpParameterMap.csrf_token.stringValue;
-    let configReport = [];
-    let lastModifed;
-    configReport = bmHelper.loadReport(csrf);
-    if (configReport && Array.isArray(configReport)) {
-        // Check if configReport has at least four elements
-        if (configReport.length > 2) {
-            lastModifed = !empty(configReport) ? configReport[2] : '';
-            // Remove the last modified attribute
-            configReport.pop();
-        }
-    }
+    let imReportJson = bmHelper.getIntegrationResportJson();
+    let transformedServices = eswHCTableHelper.transformServiceDataForTable(imReportJson.imReport);
+    let excludedKeys = ['services', 'lastModifed']; // Keys to exclude
+    let transformedData = Object.keys(imReportJson.imReport)
+        .filter(function (key) {
+            return !excludedKeys.includes(key);
+        })
+        .map(function (key) {
+            return {
+                section: key,
+                data: eswHCTableHelper.transformDataForTable(imReportJson.imReport[key], key)
+            };
+        });
     res.render('/report/esw-Integration-report', {
         currentController: 'LoadReports',
-        configReport: eswHelper.beautifyJsonAsString(configReport),
-        lastModified: lastModifed
+        configReport: eswHelper.beautifyJsonAsString(imReportJson.imReport),
+        transformedServices: transformedServices,
+        transformedData: transformedData,
+        lastModified: imReportJson.lastModifed
     });
     next();
 });
@@ -474,6 +478,20 @@ server.get('PackageConfigurations', function (req, res, next) {
         sitePrefFields: sitePrefFields,
         isPackageConfigPage: true
     });
+    next();
+});
+
+server.post('SendLogsToEsw', function (req, res, next) {
+    let isSuccess = false;
+    try {
+        let imReportJson = bmHelper.getIntegrationResportJson();
+        eswHelper.eswInfoLogger('EswIntegrationLogsInfo', 'ESW Manual Logs', 'N/A', JSON.stringify(imReportJson.imReport), true);
+        isSuccess = true;
+    } catch (e) {
+        isSuccess = false;
+    }
+
+    res.json({ success: isSuccess });
     next();
 });
 

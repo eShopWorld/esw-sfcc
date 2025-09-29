@@ -1,0 +1,24 @@
+<h2>${Resource.msg('label.services.configuration', 'eswbm', null)}</h2>
+<table class="esw-product-table" id="services-table">
+    <thead>
+        <tr>
+            <td class="table_header w e s">${Resource.msg('label.service.id', 'eswbm', null)}</td>
+            <td class="table_header w e s">${Resource.msg('label.service.url', 'eswbm', null)}</td>
+            <td class="table_header w e s">${Resource.msg('label.service.impact', 'eswbm', null)}</td>
+            <td class="table_header w e s">${Resource.msg('label.service.status.code', 'eswbm', null)}</td>
+
+        </tr>
+    </thead>
+    <tbody>
+        <isloop items="${pdict.transformedServices}" var="service">
+            <tr class="${service.class}">
+                <td class="table_detail middle e s left">${service.serviceId}</td>
+                <td class="table_detail middle e s left" data-url="${service.url}">${service.url}</td>
+                <td class="table_detail middle e s left">${service.impact}</td>
+                <td class="table_detail middle e s left status-code">
+                    ${service.statusCode}
+                </td>
+            </tr>
+        </isloop>
+    </tbody>
+</table>

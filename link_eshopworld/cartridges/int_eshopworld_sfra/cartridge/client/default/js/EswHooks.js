@@ -95,11 +95,25 @@ function updateCountryList() {
         e.preventDefault();
         $('.eshopworld-loader').removeClass('d-none');
         $('.btnCheckout').addClass('disabled');
+        let domain = $(this).attr('data-tld');
         $.ajax({
             type: 'get',
             url: $(this).attr('data-url'),
             data: '',
             success: function (response) {
+                if (response.eswAuthToken && response.eswAuthToken !== '') {
+                  // Set cookie with 1 hour expiration
+                    let expirationDate = new Date();
+                    expirationDate.setTime(expirationDate.getTime() + (3600 * 1000)); // 1 hour
+                    document.cookie = 'esw-shopper-access-token=' + response.eswAuthToken +
+                                ';path=/;domain=' + domain +
+                                ';expires=' + expirationDate.toUTCString() +
+                                ';SameSite=None;Secure';
+                } else {
+                    document.cookie = 'esw-shopper-access-token=' + response.eswAuthToken +
+                                ';path=/;domain=' + domain +
+                                ';expires=expired;SameSite=None;Secure';
+                }
                 window.open(response.redirectURL, '_self');
             }
         });
@@ -321,6 +335,10 @@ function applyRoundingMethod(price, model, roundingModel, isFractionalPart) {
  */
 function applyRoundingModel(price) {
     let roundingModel = window.SitePreferences.ESW_SELECTED_ROUNDING ? JSON.parse(window.SitePreferences.ESW_SELECTED_ROUNDING) : false;
+    // setting currency exponent value to 2 incase available to avoid rounding issues.
+    if (roundingModel.currencyExponent && roundingModel.currencyExponent !== 0) {
+        roundingModel.currencyExponent = 2;
+    }
     let roundedWholeNumber = 0;
     let roundedPrice = 0;
     if (!roundingModel || price === 0) {
@@ -513,6 +531,33 @@ $(document).ready(function () {
     $('body').on('click', '.submit-customer', function () {
         if ($('#email-guest').val() && $('#email-guest').val().indexOf('@') > 0) {
             $('.submit-customer').prop('disabled', true);
+        }
+    });
+});
+
+// Multi origin cart totals update
+$('body').on('cart:update', function (e, data) {
+    $('.veil').remove();
+    // Custom: Remove cart-error if restrictedProductID is null and error text is present
+    if (data.restrictedProductID === null && data.notAvailableMsg) {
+        let $cartError = $('.cart-error .alert');
+        if ($cartError.length && $cartError.text().indexOf(data.notAvailableMsg) !== -1) {
+            $('.cart-error').remove();
+        }
+    }
+    data.items.forEach(function (item) {
+        if (item.eswUUID) {
+            if (data.totals.orderLevelDiscountTotal.value > 0) {
+                $('.coupons-and-promos').empty().append(data.totals.discountsHtml);
+            }
+            if (item.renderedPromotions) {
+                $('.item-' + item.eswUUID).empty().append(item.renderedPromotions);
+            } else {
+                $('.item-' + item.eswUUID).empty();
+            }
+            $('.uuid-' + item.eswUUID + ' .unit-price').empty().append(item.renderedPrice);
+            $('.line-item-price-' + item.eswUUID + ' .unit-price').empty().append(item.renderedPrice);
+            $('.item-total-' + item.eswUUID).empty().append(item.priceTotal.renderedPrice);
         }
     });
 });

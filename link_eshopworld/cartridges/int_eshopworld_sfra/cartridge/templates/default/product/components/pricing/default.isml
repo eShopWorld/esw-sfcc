@@ -6,8 +6,20 @@
     <isscript>
         var priceObjectJson = JSON.stringify(price);
         var isLowPrice = typeof isLowPrice !== 'undefined' ? isLowPrice : null;
+        var eswLocation = request.httpCookies['esw.location'] 
+                ? request.httpCookies['esw.location'].value 
+                : null;
+
+        var eswCurrency = request.httpCookies['esw.currency'] 
+            ? request.httpCookies['esw.currency'].value 
+            : null;
+
+        // Combine both into one vary key
+        var cacheKey = eswLocation + '|' + eswCurrency;
     </isscript>
-    <isinclude url="${URLUtils.url('EShopWorld-GetSelectedCountryProductPrice', 'priceObject', priceObjectJson, 'isLowPrice', isLowPrice)}"/>
+    <iscache hour="1" type="relative" varyby="cacheKey" />
+    <isinclude url="${URLUtils.url('EShopWorld-GetSelectedCountryProductPrice', 'priceObject', priceObjectJson, 'isLowPrice', isLowPrice, 'eswLocation', eswLocation, 'eswCurrency', eswCurrency)}"/>
+    <iscache hour="1" type="relative" if="${false}" />
 <iselse/>
     <isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
         <isinclude template="/product/components/pricing/defaultESW" />

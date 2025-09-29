@@ -309,4 +309,39 @@
         </group-definitions>
     </custom-type>
 
+    <custom-type type-id="ESW_ORDER_DATA">
+        <display-name xml:lang="x-default">ESW Order Data</display-name>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>site</storage-scope>
+        <key-definition attribute-id="orderKey">
+            <type>string</type>
+            <min-length>0</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="orderNumber">
+                <display-name xml:lang="x-default">Order Number</display-name>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="orderToken">
+                <display-name xml:lang="x-default">Order Token</display-name>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="ESW_ORDER_DATA">
+                <display-name xml:lang="x-default">ESW Order Data</display-name>
+                <attribute attribute-id="orderNumber"/>
+                <attribute attribute-id="orderToken"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+
 </metadata>

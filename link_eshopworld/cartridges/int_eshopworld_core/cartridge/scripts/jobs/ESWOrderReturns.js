@@ -69,10 +69,12 @@ function getReturnOrderPayload(order) {
  * @returns {dw.system.Status} - Status of the job
  */
 function execute() {
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     try {
         let authToken = getOathToken();
         if (empty(authToken)) {
             Logger.error('Could not get access token.');
+            eswHelper.eswInfoLogger('Error', '', 'ESWOrderReturns Error', 'Could not get access token');
             return new Status(Status.ERROR);
         }
         let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
@@ -93,6 +95,7 @@ function execute() {
         }, 'custom.eswIsReturned = {0}', true);
         return new Status(Status.OK);
     } catch (e) {
+        eswHelper.eswInfoLogger('Order Return error', e, e.message, e.stack);
         Logger.error('ESW Service Error: {0}', e.message);
         return new Status(Status.ERROR);
     }

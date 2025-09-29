@@ -14,68 +14,72 @@ const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelp
  * @param {Object} address - the address
  */
 function selectShippingMethod(shipment, shippingMethodID, shippingMethods, address) {
-    let BasketMgr = require('dw/order/BasketMgr');
-    let currentBasket = BasketMgr.getCurrentBasket();
-    let applicableShippingMethods;
-    let defaultShippingMethod = ShippingMgr.getDefaultShippingMethod();
-    let shippingAddress;
+    try {
+        let BasketMgr = require('dw/order/BasketMgr');
+        let currentBasket = BasketMgr.getCurrentBasket();
+        let applicableShippingMethods;
+        let defaultShippingMethod = ShippingMgr.getDefaultShippingMethod();
+        let shippingAddress;
 
-    if (address && shipment) {
-        shippingAddress = shipment.shippingAddress;
+        if (address && shipment) {
+            shippingAddress = shipment.shippingAddress;
 
-        if (shippingAddress) {
-            if (address.stateCode && shippingAddress.stateCode !== address.stateCode) {
-                shippingAddress.stateCode = address.stateCode;
-            }
-            if (address.postalCode && shippingAddress.postalCode !== address.postalCode) {
-                shippingAddress.postalCode = address.postalCode;
+            if (shippingAddress) {
+                if (address.stateCode && shippingAddress.stateCode !== address.stateCode) {
+                    shippingAddress.stateCode = address.stateCode;
+                }
+                if (address.postalCode && shippingAddress.postalCode !== address.postalCode) {
+                    shippingAddress.postalCode = address.postalCode;
+                }
             }
         }
-    }
 
-    let isShipmentSet = false;
+        let isShipmentSet = false;
 
-    if (shippingMethods) {
-        applicableShippingMethods = shippingMethods;
-    } else {
-        let shipmentModel = ShippingMgr.getShipmentShippingModel(shipment);
-        applicableShippingMethods = address ? shipmentModel.getApplicableShippingMethods(address) :
-            shipmentModel.applicableShippingMethods;
-    }
+        if (shippingMethods) {
+            applicableShippingMethods = shippingMethods;
+        } else {
+            let shipmentModel = ShippingMgr.getShipmentShippingModel(shipment);
+            applicableShippingMethods = address ? shipmentModel.getApplicableShippingMethods(address) :
+                shipmentModel.applicableShippingMethods;
+        }
 
-    if (shippingMethodID) {
-        // loop through the shipping methods to get shipping method
-        let iterator = applicableShippingMethods.iterator();
-        while (iterator.hasNext()) {
-            let shippingMethod = iterator.next();
-            if (shippingMethod.ID === shippingMethodID) {
-                shipment.setShippingMethod(shippingMethod);
-                isShipmentSet = true;
+        if (shippingMethodID) {
+            // loop through the shipping methods to get shipping method
+            let iterator = applicableShippingMethods.iterator();
+            while (iterator.hasNext()) {
+                let shippingMethod = iterator.next();
+                if (shippingMethod.ID === shippingMethodID) {
+                    shipment.setShippingMethod(shippingMethod);
+                    isShipmentSet = true;
+                    /* Custom Start: esw customization */
+                    eswHelper.adjustThresholdDiscounts(currentBasket);
+                    /* Custom End: esw customization */
+                    break;
+                }
+            }
+        }
+
+        if (!isShipmentSet) {
+            if (collections.find(applicableShippingMethods, function (sMethod) {
+                return sMethod.ID === defaultShippingMethod.ID;
+            })) {
+                shipment.setShippingMethod(defaultShippingMethod);
                 /* Custom Start: esw customization */
                 eswHelper.adjustThresholdDiscounts(currentBasket);
                 /* Custom End: esw customization */
-                break;
+            } else if (applicableShippingMethods.length > 0) {
+                let firstMethod = base.getFirstApplicableShippingMethod(applicableShippingMethods, true);
+                shipment.setShippingMethod(firstMethod);
+                /* Custom Start: esw customization */
+                eswHelper.adjustThresholdDiscounts(currentBasket);
+                /* Custom End: esw customization */
+            } else {
+                shipment.setShippingMethod(null);
             }
         }
-    }
-
-    if (!isShipmentSet) {
-        if (collections.find(applicableShippingMethods, function (sMethod) {
-            return sMethod.ID === defaultShippingMethod.ID;
-        })) {
-            shipment.setShippingMethod(defaultShippingMethod);
-            /* Custom Start: esw customization */
-            eswHelper.adjustThresholdDiscounts(currentBasket);
-            /* Custom End: esw customization */
-        } else if (applicableShippingMethods.length > 0) {
-            let firstMethod = base.getFirstApplicableShippingMethod(applicableShippingMethods, true);
-            shipment.setShippingMethod(firstMethod);
-            /* Custom Start: esw customization */
-            eswHelper.adjustThresholdDiscounts(currentBasket);
-            /* Custom End: esw customization */
-        } else {
-            shipment.setShippingMethod(null);
-        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('selectShippingMethod Error', error, error.message, error.stack);
     }
 }
 

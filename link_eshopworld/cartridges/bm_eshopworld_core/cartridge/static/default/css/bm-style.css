@@ -209,6 +209,7 @@ input.esw-bm-input-text {
   height: 50px;
 }
 
+
 #esw-overlay {
   position: fixed;
   top: 0;
@@ -428,12 +429,7 @@ input.esw-bm-input-text {
 .mb-6 {
   margin-bottom: 6px;
 }
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    left: 50%;
-    font-weight: bold;
-}
+
 
 .esw-menu:not(.selected) .esw-submenu {
     display: none;
@@ -524,6 +520,90 @@ input[type="checkbox"]:checked {
   visibility: visible;
   opacity: 1;
 }
+
+#ireport{
+  height:100vh;
+}
+#ireport .esw-button-containers{float:right;}
+#ireport h2{
+  color: #54585a;
+  font-weight: bold;
+  font-size: 14px;
+  font-family: "Helvetica Neue",Helvetica,Arial,Verdana,sans-serif;
+  margin:20px 0;
+}
+#ireport .esw-product-table tr.red {
+  background-color: #f8d7da;
+}
+#ireport .esw-product-table tr.green {
+  background-color: #c7dacc;
+}
+#ireport .esw-product-table tr.yellow {
+  background-color: #fff3cd;
+}
+#ireport .esw-product-table tr:hover {
+  background-color: #eee;
+}
+#ireport .esw-product-table .serviceName{font-weight:bold}
+#ireport .esw-product-table tr td:first-child{
+  width:auto;
+}
+#ireport .header{
+  background-color: #eee;
+  color: #54585a;
+  font-weight: bold;
+  padding: 3px 5px;
+  white-space: nowrap;
+  height: 50px;
+  text-align: left;
+  cursor: pointer;
+}
+#systemConfigReport{}
+#healthStatus{text-align: center;width:50%;}
+#ireport .header.active {
+  color: #0176d3;
+  font-weight: bold;
+  text-decoration: underline;
+}
+#ireport .json-txt-lg{
+  white-space: pre-wrap;
+  font-family: monospace;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  overflow-x: auto;
+}
+#ireport .esw-ir-container{
+  vertical-align: top;
+}
+#ireport .esw-ir {
+  width: 100%;
+  display: none;
+}
+#ireport .esw-ir.active {
+  display: block;
+}
+.action-button {
+  background-color: #ddd;
+  color: #0176d3;
+  font-weight: bold;
+  border: none;
+  padding: 10px 15px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.action-button:hover {
+  background-color: #00758d;
+  color: #fff;
+}
+
+#ireport #services-table tr td:first-child{width:220px;}
+#ireport #generic-pair-value-table{margin-top:20px;}
+#ireport #generic-pair-value-table tr td:first-child{width:250px;}
 .customModule-main{ background-color: white;}
 .dwClassic table.esw-wrapper{
   font-family: "Helvetica Neue", Helvetica, Arial, Verdana, sans-serif;

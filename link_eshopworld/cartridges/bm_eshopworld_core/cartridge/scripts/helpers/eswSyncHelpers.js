@@ -16,9 +16,9 @@ const Constants = require('*/cartridge/scripts/util/Constants');
  * @return {boolean} - returns execute result
  */
 function syncSelectedProducts(saleableProducts) {
+    let payload;
     try {
         let productBatches = eswCatalogHelper.convertArrayToChunks(saleableProducts, Constants.CATALOG_API_CHUNK);
-        let payload;
         for (let i = 0; i < productBatches.length; i++) {
             payload = eswCatalogHelper.generateProductBatchPayload(productBatches[i]);
             eswCatalogHelper.sendCatalogData(payload);

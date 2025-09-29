@@ -149,6 +149,7 @@ const CATALOG_HELPER = {
             return catalogServiceResponse;
         } catch (e) {
             Logger.error('Catalog service call error: {0}', e.message);
+            eswHelper.eswInfoLogger('Catalog service call error', e, e.message, e.stack);
             return new Status(Status.ERROR);
         }
     },

@@ -51,7 +51,6 @@ function validateBasket(basket, validateTax) {
         } else if (!empty(session.privacy.eswProductRestricted) && session.privacy.eswProductRestricted) {
             result.error = true;
             result.message = Resource.msg('cart.esw.product.notavailable', 'esw', null);
-            delete session.privacy.eswProductRestricted;
         }
     }
 

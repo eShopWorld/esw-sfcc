@@ -1,7 +1,7 @@
 const formatMoney = require('dw/util/StringUtils').formatMoney;
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const collections = require('*/cartridge/scripts/util/collections');
-const Constants = require('*/cartridge/scripts/util/Constants');
+const Money = require('dw/value/Money');
 
 /**
  * get subtotal for calculated price model on order history.
@@ -37,11 +37,7 @@ function getOrderTotals(total, currency) {
  */
 function getEswCartShippingCost(shippingCost) {
     if (!eswHelper.isShippingCostConversionEnabled()) {
-        let shopperCurrency;
-        if (empty(request.httpCookies['esw.currency'])) {
-            shopperCurrency = eswHelper.applyDefaultCurrencyForCountry();
-        }
-        return new dw.value.Money(shippingCost.decimalValue, (!empty(shopperCurrency) ? shopperCurrency : request.httpCookies['esw.currency'].value));
+        return new dw.value.Money(shippingCost.decimalValue, request.getHttpCookies()['esw.currency'].value);
     }
     return eswHelper.getMoneyObject(shippingCost, true, false, false);
 }
@@ -73,7 +69,6 @@ function getDiscountForAccountHistory(discountAmount, currency) {
  * @param {dw.order.lineItemContainer} lineItemContainer - The current user's line item container
  */
 function orderTotals(lineItemContainer) {
-    let siteTaxationModel = eswHelper.getTaxationModel();
     let orderTotalsObject = {
         subTotal: '-',
         grandTotal: '-',
@@ -92,7 +87,7 @@ function orderTotals(lineItemContainer) {
             orderTotalsObject.totalTax = '-';
             orderTotalsObject.grandTotal = '-';
         } else if (orderTotalsObject.totalShippingCost !== '-') {
-            orderTotalsObject.grandTotal = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyPaymentAmount, eswShopperCurrencyCode) : getOrderTotals((siteTaxationModel === Constants.NET_TAXATION_MODEL ? lineItemContainer.totalNetPrice.decimalValue : lineItemContainer.totalGrossPrice.decimalValue), lineItemContainer.getCurrencyCode());
+            orderTotalsObject.grandTotal = (eswShopperCurrencyCode != null) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyPaymentAmount, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalGrossPrice.decimalValue, lineItemContainer.getCurrencyCode());
             orderTotalsObject.totalTax = (eswShopperCurrencyCode != null && !empty(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes)) ? getOrderTotals(lineItemContainer.originalOrder.custom.eswShopperCurrencyTaxes, eswShopperCurrencyCode) : getOrderTotals(lineItemContainer.totalTax.decimalValue, lineItemContainer.getCurrencyCode());
         }
         /* This Block handles order/ shipping discount for Account Order History (AOH) page
@@ -106,7 +101,19 @@ function orderTotals(lineItemContainer) {
         }
         if (eswHelper.isEswNativeShippingHidden() && eswHelper.isSelectedCountryOverrideShippingEnabled()) {
             orderTotalsObject.cartPageShippingCost = eswHelper.isESWSupportedCountry() ? getEswCartShippingCost(lineItemContainer.adjustedShippingTotalPrice) : null;
-            orderTotalsObject.grandTotal = eswHelper.getOrderTotalWithShippingCost(getEswCartShippingCost(lineItemContainer.shippingTotalPrice));
+            if (orderTotalsObject.grandTotal !== '-' && !empty(eswShopperCurrencyCode)) {
+                let shippingCost = parseFloat(eswHelper
+                    .getOrderTotalWithShippingCost(getEswCartShippingCost(lineItemContainer.shippingTotalPrice))
+                    .replace(/[^\d.]/g, ''));
+
+                let grandTotal = parseFloat(orderTotalsObject.grandTotal.replace(/[^\d.]/g, ''));
+
+                let totalPrice = new Money(grandTotal + shippingCost, eswShopperCurrencyCode);
+
+                orderTotalsObject.grandTotal = formatMoney(totalPrice);
+            } else {
+                orderTotalsObject.grandTotal = eswHelper.getOrderTotalWithShippingCost(getEswCartShippingCost(lineItemContainer.shippingTotalPrice));
+            }
         }
     }
     return orderTotalsObject;

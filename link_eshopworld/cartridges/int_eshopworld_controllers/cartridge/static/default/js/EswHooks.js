@@ -75,11 +75,25 @@ function updateCountryList() {
         e.preventDefault();
         $('.eshopworld-loader').removeClass('d-none');
         $('.btnCheckout').attr('disabled', 'disabled');
+        let domain = $(this).attr('data-tld');
         $.ajax({
             type: 'get',
             url: Urls.preparePreOrderRequest,
             data: '',
             success: function (response) {
+                if (response.eswAuthToken && response.eswAuthToken !== '') {
+                  // Set cookie with 1 hour expiration
+                    let expirationDate = new Date();
+                    expirationDate.setTime(expirationDate.getTime() + (3600 * 1000)); // 1 hour
+                    document.cookie = 'esw-shopper-access-token=' + response.eswAuthToken +
+                                ';path=/;domain=' + domain +
+                                ';expires=' + expirationDate.toUTCString() +
+                                ';SameSite=None;Secure';
+                } else {
+                    document.cookie = 'esw-shopper-access-token=' + response.eswAuthToken +
+                                ';path=/;domain=' + domain +
+                                ';expires=expired' + 'SameSite=None;Secure';
+                }
                 window.open(response.redirectURL, '_self');
             }
         });

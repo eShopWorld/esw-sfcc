@@ -1,16 +1,26 @@
 <isdecorate template="application/ESWMenuFrame">
     <isinclude template="util/modules" />
     <isset value="${true}" name="isReportForm" scope="page" />
-    <a href="${dw.web.URLUtils.https('ShippingMethodList-Dispatch', 'csrf_token', request.httpParameterMap.csrf_token.stringValue)}" id="shippingMethods" class="hidden"></a>
-    <a href="${dw.web.URLUtils.https('ViewOrderPreferences-Start', 'SelectedMenuItem', 'site-prefs', 'CurrentMenuItemId', 'site-prefs', 'csrf_token', request.httpParameterMap.csrf_token.stringValue)}" id="orderPreferences" class="hidden"></a>
+    <a href="${dw.web.URLUtils.https('ShippingMethodList-Dispatch', 'csrf_token', request.httpParameterMap.csrf_token.stringValue)}"
+        id="shippingMethods" class="hidden"></a>
+    <a href="${dw.web.URLUtils.https('ViewOrderPreferences-Start', 'SelectedMenuItem', 'site-prefs', 'CurrentMenuItemId', 'site-prefs',
+             'csrf_token', request.httpParameterMap.csrf_token.stringValue)}" id="orderPreferences" class="hidden"></a>
     <div class="esw-v-seperatpr">&nbsp;</div>
-    <table class="table esw-form-table" style="height:100vh;overflow:auto;">
+    <table class="table esw-form-table" id="ireport">
         <tr>
-            <th class="table_header w e s esw-report-header" style="position:sticky;top:85px;z-index:50">System Configuration Report</th>
+            <th class="tab header" id="systemConfigReport" data-target="systemConfigContent">System Configuration Report</th>
+            <th class="tab header active" id="healthStatus" data-target="healthStatusContent">Health Status
+             <div class="esw-button-containers">
+                    <a href="javascript:void(0)" data-href="${dw.web.URLUtils.https('EShopWorldBM-SendLogsToEsw')}" class="button input-container esw-send-log-btn" style="margin-right: 30px;">
+                        Send logs to ESW
+                    </a>
+                </div></th>
+
         </tr>
         <tr class="no-hover">
-            <td class="top">
-                <span class="item json-txt-lg">${pdict.configReport}</span>
+            <td class="esw-ir-container" colspan="4">
+                <isinclude template="report/partials/systemConfigContent" />
+                <isinclude template="report/partials/healthStatusContent" />
             </td>
         </tr>
     </table>

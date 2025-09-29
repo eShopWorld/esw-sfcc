@@ -32,7 +32,7 @@ const eswPricingHelper = {
                 }
             }
         } catch (e) {
-            eswHelper.eswInfoLogger('ESW Localize Pricing Job error: ' + e);
+            eswHelper.eswInfoLogger('ESW Localize Pricing Job error: ' + e, e, e.message, e.stack);
         }
         return selectedRoundingRule;
     },
@@ -118,6 +118,7 @@ const eswPricingHelper = {
     * @returns {Object} conversionPref JSON
     */
     getConversionPreference: function (localizeObj) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         try {
             if (localizeObj
                 && !empty(localizeObj)
@@ -134,6 +135,7 @@ const eswPricingHelper = {
             return conversionPref;
         } catch (e) {
             logger.error(e.message + e.stack);
+            eswHelper.eswInfoLogger('Error in getConversionPreference', e, e.message, e.stack);
         }
         return null;
     },
@@ -197,6 +199,7 @@ const eswPricingHelper = {
                 }
             } catch (e) {
                 logger.error(e.message + e.stack);
+                eswHelper.eswInfoLogger('Error in  setOverridePriceBooks', e, e.message, e.stack);
             }
             return true;
         }

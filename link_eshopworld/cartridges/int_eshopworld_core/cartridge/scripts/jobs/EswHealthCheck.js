@@ -338,6 +338,7 @@ function execute(args) {
         }
     } catch (e) {
         Logger.error('EswHealthChecJobError' + JSON.stringify(e));
+        eswCoreHelper.eswInfoLogger('Health Check error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);
