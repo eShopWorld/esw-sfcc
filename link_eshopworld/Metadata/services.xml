@@ -42,6 +42,24 @@
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
 
+     <service-credential service-credential-id="EswAzureInsightServiceCredentials">
+        <url>https://westeurope-5.in.applicationinsights.azure.com/v2/track</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswOcapiDataAuthServiceCredentials">
+        <url>https://account.demandware.com/dw/oauth2/access_token</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswDispatchOcapiJobServiceCredentials">
+        <url>https://{bm_hostname}/s/-/dw/data/v{ocapi_version}/jobs/{job_id}/executions</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
     <service-credential service-credential-id="ESWOrderCreationCredentials">
         <url></url>
         <user-id/>
@@ -63,6 +81,18 @@
         <url></url>
         <user-id/>
         <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswOcapiDataAuthServiceCredentials">
+        <url>https://account.demandware.com/dw/oauth2/access_token</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export"></password>
+    </service-credential>
+
+    <service-credential service-credential-id="EswMoInventorySyncCredentials">
+        <url>https://{hostname}/s/-/dw/data/v23_1/inventory_lists/{inventory_ID}/product_inventory_records/{productID}</url>
+        <user-id/>
+        <password encrypted="true" encryption-type="common.export">tcHvPeFhr1VPnhV6t4P8T/h7+l78ihrrlVKPtjc7XU4=</password>
     </service-credential>
 
     <service-profile service-profile-id="ESWSFTPProfile">
@@ -162,6 +192,14 @@
         <credential-id>EswGetAsnPackageCredentials</credential-id>
     </service>
 
+    <service service-id="EswAzureInsightService">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>EswAzureInsightService</log-prefix>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswAzureInsightServiceCredentials</credential-id>
+    </service>
+    
    <service service-id="ESWOrderCreation">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
@@ -173,7 +211,29 @@
         <credential-id>ESWOrderCreationCredentials</credential-id>
     </service>
 
-     <service service-id="EswOcapiBasketService">
+    <service service-id="EswOcapiDataAuthService">
+        <service-type>HTTPForm</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswOcapiDataAuthServiceCredentials</credential-id>
+    </service>
+    
+    <service service-id="EswDispatchOcapiJobService">
+        <service-type>HTTPForm</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswDispatchOcapiJobServiceCredentials</credential-id>
+    </service>
+
+    <service service-id="EswOcapiBasketService">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
         <log-prefix>EswOcapiBasketService</log-prefix>
@@ -204,5 +264,27 @@
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>EswGetJwksServiceCredentials</credential-id>
+    </service>
+
+    <service service-id="EswOcapiDataAuthService">
+        <service-type>HTTPForm</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswOcapiDataAuthServiceCredentials</credential-id>
+    </service>
+
+    <service service-id="EswMoInventorySync">
+        <service-type>HTTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix/>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>true</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>EswServiceProfile</profile-id>
+        <credential-id>EswMoInventorySyncCredentials</credential-id>
     </service>
 </services>

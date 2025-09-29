@@ -72,8 +72,10 @@ function execute() {
                         } else if (priceFeedResult.status === 'ERROR' || empty(priceFeedResult.object)) {
                             if (priceFeedResult.error === 403) {
                                 logger.error('ESW PriceFeed Service Forbidden Error: 403: Make sure that service URL configurations, Client ID and Client Secret are aligned and correct.');
+                                eswHelper.eswInfoLogger('Error', '', 'ESW PriceFeed Service Forbidden Error: 403', 'Make sure that service URL configurations, Client ID and Client Secret are aligned and correct.');
                                 return new Status(Status.ERROR);
                             }
+                            eswHelper.eswInfoLogger('Error', 'ESW PriceFeed Service Forbidden Error: 403', priceFeedResult.error, priceFeedResult.msg);
                             logger.error('ESW PriceFeed Service Error: {0} {1}', priceFeedResult.error, priceFeedResult.msg);
                             return new Status(Status.ERROR);
                         }
@@ -102,10 +104,12 @@ function execute() {
                 }
             } else if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
                 logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+                eswHelper.eswInfoLogger('Error', '', 'ESW Service Error', oAuthResult.errorMessage);
                 return new Status(Status.ERROR);
             }
         }
     } catch (e) {
+        eswHelper.eswInfoLogger('Price Feed error', e, e.message, e.stack);
         logger.error('ESW PriceFeed Error: {0} {1}', e.message, e.stack);
         return new Status(Status.ERROR);
     }

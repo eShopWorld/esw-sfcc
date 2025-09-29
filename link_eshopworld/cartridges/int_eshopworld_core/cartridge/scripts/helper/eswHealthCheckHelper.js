@@ -1,6 +1,7 @@
 'use strict';
 const System = require('dw/system/System');
 const Logger = require('dw/system/Logger').getLogger('ESWHealthCheckJobLog', 'ESWHealthCheckJobLog');
+
 const eswHealthCheckHelper = {
 /**
  * Chceck if service is down or has 500 error
@@ -50,6 +51,7 @@ const eswHealthCheckHelper = {
  * @returns {Object} - Service object
  */
     getServiceRes: function (serviceName, serviceTestJson) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
         let serviceResponse = {};
         try {
@@ -63,6 +65,7 @@ const eswHealthCheckHelper = {
                 case 'EswCheckoutV2Service.SFRA':
                 case 'EswCheckoutV3Service.SFRA':
                 case 'EswCheckoutV2Service.SG':
+                    eswHelper.setOAuthToken();
                     serviceResponse = eswCoreService.getPreorderServiceV2().call(serviceTestJson.payload);
                     break;
                 case 'EswPackageV4Service':
@@ -75,13 +78,23 @@ const eswHealthCheckHelper = {
                     serviceResponse = eswCoreService.getPricingV3Service().call(serviceTestJson.payload);
                     break;
                 case 'EswPriceFeedV4Service':
-                    serviceResponse = eswCoreService.getPricingAdvisorService().call(serviceTestJson.payload);
+                case 'EswPriceFeedService':
+                    serviceResponse = eswCoreService.getPricingAdvisorService().call(serviceTestJson.payload.eswOAuthToken);
                     break;
                 case 'EswGetJwksService':
                     serviceResponse = eswCoreService.getJwksFromEswService().call(serviceTestJson.payload);
                     break;
+                case 'EswGetAsnPackage':
+                    serviceResponse = eswCoreService.getAsnServiceForEswToSfcc().call(serviceTestJson.payload);
+                    break;
                 case 'ESWCatalogService':
                     serviceResponse = eswCoreService.getCatalogService().call(serviceTestJson.payload);
+                    break;
+                case 'EswAzureInsightService':
+                    serviceResponse = eswCoreService.getEswAzureInsightService().call(serviceTestJson.payload);
+                    break;
+                case 'EswOcapiDataAuthService':
+                    serviceResponse = eswCoreService.getDataOcapiAuthToken().call(serviceTestJson.payload);
                     break;
                 default:
                 // Do nothing

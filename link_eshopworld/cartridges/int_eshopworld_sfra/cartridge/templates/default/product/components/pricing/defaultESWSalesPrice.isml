@@ -12,7 +12,7 @@
                         <span class="sr-only">
                             ${Resource.msg('label.price.reduced.from', 'pricing', null)}
                         </span>
-                        <isif condition="${!eswHelper.isAjaxCall() && typeof price === 'object' && !('formatted' in pdict.productStrikePrice)}">
+                        <isif condition="${!eswHelper.isAjaxCall() && typeof price === 'object' && pdict.productStrikePrice && !('formatted' in pdict.productStrikePrice)}">
                             ${pdict.productStrikePrice.decimalPrice}
                         <iselse/>
                             ${pdict.productStrikePrice.formatted}

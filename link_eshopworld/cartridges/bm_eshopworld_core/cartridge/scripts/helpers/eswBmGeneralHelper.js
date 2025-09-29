@@ -4,67 +4,22 @@
 const Site = require('dw/system/Site');
 const eswCoreBmHelper = require('*/cartridge/scripts/helper/eswBmHelper');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-
+const Resource = require('dw/web/Resource');
+const eswImHelepr = require('*/cartridge/scripts/helper/eswIntegrationMonitorHelper');
 /**
  * update monitoring configuration object
  * @param {Object} configReport - configReport object
  * @returns {Time | null} - last modified time or null if not found
  */
 function updateIntegrationMonitoring(configReport) {
-    const Transaction = require('dw/system/Transaction');
-    let CustomObjectMgr = require('dw/object/CustomObjectMgr');
-    let eswIntegrationMonitoring = CustomObjectMgr.getCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
-    Transaction.wrap(function () {
-        if (eswIntegrationMonitoring) {
-            CustomObjectMgr.remove(eswIntegrationMonitoring);
-        }
-        eswIntegrationMonitoring = CustomObjectMgr.createCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
-        eswIntegrationMonitoring.getCustom().configReport = configReport;
-    });
-    return !empty(eswIntegrationMonitoring) ? eswHelper.formatTimeStamp(eswIntegrationMonitoring.lastModified) : null;
+    return eswImHelepr.updateIntegrationMonitoring(configReport);
 }
 /**
  * Return the countries configs
  * @returns {Array} - array of countries
  */
 function getCountriesConfigurations() {
-    let logger = require('dw/system/Logger');
-    try {
-        let allCountriesCO = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
-            countriesArr = [];
-        if (allCountriesCO.count > 0) {
-            while (allCountriesCO.hasNext()) {
-                let countryDetail = allCountriesCO.next();
-                let countryCode = countryDetail.getCustom().countryCode;
-                if (!empty(countryCode)) {
-                    countriesArr.push({
-                        countryCode: countryCode,
-                        isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
-                        name: countryDetail.getCustom().name,
-                        defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
-                        eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
-                        baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
-                        isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
-                        isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
-                        ESW_HUB_Address: {
-                            hubAddress: countryDetail.getCustom().hubAddress,
-                            hubAddressState: countryDetail.getCustom().hubAddressState,
-                            hubAddressCity: countryDetail.getCustom().hubAddressCity,
-                            hubAddressPostalCode: countryDetail.getCustom().hubAddressPostalCode
-                        },
-                        eswPackage: {
-                            eswToSfcc: countryDetail.getCustom().eswToSfcc,
-                            sfccToEsw: countryDetail.getCustom().sfccToEsw
-                        }
-                    });
-                }
-            }
-        }
-        return countriesArr;
-    } catch (error) {
-        logger.error('Error while fetching Countries Configurations {0} ', error);
-    }
-    return null;
+    return eswHelper.getCountriesConfigurations();
 }
 /**
  * Return the currencies configs
@@ -265,6 +220,11 @@ function refactorCustomObjectResponse(customObject) {
                         value: listArray
                     });
                 }
+            } else if (obj.id === 'eswSelfhostedOcPageUrl') {
+                jsonPrefrencesArray.push({
+                    displayName: 'eswSelfhostedOcPageController',
+                    value: !empty(obj.currentValue) ? obj.currentValue : ''
+                });
             } else {
                 jsonPrefrencesArray.push({
                     displayName: obj.id,
@@ -275,6 +235,7 @@ function refactorCustomObjectResponse(customObject) {
     }
     return jsonPrefrencesArray;
 }
+
 /**
  * Function to create Config Report
  * @param {string} csrf - csrf
@@ -283,7 +244,6 @@ function refactorCustomObjectResponse(customObject) {
 function loadReport(csrf) {
     let logger = require('dw/system/Logger');
     let URLUtils = require('dw/web/URLUtils');
-    let Resource = require('dw/web/Resource');
     let configReport = [];
     let lastModified;
     let checkoutServiceName = eswHelper.getCheckoutServiceName();
@@ -410,7 +370,7 @@ function loadReport(csrf) {
         logger.error('Error while updating config object {0} ', error);
         let eswIntegrationMonitoringObject = eswHelper.getCustomObjectDetails('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
         if (!empty(eswIntegrationMonitoringObject)) {
-            configReport = !empty(eswIntegrationMonitoringObject.custom.configReport) ? JSON.parse(eswIntegrationMonitoringObject.custom.configReport) : configReport;
+            configReport = eswIntegrationMonitoringObject.custom && !empty(eswIntegrationMonitoringObject.custom.configReport) ? JSON.parse(eswIntegrationMonitoringObject.custom.configReport) : configReport;
             lastModified = !empty(eswIntegrationMonitoringObject) ? eswHelper.formatTimeStamp(eswIntegrationMonitoringObject.lastModified) : null;
         }
     }
@@ -518,6 +478,15 @@ function storeMixedPkgConf(reqForm) {
         }
     }
 }
+/**
+ * Retrieves the integration report JSON.
+ *
+ * @returns {Object} An object containing the integration report and the last modified timestamp.
+ */
+function getIntegrationResportJson() {
+    let logs = eswImHelepr.getLogsJson();
+    return { imReport: logs, lastModifed: logs.lastModifed };
+}
 
 exports.loadGroups = loadGroups;
 exports.removeElements = removeElements;
@@ -528,3 +497,4 @@ exports.loadReport = loadReport;
 exports.updateIntegrationMonitoring = updateIntegrationMonitoring;
 exports.convertMixedPkgInputToArr = convertMixedPkgInputToArr;
 exports.storeMixedPkgConf = storeMixedPkgConf;
+exports.getIntegrationResportJson = getIntegrationResportJson;

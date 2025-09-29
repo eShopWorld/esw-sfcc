@@ -13,10 +13,10 @@
 /* API includes */
 const URLUtils = require('dw/web/URLUtils');
 const ArrayList = require('dw/util/ArrayList');
-
 /* Script Modules */
 const Constants = require('*/cartridge/scripts/util/Constants');
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
 const app = require('*/cartridge/scripts/app');
 const guard = require('*/cartridge/scripts/guard');
 const Response = require('*/cartridge/scripts/util/Response');
@@ -26,28 +26,32 @@ const Response = require('*/cartridge/scripts/util/Response');
  * this function will set cookies only if there is no cookie set for any variable
  */
 function setInitialCookies() {
-    let country = eswHelper.getAvailableCountry();
-    let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
-    let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
+    try {
+        let country = eswHelper.getAvailableCountry();
+        let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
+        let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
 
-    eswHelper.createInitialCookies(country, currencyCode, locale);
-    eswHelper.setCustomerCookies();
+        eswHelper.createInitialCookies(country, currencyCode, locale);
+        eswHelper.setCustomerCookies();
 
-    let selectedFxRate = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate) : '';
-    if (!selectedFxRate && selectedFxRate !== null) {
-        country = eswHelper.getAvailableCountry();
-        if (eswHelper.checkIsEswAllowedCountry(country)) {
-            if (!eswHelper.overridePrice(country)) {
-                eswHelper.setBaseCurrencyPriceBook(eswHelper.getBaseCurrencyPreference());
+        let selectedFxRate = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate) : '';
+        if (!selectedFxRate && selectedFxRate !== null) {
+            country = eswHelper.getAvailableCountry();
+            if (eswHelper.checkIsEswAllowedCountry(country)) {
+                if (!eswHelper.overridePrice(country)) {
+                    eswHelper.setBaseCurrencyPriceBook(eswHelper.getBaseCurrencyPreference());
+                }
+            }
+            if (eswHelper.checkIsEswAllowedCountry(eswHelper.getAvailableCountry()) != null) {
+                if (request.httpCookies['esw.currency'] == null) {
+                    eswHelper.selectCountry(eswHelper.getAvailableCountry(), currencyCode, locale);
+                } else {
+                    eswHelper.selectCountry(eswHelper.getAvailableCountry(), request.httpCookies['esw.currency'].value, locale);
+                }
             }
         }
-        if (eswHelper.checkIsEswAllowedCountry(eswHelper.getAvailableCountry()) != null) {
-            if (request.httpCookies['esw.currency'] == null) {
-                eswHelper.selectCountry(eswHelper.getAvailableCountry(), currencyCode, locale);
-            } else {
-                eswHelper.selectCountry(eswHelper.getAvailableCountry(), request.httpCookies['esw.currency'].value, locale);
-            }
-        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('EshopWorld-setInitialCookies Error', error, error.message, error.stack);
     }
 }
 
@@ -213,7 +217,8 @@ function preOrderRequest() {
     let result,
         isAjax = Object.hasOwnProperty.call(request.httpHeaders, 'x-requested-with'),
         logger = require('dw/system/Logger'),
-        redirectURL;
+        redirectURL,
+        eswShopperAccessToken = '';
 
     let BasketMgr = require('dw/order/BasketMgr');
     let currentBasket = BasketMgr.getCurrentBasket();
@@ -280,14 +285,13 @@ function preOrderRequest() {
              URLUtils.https('EShopWorldSG-EswEmbeddedCheckout', Constants.EMBEDDED_CHECKOUT_QUERY_PARAM, JSON.parse(result.object).redirectUrl).toString() :
              JSON.parse(result.object).redirectUrl;
             if ('shopperAccessToken' in JSON.parse(result.object)) {
-                eswHelper.createCookie('esw-shopper-access-token', JSON.parse(result.object).shopperAccessToken, '/', 3600, eswHelper.getTopLevelDomain());
-            } else {
-                eswHelper.createCookie('esw-shopper-access-token', '', '/', 'expired', eswHelper.getTopLevelDomain());
+                eswShopperAccessToken = JSON.parse(result.object).shopperAccessToken;
             }
             delete session.privacy.guestCheckout;
         }
     } catch (e) {
         logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
+        eswHelper.eswInfoLogger('EshopWorld-preOrderRequest Error', e, e.message, e.stack);
         if (e.message === 'SFCC_ORDER_CREATION_FAILED') {
             redirectURL = URLUtils.https('Cart-Show', 'eswRetailerCartIdNullException', true).toString();
         } else if (e.message === 'ATTRIBUTES_MISSING_IN_PRE_ORDER') {
@@ -298,7 +302,8 @@ function preOrderRequest() {
     }
     if (isAjax) {
         Response.renderJSON({
-            redirectURL: redirectURL
+            redirectURL: redirectURL,
+            eswAuthToken: eswShopperAccessToken
         });
     } else {
         response.redirect(redirectURL);
@@ -333,6 +338,15 @@ function handlePreOrderRequestV2() {
 
     let requestObj = eswServiceHelper.preparePreOrder();
     requestObj.retailerCartId = eswServiceHelper.createOrder();
+    if (eswHelper.isEswSelfHostedOcEnabled()) {
+        let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestObj.retailerCartId);
+        if (!empty(selfHostedOcMetadata)) {
+            requestObj.retailerCheckoutExperience.metadataItems.push({
+                Name: selfHostedOcMetadata.metadataName,
+                Value: selfHostedOcMetadata.metadataValue
+            });
+        }
+    }
     eswHelper.validatePreOrder(requestObj, true);
     session.privacy.confirmedOrderID = requestObj.retailerCartId;
 
@@ -345,10 +359,14 @@ function handlePreOrderRequestV2() {
  * Function to return to home page after rebuilding cart
  */
 function eswBackToHome() {
-    // Rebuild cart starts here
-    eswHelper.rebuildCart();
-    // Rebuild cart ends here
-    response.redirect(URLUtils.httpHome());
+    try {
+        // Rebuild cart starts here
+        eswHelper.rebuildCart();
+        // Rebuild cart ends here
+        response.redirect(URLUtils.httpHome());
+    } catch (error) {
+        eswHelper.eswInfoLogger('EshopWorld-eswBackToHome Error', error, error.message, error.stack);
+    }
 }
 
 /**
@@ -366,10 +384,14 @@ function getEswAbTastyScriptPath() {
  * Function to return to cart page after rebuilding cart
  */
 function eswBackToCart() {
-    // Rebuild cart starts here
-    eswHelper.rebuildCart();
-    // Rebuild cart ends here
-    response.redirect(URLUtils.https('Cart-Show').toString());
+    try {
+        // Rebuild cart starts here
+        eswHelper.rebuildCart();
+        // Rebuild cart ends here
+        response.redirect(URLUtils.https('Cart-Show').toString());
+    } catch (error) {
+        eswHelper.eswInfoLogger('EshopWorld-eswBackToCart Error', error, error.message, error.stack);
+    }
 }
 
 /**
@@ -379,11 +401,11 @@ function registerCustomer() {
     let CustomerMgr = require('dw/customer/CustomerMgr');
     let OrderMgr = require('dw/order/OrderMgr');
     let Transaction = require('dw/system/Transaction');
-    let logger = require('dw/system/Logger');
     let orderNumber,
         existerCustomer;
 
     try {
+        delete session.privacy.keepOrderIDForRegistration;
         orderNumber = session.privacy.confirmedOrderID;
         let order = OrderMgr.getOrder(orderNumber);
         let loginForm;
@@ -455,7 +477,7 @@ function registerCustomer() {
         } else {
             response.redirect(URLUtils.url('Account-StartRegister').toString());
         }
-        logger.error('ESW Plugin Account Creation Error: {0}', error.message);
+        eswHelper.eswInfoLogger('EshopWorld-RegisterCustomer Error', error, error.message, error.stack);
     }
 }
 /**
@@ -566,15 +588,20 @@ function notify() {
                     ocHelper.updateSfccPromotionPriceUponOrderConfirmation(order);
 
                     OrderMgr.placeOrder(order);
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_READY);
 
                     if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId)) {
                         ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId, obj.shopperCheckoutExperience.saveAddressForNextPurchase);
                     }
-
-                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    if (eswHelper.isEswPostOrderSyncEnabled()) {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+                        order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+                    } else {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_READY);
+                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        }
                     }
                 }
             });
@@ -724,7 +751,7 @@ function processWebHooks() {
  * Function to be called to render ESW Embeded Checkout page
  */
 function eswEmbeddedCheckout() {
-    // This controller will be in use only if int_eshopworld_eckout cartridge is in the path
+    // This controller will be in use only if int_eshopworld_spark cartridge is in the path
     const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
     var iframeUrlQueryParam = request.httpParameterMap.get(Constants.EMBEDDED_CHECKOUT_QUERY_PARAM).stringValue;
     var eswIframeCheckoutUrl = empty(iframeUrlQueryParam) ? request.httpCookies[embCheckoutHelper.getEswIframeCookieName()].value : iframeUrlQueryParam;
@@ -775,7 +802,28 @@ function eswEmbeddedCheckoutPreOrderRequest() {
     }
     Response.renderJSON(response);
 }
+/**
+ * Function to be called to render Self Hosted Order Confirmation page
+ */
+function showConfirmation() {
+    let orderId = request.httpParameterMap.orderId.stringValue;
+    let order = orderId ? selfHostedOcHelper.getEswOrderDetail(orderId) : null;
 
+    if (!order) {
+        response.setStatus(404);
+        app.getView().render('error/notfound'); // Reuse your 404 template
+        return;
+    }
+    if (eswHelper.isCheckoutRegisterationEnabled()) {
+        session.privacy.confirmedOrderID = order.orderNo;
+        session.privacy.keepOrderIDForRegistration = true;
+    }
+
+    app.getView({
+        Order: order,
+        ContinueURL: URLUtils.https('Account-RegistrationForm') // Optional
+    }).render('checkout/eswOrderConfirmationSG');
+}
 /* Web exposed methods */
 
 /** Gets ESW header bar.
@@ -844,3 +892,7 @@ exports.EswEmbeddedCheckoutNotify = guard.ensure(['post'], eswEmbeddedCheckoutNo
 /** Handles the pre order request
  * @see module:controllers/EShopWorldSG~EswEmbeddedCheckoutPreOrderRequest */
 exports.EswEmbeddedCheckoutPreOrderRequest = guard.ensure(['post'], eswEmbeddedCheckoutPreOrderRequest);
+
+/** Handles Self Hosted Order Confirmation request
+ * @see module:controllers/EShopWorldSG~OrderConfirm */
+exports.OrderConfirm = guard.ensure(['get'], showConfirmation);

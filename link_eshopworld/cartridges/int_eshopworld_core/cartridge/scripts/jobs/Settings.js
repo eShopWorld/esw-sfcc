@@ -1,5 +1,6 @@
 const Logger = require('dw/system/Logger');
 const CustomObjectMgr = require('dw/object/CustomObjectMgr');
+let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 /**
  * Returns Country Data
  * @param {string} country - country for data
@@ -113,10 +114,12 @@ function execute(args) {
         let customObj = CustomObjectMgr.getCustomObject('ESW_PA_DATA', 'ESW_PA_DATA');
         if (args.settingType === 'countries') {
             if (!setCountriesData(JSON.parse(customObj.custom.countryAdjustmentJson))) {
+                eswHelper.eswInfoLogger('Error', '', 'ESW Settings Job error', 'setCountriesData Error');
                 return new Status(Status.ERROR);
             }
         } else if (args.settingType === 'currencies') {
             if (!setCurrenicesData(JSON.parse(customObj.custom.fxRatesJson))) {
+                eswHelper.eswInfoLogger('Error', '', 'ESW Settings Job error', 'setcurrenciesData Error');
                 return new Status(Status.ERROR);
             }
         } else if (args.settingType === 'global') {
@@ -127,6 +130,7 @@ function execute(args) {
         }
     } catch (e) {
         Logger.error('ESW Settings Job Error: {0} {1}', e.message, e.stack);
+        eswHelper.eswInfoLogger('ESW Settings Job error:', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);

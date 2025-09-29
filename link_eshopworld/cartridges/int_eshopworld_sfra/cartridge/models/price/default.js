@@ -10,12 +10,18 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
  * @returns {Object} price formatted as a simple object
  */
 function toPriceModel(price) {
-    let value = price.available ? price.getDecimalValue().get() : null;
-    let currency = price.available ? price.getCurrencyCode() : null;
-    let formattedPrice = price.available ? formatMoney(price) : null;
+    let value;
+    let currency;
     let decimalPrice;
-
-    if (formattedPrice) { decimalPrice = price.getDecimalValue().toString(); }
+    let formattedPrice;
+    try {
+        value = price.available ? price.getDecimalValue().get() : null;
+        currency = price.available ? price.getCurrencyCode() : null;
+        formattedPrice = price.available ? formatMoney(price) : null;
+        if (formattedPrice) { decimalPrice = price.getDecimalValue().toString(); }
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW toPriceModel Error', error, error.message, error.stack);
+    }
 
     return {
         value: value,

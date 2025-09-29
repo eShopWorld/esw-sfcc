@@ -50,6 +50,47 @@ const eswEmbCheckoutHelper = {
         return null; // Return null if 'eswShopperIpAddress' is not found
     },
     /**
+     * set customer custom object
+     * @param {*} retailerOrderId - retailerOrderId
+     * @param {*} order - order
+     */
+    setCustomerOrderCustomObject: function (retailerOrderId, order) {
+        let CustomObjectMgr = require('dw/object/CustomObjectMgr'),
+            Transaction = require('dw/system/Transaction');
+        Transaction.wrap(function () {
+            let co = CustomObjectMgr.getCustomObject('ESW_ORDER_DATA', retailerOrderId);
+
+            if (co) {
+                CustomObjectMgr.remove(co);
+            }
+            co = CustomObjectMgr.createCustomObject('ESW_ORDER_DATA', retailerOrderId);
+            co.custom.orderNumber = order.orderNo;
+            co.custom.orderToken = order.getOrderToken();
+        });
+    },
+    /**
+     * Get customer custom object
+     * @param {*} retailerOrderId - retailerOrderId
+     * @returns {Object}- order number
+     */
+    getCustomerOrderCustomObject: function (retailerOrderId) {
+        let CustomObjectMgr = require('dw/object/CustomObjectMgr'),
+            co,
+            orderNumber,
+            orderToken,
+            Transaction = require('dw/system/Transaction');
+        Transaction.wrap(function () {
+            co = CustomObjectMgr.getCustomObject('ESW_ORDER_DATA', retailerOrderId);
+
+            if (co) {
+                orderNumber = co.getCustom().orderNumber;
+                orderToken = co.getCustom().orderToken;
+                CustomObjectMgr.remove(co);
+            }
+        });
+        return { orderNumber: orderNumber, orderToken: orderToken };
+    },
+    /**
      * Update order attributes related to embedded checkout order flow only, must be wrapped in a Transaction.
      * @param {dw.order.Order} order - DW order object
      * @param {Object} obj - object containing cartItems
@@ -60,6 +101,7 @@ const eswEmbCheckoutHelper = {
         try {
             let fxRate = eswHelper.getESWCurrencyFXRate(obj.checkoutTotal.shopper.currency, obj.deliveryCountryIso);
             if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+                this.setCustomerOrderCustomObject(obj.retailerCartId, order);
                 order.custom.eswBasketUuid = obj.retailerCartId;
                 order.custom.eswShopperIpAddress = this.getShopperIpAddressValue(obj);
                 order.custom.eswShopperCurrencyTotalOrderDiscount = eswHelper.getOrderDiscount(order, { currencyCode: obj.checkoutTotal.shopper.currency }).value;
@@ -133,10 +175,16 @@ const eswEmbCheckoutHelper = {
         // Add konbini related order information
             let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
             if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
-                order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                order.setExportStatus(Order.EXPORT_STATUS_READY);
-                if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                    order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                if (eswHelper.isEswPostOrderSyncEnabled()) {
+                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+                    order.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+                    order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+                } else {
+                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                    order.setExportStatus(Order.EXPORT_STATUS_READY);
+                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    }
                 }
             }
         }

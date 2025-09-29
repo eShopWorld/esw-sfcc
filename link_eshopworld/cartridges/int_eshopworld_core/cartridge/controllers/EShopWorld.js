@@ -6,10 +6,14 @@ const server = require('server');
 /* API includes */
 const logger = require('dw/system/Logger');
 const Order = require('dw/order/Order');
+const Site = require('dw/system/Site').getCurrent();
 
 /* Script Modules */
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswControllerHelper = require('*/cartridge/scripts/helper/eswControllersHelper');
+const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
+const eswMultiOriginHelper = require('*/cartridge/scripts/helper/eswMultiOriginHelper');
+const eswOcapiServiceHelper = require('*/cartridge/scripts/services/EswOcapiService').getEswOcapiServices;
 
 /**
  * function to get cart item
@@ -44,6 +48,7 @@ server.post('Notify', function (req, res, next) {
     eswHelper.eswInfoLogger('Esw Order Confirmation Request Payload', JSON.stringify(obj));
     if (!eswHelper.isValidEswAuthorization()) {
         response.setStatus(401);
+        eswHelper.eswInfoLogger('ESW Order Confirmation Error', 'ESW Manual Logs', 'Authentication Token did not match');
         logger.error('ESW Order Confirmation Error: Authentication Token did not match');
     } else {
         responseJSON = {
@@ -128,15 +133,22 @@ server.post('Notify', function (req, res, next) {
                     // Add konbini related order information
                     let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
                     if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
-                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                        order.setExportStatus(Order.EXPORT_STATUS_READY);
-                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        if (eswHelper.isEswPostOrderSyncEnabled()) {
+                            order.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+                            order.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+                        } else {
+                            order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                            order.setExportStatus(Order.EXPORT_STATUS_READY);
+                            if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                                order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                            }
                         }
                     }
                 }
             });
         } catch (e) {
+            eswHelper.eswInfoLogger('ESW Service Error', JSON.stringify(obj), e.message, e.stack);
             logger.error('ESW Service Error: {0}', e.message);
             // In SFCC, SystemError suggest exceptions initiated by system like optimistic lock exception etc.
             if (e.name === 'SystemError') {
@@ -187,14 +199,101 @@ server.post('ProcessExternalOrder', function (req, res, next) {
     next();
 });
 
+
 /**
- * Just a test controller, should be removed when JWT is available in requests from ESP
+ * Controller to send logs to ESW Azure Insight so that no retailer interaction is require
  */
-server.post('TestEswAuth', function (req, res, next) {
-    let isValidAuth = eswHelper.isValidEswAuthorization();
-    res.json({
-        isValidAuth: isValidAuth
-    });
+server.get('GetIntegtrationMonitoring', function (req, res, next) {
+    let jsonResponse = { success: false, message: 'An error occured while executing jo via OCAPI' };
+    if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
+        response.setStatus(401);
+        logger.error('ESW GetIntegtrationMonitoring Error: Basic Authentication Token did not match');
+        jsonResponse = { success: false, message: 'Auth token does not match' };
+    } else {
+        let getOcapiAuthToken = eswHelper.getAdminOAuthToken();
+        let ocapiDispatchJobServiceRes = null;
+        if (getOcapiAuthToken.success) {
+            let ocapiDispatchJobService = eswCoreService.dispatchJobViaOcapi();
+            ocapiDispatchJobServiceRes = ocapiDispatchJobService.call({
+                dataOcapiAuthToken: getOcapiAuthToken.token,
+                jobId: 'eswSubmitLogsForReviewJob'
+            });
+            if (ocapiDispatchJobServiceRes && ocapiDispatchJobServiceRes.isOk()) {
+                jsonResponse = {
+                    success: true,
+                    message: 'Process initiated successfully. Detailed logs are being sent to Azure Application Insights. Please allow up to 5 minutes for them to become available for querying.'
+                };
+            } else {
+                // Calling job service failed
+                jsonResponse = {
+                    success: true,
+                    message: ocapiDispatchJobServiceRes.getErrorMessage()
+                };
+            }
+        } else {
+            // OCAPI auth service failed
+            jsonResponse = {
+                success: false,
+                message: getOcapiAuthToken.error
+            };
+        }
+    }
+    res.json(jsonResponse);
     next();
 });
+
+server.post('CreateBasket', function (req, res, next) {
+    if (empty(request.httpParameters.get('country-code'))) {
+        throw new Error('ParamCountryCodeMissingException');
+    }
+    let ocapiResponse = { success: false };
+    let reqBodyJson = JSON.parse(req.body);
+    let authKey = request.httpHeaders.authorization;
+    let inventoryUpdateResponse = null;
+    if (eswHelper.isEnabledMultiOrigin()) {
+        inventoryUpdateResponse = eswMultiOriginHelper.syncMoInventoryWithSfcc(reqBodyJson.product_items);
+        if (inventoryUpdateResponse.success) {
+            ocapiResponse = eswOcapiServiceHelper.ocapiBasketService().call({
+                httpMethod: 'POST',
+                authToken: authKey,
+                siteID: Site.getCurrent().getID(),
+                payload: reqBodyJson,
+                countryCode: request.httpParameters.get('country-code')
+            });
+        }
+    }
+    if (ocapiResponse.isOk()) {
+        ocapiResponse = JSON.parse(ocapiResponse.object.text);
+    }
+    res.json(ocapiResponse);
+    next();
+});
+
+server.post('IsInventoryAvailable', function (req, res, next) {
+    const Resource = require('dw/web/Resource');
+    const ProductInventoryMgr = require('dw/catalog/ProductInventoryMgr');
+    const ProductMgr = require('dw/catalog/ProductMgr');
+
+
+    let inventoryUpdateResponse = { success: false };
+    let reqBodyJson = JSON.parse(req.body);
+    if (eswHelper.isEnabledMultiOrigin()) {
+        inventoryUpdateResponse = eswMultiOriginHelper.syncMoInventoryWithSfcc(reqBodyJson.productItems);
+    }
+    let inventoryList = ProductInventoryMgr.getInventoryList();
+    let inventoryRec = inventoryList ? inventoryList.getRecord(reqBodyJson.productItems[0].productId) : null;
+    let result = {
+        success: inventoryUpdateResponse.success,
+        message: inventoryUpdateResponse.success ? null : Resource.msgf(
+                        'error.alert.selected.quantity.cannot.be.added.for',
+                        'product',
+                        null,
+                        inventoryRec.ATS.value,
+                        ProductMgr.getProduct(reqBodyJson.productItems[0].productId).getName()
+                    )
+    };
+    res.json(result);
+    next();
+});
+
 module.exports = server.exports();

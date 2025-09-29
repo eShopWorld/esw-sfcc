@@ -23,7 +23,11 @@ const cache = require('*/cartridge/scripts/middleware/cache');
   * @param {serverfunction} - get
   */
 server.prepend('Show', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    try {
+        eswHelper.setEnableMultipleFxRatesCurrency(req);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-Show Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -39,7 +43,11 @@ server.prepend('Show', cache.applyPromotionSensitiveCache, function (req, res, n
  * @param {serverfunction} - get
  */
 server.prepend('ShowInCategory', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    try {
+        eswHelper.setEnableMultipleFxRatesCurrency(req);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-ShowInCategory Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -56,8 +64,12 @@ server.prepend('ShowInCategory', cache.applyPromotionSensitiveCache, function (r
  * @param {returns} - json
  * @param {serverfunction} - get
  */
-server.prepend('Variation', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
+server.prepend('Variation', function (req, res, next) {
+    try {
+        eswHelper.setEnableMultipleFxRatesCurrency(req);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-Variation Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -72,7 +84,11 @@ server.prepend('Variation', cache.applyPromotionSensitiveCache, function (req, r
  * @param {serverfunction} - get
  */
 server.prepend('ShowQuickView', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    try {
+        eswHelper.setEnableMultipleFxRatesCurrency(req);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-ShowQuickView Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -87,7 +103,11 @@ server.prepend('ShowQuickView', cache.applyPromotionSensitiveCache, function (re
  * @param {serverfunction} - get
  */
 server.prepend('SizeChart', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    try {
+        eswHelper.setEnableMultipleFxRatesCurrency(req);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-SizeChart Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -105,7 +125,11 @@ server.prepend('SizeChart', cache.applyPromotionSensitiveCache, function (req, r
  * @param {serverfunction} - get
  */
 server.prepend('ShowBonusProducts', cache.applyPromotionSensitiveCache, function (req, res, next) {
-    eswHelper.setEnableMultipleFxRatesCurrency(req);
+    try {
+        eswHelper.setEnableMultipleFxRatesCurrency(req);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-ShowBonusProducts Error', error, error.message, error.stack);
+    }
     next();
 });
 

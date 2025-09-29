@@ -51,6 +51,14 @@
 		{
 			"name":"dw.ocapi.shop.order.modifyGETResponse",
 			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.afterPOST",
+			"script": "./ocapi/shop/hooks/basketHooks.js"
+		},
+		{
+			"name": "dw.ocapi.shop.basket.item.modifyPATCHResponse",
+			"script": "./ocapi/shop/hooks/basketItemsUpdateResponse.js"
 		}
 	]
 }

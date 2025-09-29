@@ -72,10 +72,12 @@ module.exports = [{
                 }, {
                     loader: 'sass-loader',
                     options: {
-                        includePaths: [
-                            path.resolve('node_modules'),
-                            path.resolve('node_modules/flag-icon-css/sass')
-                        ]
+                        sassOptions: {
+                            includePaths: [
+                                path.resolve('node_modules'),
+                                path.resolve('node_modules/flag-icon-css/sass')
+                            ]
+                        }
                     }
                 }]
             })

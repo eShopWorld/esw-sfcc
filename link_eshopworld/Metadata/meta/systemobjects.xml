@@ -571,6 +571,14 @@
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
             </attribute-definition>
+            <attribute-definition attribute-id="eswPaymentStatus">
+                <display-name xml:lang="x-default">ESW Payment Status</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>1</min-length>
+                <default-value>Not Authorized</default-value>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="esw_Custom">
@@ -578,6 +586,7 @@
                 <attribute attribute-id="eswPaymentAmount"/>
                 <attribute attribute-id="creationDate" system="true"/>
                 <attribute attribute-id="eswPaymentMethodCardBrand"/>
+                <attribute attribute-id="eswPaymentStatus"/>
             </attribute-group>
         </group-definitions>
     </type-extension>
@@ -737,7 +746,6 @@ Enter ISO Codes or ALL(not returnable for all countries)</description>
             </attribute-group>
         </group-definitions>
     </type-extension>
-
     <type-extension type-id="ProductLineItem">
         <custom-attribute-definitions>
             <attribute-definition attribute-id="eswFulfilmentCountryIso">
@@ -1816,6 +1824,28 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
+            <attribute-definition attribute-id="eswSyncPostOrderUpdates">
+                <display-name xml:lang="x-default">ESW Order Status Updates</display-name>
+                <description xml:lang="x-default">Feature toggle that enables syncing ESW order statuses to SFCC via webhook for accurate order status updates.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswEnableAzureInsightLogs">
+                <display-name xml:lang="x-default">Esw Enable Azure Insight Logs</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswAzureInsightiKey">
+                <display-name xml:lang="x-default">Esw Azure Insight iKey</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value></default-value>
+            </attribute-definition>
              <attribute-definition attribute-id="eswCheckoutIframeScriptPath">
                 <display-name xml:lang="x-default">ESW SPARK Script Path</display-name>
                 <description xml:lang="x-default">The iFrame script path to be included in the header</description>
@@ -1842,6 +1872,21 @@ Example: &#13;
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="isEswSelfHostedOcEnabled">
+                <display-name xml:lang="x-default">ESW Enable Order Confirmation Success Page</display-name>
+                <description xml:lang="x-default">Feature toggle for enabling self-hosted order confirmation success page.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswSelfhostedOcPageUrl">
+                <display-name xml:lang="x-default">ESW Order Confirmation Success URL</display-name>
+                <description xml:lang="x-default">URL for the order confirmation page. If empty, defaults to EShopWorld-OrderConfirm (or EShopWorldSG-OrderConfirm for SiteGenesis).</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <default-value></default-value>
             </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
@@ -1878,6 +1923,7 @@ Example: &#13;
                 <attribute attribute-id="eswCountryUrlParam"/>
                 <attribute attribute-id="eswEnableTaxInformation"/>
                 <attribute attribute-id="eswEnableSplitShipment"/>
+                <attribute attribute-id="eswSyncPostOrderUpdates"/>
             </attribute-group>
             <attribute-group group-id="ESW Retailer Display Configuration">
                 <display-name xml:lang="x-default">ESW Retailer Display Configuration</display-name>
@@ -1924,6 +1970,8 @@ Example: &#13;
                 <attribute attribute-id="eswCustomerMetaData"/>
                 <attribute attribute-id="eswBasketMetaData"/>
                 <attribute attribute-id="isEswMultiAddressEnabled"/>
+                <attribute attribute-id="isEswSelfHostedOcEnabled"/>
+                <attribute attribute-id="eswSelfhostedOcPageUrl"/>
             </attribute-group>
             <attribute-group group-id="ESW Catalog Integration Configuration">
                 <display-name xml:lang="x-default">ESW Catalog Integration Configuration</display-name>
@@ -1943,12 +1991,16 @@ Example: &#13;
                 <attribute attribute-id="eswCheckoutOnlyPackagesExport"/>
                 <attribute attribute-id="eswReturnOrderStatus"/>
             </attribute-group>
+            <attribute-group group-id="ESW Azure Insights Configuration">
+                <display-name xml:lang="x-default">ESW Azure Insights Configuration</display-name>
+                <attribute attribute-id="eswEnableAzureInsightLogs"/>
+                <attribute attribute-id="eswAzureInsightiKey"/>
+            </attribute-group>
             <attribute-group group-id="ESW SPARK Integration Configuration">
                 <display-name xml:lang="x-default">ESW SPARK Integration Configuration</display-name>
                 <attribute attribute-id="eswCheckoutIframeScriptPath"/>
                 <attribute attribute-id="eswCheckoutIframeCookieName"/>
                 <attribute attribute-id="eswOcapiClientId"/>
-                <attribute attribute-id="eswHeadlessSiteUrl"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

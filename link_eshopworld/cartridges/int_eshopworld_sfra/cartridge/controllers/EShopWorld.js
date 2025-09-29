@@ -10,11 +10,12 @@ server.extend(module.superModule);
 /* API includes */
 const URLUtils = require('dw/web/URLUtils');
 const logger = require('dw/system/Logger');
+const cache = require('*/cartridge/scripts/middleware/cache');
 
 /* Script Modules */
 const Constants = require('*/cartridge/scripts/util/Constants');
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-
+const csrfProtection = require('*/cartridge/scripts/middleware/csrf');
 
 /**
  * function used to set initial cookies for country, currency and local.
@@ -22,33 +23,37 @@ const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper()
  * @param {Object} req - productLineItem
  */
 function setInitialCookies(req) {
-    let country = eswHelper.getAvailableCountry();
-    let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
-    let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
+    try {
+        let country = eswHelper.getAvailableCountry();
+        let currencyCode = eswHelper.getDefaultCurrencyForCountry(country);
+        let locale = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
 
-    let Site = require('dw/system/Site').getCurrent();
-    let locationParameter = !empty(req.httpParameterMap) ? req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')) : null;
-    eswHelper.setCustomSessionVariables(country, currencyCode);
-    eswHelper.createInitialCookies(country, currencyCode, locale);
-    eswHelper.setCustomerCookies();
+        let Site = require('dw/system/Site').getCurrent();
+        let locationParameter = !empty(req.httpParameterMap) ? req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')) : null;
+        eswHelper.setCustomSessionVariables(country, currencyCode);
+        eswHelper.createInitialCookies(country, currencyCode, locale);
+        eswHelper.setCustomerCookies();
 
-    if (!empty(locationParameter) && !empty(locationParameter.value)) {
-        eswHelper.setLocation(locationParameter.value);
-        if (request.httpCookies['esw.Landing.Played'] == null) {
-            eswHelper.createCookie('esw.Landing.Played', true, '/');
+        if (!empty(locationParameter) && !empty(locationParameter.value)) {
+            eswHelper.setLocation(locationParameter.value);
+            if (request.httpCookies['esw.Landing.Played'] == null) {
+                eswHelper.createCookie('esw.Landing.Played', true, '/');
+            }
         }
-    }
-    if (eswHelper.checkIsEswAllowedCountry(country)) {
-        if (!eswHelper.overridePrice(req, country)) {
-            eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());
+        if (eswHelper.checkIsEswAllowedCountry(country)) {
+            if (!eswHelper.overridePrice(req, country)) {
+                eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());
+            }
         }
-    }
-    if (eswHelper.checkIsEswAllowedCountry(country) != null && empty(locationParameter.value)) {
-        if (request.httpCookies['esw.currency'] == null) {
-            eswHelper.selectCountry(eswHelper.getAvailableCountry(), currencyCode, locale);
-        } else {
-            eswHelper.selectCountry(eswHelper.getAvailableCountry(), request.httpCookies['esw.currency'].value, locale);
+        if (eswHelper.checkIsEswAllowedCountry(country) != null && empty(locationParameter.value)) {
+            if (request.httpCookies['esw.currency'] == null) {
+                eswHelper.selectCountry(eswHelper.getAvailableCountry(), currencyCode, locale);
+            } else {
+                eswHelper.selectCountry(eswHelper.getAvailableCountry(), request.httpCookies['esw.currency'].value, locale);
+            }
         }
+    } catch (error) {
+        eswHelper.eswInfoLogger('setInitialCookies Error', error, error.message, error.stack);
     }
 }
 
@@ -58,25 +63,30 @@ function setInitialCookies(req) {
  * @returns {Object} - General Config JSON object
  */
 function getESWGeneralConfigs() {
-    let Site = require('dw/system/Site').getCurrent();
-    let country = eswHelper.getAvailableCountry();
-    let currency;
-    let urlParameter = request.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
+    let ESWGeneralConfigs;
+    try {
+        let Site = require('dw/system/Site').getCurrent();
+        let country = eswHelper.getAvailableCountry();
+        let currency;
+        let urlParameter = request.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam'));
 
-    if (urlParameter && urlParameter.value && eswHelper.checkIsEswAllowedCountry(urlParameter.value)) {
-        currency = eswHelper.getDefaultCurrencyForCountry(urlParameter.value);
-    } else {
-        currency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
-    }
-    let language = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
-    let ESWGeneralConfigs = {
-        selectedCountry: country,
-        selectedCountryName: eswHelper.getCountryName(country),
-        selectedLanguage: language,
-        selectedCurrency: currency
-    };
-    if (!customer.authenticated) {
-        eswHelper.createCookie('esw-shopper-access-token', '', request.httpHost, 'expired', eswHelper.getTopLevelDomain());
+        if (urlParameter && urlParameter.value && eswHelper.checkIsEswAllowedCountry(urlParameter.value)) {
+            currency = eswHelper.getDefaultCurrencyForCountry(urlParameter.value);
+        } else {
+            currency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
+        }
+        let language = !empty(request.httpCookies['esw.LanguageIsoCode']) ? request.httpCookies['esw.LanguageIsoCode'].value : eswHelper.getAllowedLanguages()[0].value;
+        ESWGeneralConfigs = {
+            selectedCountry: country,
+            selectedCountryName: eswHelper.getCountryName(country),
+            selectedLanguage: language,
+            selectedCurrency: currency
+        };
+        if (!customer.authenticated) {
+            eswHelper.createCookie('esw-shopper-access-token', '', request.httpHost, 'expired', eswHelper.getTopLevelDomain());
+        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('getESWGeneralConfigs Error', error, error.message, error.stack);
     }
     return ESWGeneralConfigs;
 }
@@ -85,12 +95,16 @@ function getESWGeneralConfigs() {
  * Get header bar of ESW and render template for it in response
  */
 server.get('GetEswHeader', function (req, res, next) {
-    setInitialCookies(req);
-    let ESWHeaderConfigs = getESWGeneralConfigs();
-    res.render('/EswMfComponents/eswHeaderBar', {
-        EswHeaderEnabled: eswHelper.getEnableHeaderBar(),
-        EswHeaderObject: ESWHeaderConfigs
-    });
+    try {
+        setInitialCookies(req);
+        let ESWHeaderConfigs = getESWGeneralConfigs();
+        res.render('/EswMfComponents/eswHeaderBar', {
+            EswHeaderEnabled: eswHelper.getEnableHeaderBar(),
+            EswHeaderObject: ESWHeaderConfigs
+        });
+    } catch (error) {
+        eswHelper.eswInfoLogger('GetEswHeader Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -98,12 +112,16 @@ server.get('GetEswHeader', function (req, res, next) {
  * Get footer bar of ESW and render template for it in response
  */
 server.get('GetEswFooter', function (req, res, next) {
-    setInitialCookies(req);
-    let ESWFooterConfigs = getESWGeneralConfigs();
-    res.render('/EswMfComponents/eswFooterBar', {
-        EswFooterEnabled: eswHelper.getEnableFooterBar(),
-        EswFooterObject: ESWFooterConfigs
-    });
+    try {
+        setInitialCookies(req);
+        let ESWFooterConfigs = getESWGeneralConfigs();
+        res.render('/EswMfComponents/eswFooterBar', {
+            EswFooterEnabled: eswHelper.getEnableFooterBar(),
+            EswFooterObject: ESWFooterConfigs
+        });
+    } catch (error) {
+        eswHelper.eswInfoLogger('GetEswFooter Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -111,29 +129,32 @@ server.get('GetEswFooter', function (req, res, next) {
  * Get landing page of ESW and render template for it in response
  */
 server.get('GetEswLandingPage', function (req, res, next) {
-    if (empty(request.httpCookies['esw.Landing.Played']) || request.httpCookies['esw.Landing.Played'] === false || req.querystring.dropDownSelection === 'true') {
-        let Cookie = require('dw/web/Cookie');
-        let eswLandingCookie = new Cookie('esw.Landing.Played', true);
-        eswLandingCookie.setPath('/');
-        response.addHttpCookie(eswLandingCookie);
-        setInitialCookies(req);
-        let ESWLandingConfigs = {
-            allCountries: eswHelper.getAllCountries(),
-            languages: eswHelper.getAllowedLanguages(),
-            currencies: eswHelper.getAllowedCurrencies(),
-            enabledLandingPageBar: eswHelper.getEnableLandingPageBar(),
-            enabledCountriesInLandingPage: eswHelper.getEnableCountryLandingBar(),
-            enabledLanguagesInLandingPage: eswHelper.getEnableLanguageLandingBar(),
-            enabledCurrencyInLandingPage: eswHelper.getEnableCurrencyLandingBar()
-        };
-        ESWLandingConfigs = eswHelper.extendObject(ESWLandingConfigs, getESWGeneralConfigs());
+    try {
+        if (empty(request.httpCookies['esw.Landing.Played']) || request.httpCookies['esw.Landing.Played'] === false || req.querystring.dropDownSelection === 'true') {
+            let Cookie = require('dw/web/Cookie');
+            let eswLandingCookie = new Cookie('esw.Landing.Played', true);
+            eswLandingCookie.setPath('/');
+            response.addHttpCookie(eswLandingCookie);
+            setInitialCookies(req);
+            let ESWLandingConfigs = {
+                allCountries: eswHelper.getAllCountries(),
+                languages: eswHelper.getAllowedLanguages(),
+                currencies: eswHelper.getAllowedCurrencies(),
+                enabledLandingPageBar: eswHelper.getEnableLandingPageBar(),
+                enabledCountriesInLandingPage: eswHelper.getEnableCountryLandingBar(),
+                enabledLanguagesInLandingPage: eswHelper.getEnableLanguageLandingBar(),
+                enabledCurrencyInLandingPage: eswHelper.getEnableCurrencyLandingBar()
+            };
+            ESWLandingConfigs = eswHelper.extendObject(ESWLandingConfigs, getESWGeneralConfigs());
 
-        res.render('/EswMfComponents/eswLandingPage', {
-            EswLandingObject: ESWLandingConfigs
-        });
-        next();
+            res.render('/EswMfComponents/eswLandingPage', {
+                EswLandingObject: ESWLandingConfigs
+            });
+        }
+    } catch (error) {
+        eswHelper.eswInfoLogger('GetEswLandingPage Error', error, error.message, error.stack);
     }
-    return;
+    next();
 });
 
 
@@ -141,14 +162,18 @@ server.get('GetEswLandingPage', function (req, res, next) {
  * Get footer bar of ESW and render template for it in response
  */
 server.get('GetDefaultCurrency', function (req, res, next) {
-    let selectedCountry = req.querystring.country,
-        selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry);
-    res.json({
-        success: !empty(selectedCountryDetail.defaultCurrencyCode),
-        isAllowed: selectedCountryDetail.isSupportedByESW,
-        currency: selectedCountryDetail.defaultCurrencyCode,
-        isFixedPriceCountry: selectedCountryDetail.isFixedPriceModel
-    });
+    try {
+        let selectedCountry = req.querystring.country,
+            selectedCountryDetail = eswHelper.getSelectedCountryDetail(selectedCountry);
+        res.json({
+            success: !empty(selectedCountryDetail.defaultCurrencyCode),
+            isAllowed: selectedCountryDetail.isSupportedByESW,
+            currency: selectedCountryDetail.defaultCurrencyCode,
+            isFixedPriceCountry: selectedCountryDetail.isFixedPriceModel
+        });
+    } catch (error) {
+        eswHelper.eswInfoLogger('GetDefaultCurrency Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -156,23 +181,28 @@ server.get('GetDefaultCurrency', function (req, res, next) {
  * Get ESW App Resources for frontend prices conversion (content assets & callout messages)
  */
 server.get('GetEswAppResources', function (req, res, next) {
-    let selectedCountryParam = null;
-    let Site = require('dw/system/Site').getCurrent();
-    let Currency = require('dw/util/Currency');
-    let locationUrlParameter = !empty(req.httpParameterMap) ? req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')) : null;
-    if (empty(locationUrlParameter) || empty(locationUrlParameter.value)) {
-        selectedCountryParam = !empty(request.httpCookies['esw.location']) && !empty(request.httpCookies['esw.location'].value) ? request.httpCookies['esw.location'].value : eswHelper.getAvailableCountry();
-    } else {
-        selectedCountryParam = locationUrlParameter.value;
+    try {
+        let selectedCountryParam = null;
+        let Site = require('dw/system/Site').getCurrent();
+        let Currency = require('dw/util/Currency');
+        let locationUrlParameter = !empty(req.httpParameterMap) ? req.httpParameterMap.get(Site.getCustomPreferenceValue('eswCountryUrlParam')) : null;
+        if (empty(locationUrlParameter) || empty(locationUrlParameter.value)) {
+            selectedCountryParam = !empty(request.httpCookies['esw.location']) && !empty(request.httpCookies['esw.location'].value) ? request.httpCookies['esw.location'].value : eswHelper.getAvailableCountry();
+        } else {
+            selectedCountryParam = locationUrlParameter.value;
+        }
+        let selectedCountry = eswHelper.getSelectedCountryDetail(selectedCountryParam);
+        let selectedCurrency = eswHelper.getDefaultCurrencyForCountry(selectedCountry.countryCode);
+        res.render('/EswMfComponents/eswAppResources', {
+            isEswRoundingsEnabled: eswHelper.isEswRoundingsEnabled(),
+            isFrontendConversionEnabled: eswHelper.isFrontendConversionEnabled(),
+            selectedCurrencySymbol: Currency.getCurrency(selectedCurrency).symbol,
+            isFixedPriceCountry: selectedCountry.isFixedPriceModel || !selectedCountry.isSupportedByESW
+        });
+    } catch (error) {
+        eswHelper.eswInfoLogger('GetEswAppResources Error', error, error.message, error.stack);
     }
-    let selectedCountry = eswHelper.getSelectedCountryDetail(selectedCountryParam);
-    let selectedCurrency = eswHelper.getDefaultCurrencyForCountry(selectedCountry.countryCode);
-    res.render('/EswMfComponents/eswAppResources', {
-        isEswRoundingsEnabled: eswHelper.isEswRoundingsEnabled(),
-        isFrontendConversionEnabled: eswHelper.isFrontendConversionEnabled(),
-        selectedCurrencySymbol: Currency.getCurrency(selectedCurrency).symbol,
-        isFixedPriceCountry: selectedCountry.isFixedPriceModel || !selectedCountry.isSupportedByESW
-    });
+
     next();
 });
 
@@ -212,21 +242,16 @@ server.get('PreOrderRequest', function (req, res, next) {
 
     if (currentBasket) {
         delete session.privacy.restrictedProductID;
-        // eslint-disable-next-line no-restricted-syntax, guard-for-in
-        for (let lineItemNumber in currentBasket.productLineItems) {
-            let cartProduct = currentBasket.productLineItems[lineItemNumber].product;
-            if (eswHelper.isProductRestricted(cartProduct.custom)) {
-                session.privacy.eswProductRestricted = true;
-                session.privacy.restrictedProductID = cartProduct.ID;
-                if (isAjax) {
-                    res.json({
-                        redirectURL: URLUtils.https('Cart-Show').toString()
-                    });
-                } else {
-                    res.redirect(URLUtils.https('Cart-Show').toString());
-                }
-                return next();
+        let eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        if (eswCoreHelper.handleRestrictedProductsInBasket(currentBasket)) {
+            if (isAjax) {
+                res.json({
+                    redirectURL: URLUtils.https('Cart-Show').toString()
+                });
+            } else {
+                res.redirect(URLUtils.https('Cart-Show').toString());
             }
+            return next();
         }
     }
 
@@ -238,9 +263,15 @@ server.get('PreOrderRequest', function (req, res, next) {
         } else {
             result = preOrderrequestHelper.handlePreOrderRequestV2();
         }
+        let eswShopperAccessToken = '';
         if (result.status === 'REDIRECT') {
+            if ('shopperAccessToken' in JSON.parse(result.object)) {
+                eswShopperAccessToken = JSON.parse(result.object).shopperAccessToken;
+            }
             res.json({
-                redirectURL: URLUtils.https('Checkout-Begin').toString()
+                redirectURL: URLUtils.https('Checkout-Begin').toString(),
+                eswAuthToken: eswShopperAccessToken
+
             });
             return next();
         }
@@ -262,16 +293,15 @@ server.get('PreOrderRequest', function (req, res, next) {
         } else {
             let redirectURL = JSON.parse(result.object).redirectUrl;
             if ('shopperAccessToken' in JSON.parse(result.object)) {
-                eswHelper.createCookie('esw-shopper-access-token', JSON.parse(result.object).shopperAccessToken, '/', 3600, eswHelper.getTopLevelDomain());
-            } else {
-                eswHelper.createCookie('esw-shopper-access-token', '', '/', 'expired', eswHelper.getTopLevelDomain());
+                eswShopperAccessToken = JSON.parse(result.object).shopperAccessToken;
             }
             delete session.privacy.guestCheckout;
             if (isAjax) {
                 res.json({
                     redirectURL: eswHelper.isEswEnabledEmbeddedCheckout() ?
                      URLUtils.https('EShopWorld-EswEmbeddedCheckout', Constants.EMBEDDED_CHECKOUT_QUERY_PARAM, redirectURL).toString() :
-                     redirectURL
+                     redirectURL,
+                    eswAuthToken: eswShopperAccessToken
                 });
             } else {
                 res.redirect(redirectURL);
@@ -280,6 +310,7 @@ server.get('PreOrderRequest', function (req, res, next) {
     } catch (e) {
         logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
         session.privacy.eswfail = true;
+        eswHelper.eswInfoLogger('ESW Service Error', e, e.message, e.stack);
         if (isAjax) {
             if (eswHelper.isEswEnabledEmbeddedCheckout()) {
                 res.json({
@@ -302,22 +333,26 @@ server.get('PreOrderRequest', function (req, res, next) {
  * Render Product Tiles with Dynamic Prices and to avoid cache issue.
  */
 server.get('Cache', function (req, res, next) {
-    let params = { remoteIncludeUrl: null };
-    let requestParams = req.querystring.toString();
-    if (('remoteIncludeUrl' in req.querystring) && req.querystring.remoteIncludeUrl) {
-        params.remoteIncludeUrl = URLUtils.url(req.querystring.remoteIncludeUrl);
-        requestParams = requestParams.replace(/&remoteIncludeUrl=+/g + req.querystring.remoteIncludeUrl, '');
+    try {
+        let params = { remoteIncludeUrl: null };
+        let requestParams = req.querystring.toString();
+        if (('remoteIncludeUrl' in req.querystring) && req.querystring.remoteIncludeUrl) {
+            params.remoteIncludeUrl = URLUtils.url(req.querystring.remoteIncludeUrl);
+            requestParams = requestParams.replace(/&remoteIncludeUrl=+/g + req.querystring.remoteIncludeUrl, '');
+        }
+        if (req.querystring.ajax) {
+            requestParams = requestParams.replace(/&ajax=+/g + req.querystring.ajax, '');
+            params.ajax = 'true';
+        }
+        let currency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
+        let country = eswHelper.getAvailableCountry();
+        params.remoteIncludeUrl.append('eswCountry', country);
+        params.remoteIncludeUrl.append('eswCurrency', currency);
+        params.remoteIncludeUrl = (params.remoteIncludeUrl.toString() + '&' + requestParams);
+        res.render('/EswMfComponents/remoteinclude', params);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Cache Error', error, error.message, error.stack);
     }
-    if (req.querystring.ajax) {
-        requestParams = requestParams.replace(/&ajax=+/g + req.querystring.ajax, '');
-        params.ajax = 'true';
-    }
-    let currency = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.getDefaultCurrencyForCountry(eswHelper.getAvailableCountry());
-    let country = eswHelper.getAvailableCountry();
-    params.remoteIncludeUrl.append('eswCountry', country);
-    params.remoteIncludeUrl.append('eswCurrency', currency);
-    params.remoteIncludeUrl = (params.remoteIncludeUrl.toString() + '&' + requestParams);
-    res.render('/EswMfComponents/remoteinclude', params);
     return next();
 });
 
@@ -325,12 +360,16 @@ server.get('Cache', function (req, res, next) {
  * Function to return to home page after rebuilding cart
  */
 server.get('Home', function (req, res, next) {
-    res.cachePeriod = 0;
-    res.cachePeriodUnit = 'minutes';
-    // Rebuild cart starts here
-    eswHelper.rebuildCart();
-    // Rebuild cart ends here
-    res.redirect(URLUtils.url('Home-Show'));
+    try {
+        res.cachePeriod = 0;
+        res.cachePeriodUnit = 'minutes';
+        // Rebuild cart starts here
+        eswHelper.rebuildCart();
+        // Rebuild cart ends here
+        res.redirect(URLUtils.url('Home-Show'));
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Home Error', error, error.message, error.stack);
+    }
     next();
 });
 
@@ -338,38 +377,46 @@ server.get('Home', function (req, res, next) {
  * Function to return to cart page after rebuilding cart
  */
 server.get('GetCart', function (req, res, next) {
-    res.cachePeriod = 0;
-    res.cachePeriodUnit = 'minutes';
-    // Rebuild cart starts here
-    eswHelper.rebuildCart();
-    // Rebuild cart ends here
-    res.redirect(URLUtils.https('Cart-Show'));
+    try {
+        res.cachePeriod = 0;
+        res.cachePeriodUnit = 'minutes';
+        // Rebuild cart starts here
+        eswHelper.rebuildCart();
+        // Rebuild cart ends here
+        res.redirect(URLUtils.https('Cart-Show'));
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW GetCart Error', error, error.message, error.stack);
+    }
     next();
 });
 
 /**
  * Function to return to updated PDP product price
  */
-server.get('GetSelectedCountryProductPrice', function (req, res, next) {
-    let params = { productStrikePrice: null, EShopWorldModuleEnabled: false, isAjaxCall: false };
-    let requestParams = req.querystring;
-    params.isLowPrice = requestParams.isLowPrice;
-    let priceObject = 'priceObject' in requestParams && !empty(requestParams.priceObject) ? JSON.parse(requestParams.priceObject) : null;
-    if (!eswHelper.isAjaxCall() && !empty(priceObject)) {
-        params.price = priceObject;
-        if (!eswHelper.isAjaxCall()) {
-            params.EShopWorldModuleEnabled = true;
-            let eswSFRAHelper = require('*/cartridge/scripts/helper/eswSFRAHelper');
-            let listPrice,
-                salesprice;
-            if (priceObject.list !== null && typeof priceObject.list === 'object') {
-                listPrice = priceObject.list;
-                params.productStrikePrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(listPrice.value, listPrice.currency) : listPrice;
+server.get('GetSelectedCountryProductPrice', cache.applyCachedCountryVariations, function (req, res, next) {
+    try {
+        let params = { productStrikePrice: null, EShopWorldModuleEnabled: false, isAjaxCall: false };
+        let requestParams = req.querystring;
+        params.isLowPrice = requestParams.isLowPrice;
+        let priceObject = 'priceObject' in requestParams && !empty(requestParams.priceObject) ? JSON.parse(requestParams.priceObject) : null;
+        if (!eswHelper.isAjaxCall() && !empty(priceObject)) {
+            params.price = priceObject;
+            if (!eswHelper.isAjaxCall()) {
+                params.EShopWorldModuleEnabled = true;
+                let eswSFRAHelper = require('*/cartridge/scripts/helper/eswSFRAHelper');
+                let listPrice,
+                    salesprice;
+                if (priceObject.list !== null && typeof priceObject.list === 'object') {
+                    listPrice = priceObject.list;
+                    params.productStrikePrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(listPrice.value, listPrice.currency) : listPrice;
+                }
+                salesprice = priceObject.sales;
+                params.productPrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(salesprice.value, salesprice.currency) : salesprice;
             }
-            salesprice = priceObject.sales;
-            params.productPrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(salesprice.value, salesprice.currency) : salesprice;
+            res.render('product/components/pricing/defaultESWSalesPrice', params);
         }
-        res.render('product/components/pricing/defaultESWSalesPrice', params);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW GetSelectedCountryProductPrice Error', error, error.message, error.stack);
     }
     return next();
 });
@@ -389,6 +436,7 @@ server.get('RegisterCustomer', function (req, res, next) {
             registrationObj = {},
             password;
         let order = OrderMgr.getOrder(orderNumber);
+        delete session.privacy.keepOrderIDForRegistration;
         if (order && order.customer.ID === req.currentCustomer.raw.ID) {
             existerCustomer = CustomerMgr.getCustomerByLogin(order.getCustomerEmail());
             if (existerCustomer && existerCustomer.registered) {
@@ -474,10 +522,67 @@ server.get('RegisterCustomer', function (req, res, next) {
         } else {
             res.redirect(URLUtils.url('Login-Show', 'showRegistration', 'true').toString());
         }
-        eswHelper.eswInfoLogger('Error While Creating customers account', error);
+        eswHelper.eswInfoLogger('Error While Creating customers account', error, error.message, error.stack);
     }
     next();
 });
 
+/**
+ * @endpoint EShopWorld-OrderConfirm
+ * @description Displays Sefl Hosted ESW order confirmation page based on orderId
+ */
+server.get('OrderConfirm', csrfProtection.generateToken, function (req, res, next) {
+    let selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
+    let orderId = req.querystring.orderId;
+    let Resource = require('dw/web/Resource');
+    let OrderModel = require('*/cartridge/models/order');
+    let reportingUrlsHelper = require('*/cartridge/scripts/reportingUrls');
+
+    if (!eswHelper.isCheckoutRegisterationEnabled() && !empty(session.privacy.confirmedOrderID)) {
+        delete session.privacy.confirmedOrderID;
+    } else {
+        session.privacy.keepOrderIDForRegistration = true;
+    }
+
+    if (!orderId) {
+        res.setStatusCode(400);
+        res.render('/error', {
+            message: Resource.msg('error.confirmation.error', 'confirmation', null)
+        });
+        return next();
+    }
+
+    let order = selfHostedOcHelper.getEswOrderDetail(orderId);
+
+    if (!order) {
+        res.setStatusCode(404);
+        res.render('/error', {
+            message: Resource.msg('error.confirmation.error', 'confirmation', null)
+        });
+        return next();
+    }
+    session.privacy.confirmedOrderID = order.currentOrderNo;
+
+    let orderModel = new OrderModel(order, { containerView: 'order' });
+    let reportingURLs = reportingUrlsHelper.getOrderReportingURLs(order);
+
+    let passwordForm;
+    let returningCustomer = !!req.currentCustomer.profile;
+    if (!returningCustomer) {
+        passwordForm = require('server').forms.getForm('newPasswords');
+        passwordForm.clear();
+    }
+
+    res.render('checkout/orderConfirmation', {
+        order: orderModel,
+        returningCustomer: returningCustomer,
+        passwordForm: passwordForm,
+        reportingURLs: reportingURLs,
+        orderUUID: order.getUUID(),
+        csrf: res.viewData.csrf
+    });
+
+    return next();
+});
 
 module.exports = server.exports();

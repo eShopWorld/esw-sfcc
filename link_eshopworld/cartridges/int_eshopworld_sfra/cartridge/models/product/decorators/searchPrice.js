@@ -29,6 +29,7 @@ function getListPrices(hit, getSearchHit) {
         searchHit = getSearchHit(hit.product);
     } catch (e) {
         searchHit = hit;
+        eswHelper.eswInfoLogger('ESW getListPrices Error', e, e.message, e.stack);
     } finally {
         // Clears price book ID's stored to the session.
         // When switching locales, there is nothing that clears the price book ids stored in the

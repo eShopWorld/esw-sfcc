@@ -1,7 +1,21 @@
+<isscript>
+    var eswLocation = request.httpCookies['esw.location']
+            ? request.httpCookies['esw.location'].value
+            : null;
+
+    var eswCurrency = request.httpCookies['esw.currency']
+        ? request.httpCookies['esw.currency'].value
+        : null;
+
+    // Combine both into one vary key
+    var cacheKey = eswLocation + '|' + eswCurrency;
+</isscript>
 <isloop items="${pdict.productSearch.productIds}" var="product">
     <div class="col-6 col-sm-4">
         <isobject object="${product.productSearchHit}" view="searchhit">
-        	<isinclude url="${URLUtils.url('EShopWorld-Cache', 'remoteIncludeUrl', 'Tile-Show', 'pid', product.productID, 'swatches', true, 'ratings', true)}" />
+            <iscache hour="1" type="relative" varyby="cacheKey" />
+            <isinclude url="${URLUtils.url('Tile-Show', 'pid', product.productID, 'swatches', true, 'ratings', true, 'eswLocation', eswLocation, 'eswCurrency', eswCurrency)}" />
+            <iscache hour="1" type="relative" if="${false}" />
         </isobject>
     </div>
 </isloop>

@@ -174,6 +174,7 @@ server.post('EswEmbeddedCheckoutPreOrderRequest', function (req, res, next) {
         if (ocapiBasketResponse.isOk() && !empty(ocapiBasketResponse.getObject())) {
             let response = JSON.parse(ocapiBasketResponse.object.text);
             if (response.c_eswPreOrderResponseStatus && response.c_eswPreOrderResponseStatus === 'OK') {
+                response.c_eswPreOrderResponse.redirectUrl = response.c_eswPreOrderResponse.redirectUrl.replace('?', '&');
                 response.c_eswPreOrderResponse.redirectUrl = eswHelper.getEswHeadlessSiteUrl() + Constants.EMBEDDED_CHECKOUT_ENDPOINT_HEADLESS + Constants.EMBEDDED_CHECKOUT_QUERY_PARAM + Constants.EQUALS_OPERATOR + response.c_eswPreOrderResponse.redirectUrl;
             }
             res.json(response);

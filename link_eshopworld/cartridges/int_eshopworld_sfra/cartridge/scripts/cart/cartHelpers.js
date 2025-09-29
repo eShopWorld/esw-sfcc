@@ -112,132 +112,135 @@ function countMultiOriginProductInCart(productId, originIso, productLineItems) {
  *  @return {Object} returns an error object
  */
 function addProductToCart(currentBasket, productId, quantity, childProducts, options, isUpdateQuantity) {
-    let availableToSell;
-    let defaultShipment = currentBasket.defaultShipment;
-    let perpetual;
-    let product = ProductMgr.getProduct(productId);
-    let productInCart;
-    let productLineItems = currentBasket.productLineItems;
-    let productQuantityInCart;
-    let quantityToSet;
-    let optionModel = productHelper.getCurrentOptionModel(product.optionModel, options);
     let result = {
         error: false,
         message: Resource.msg('text.alert.addedtobasket', 'product', null)
     };
+    try {
+        let availableToSell;
+        let defaultShipment = currentBasket.defaultShipment;
+        let perpetual;
+        let product = ProductMgr.getProduct(productId);
+        let productInCart;
+        let productLineItems = currentBasket.productLineItems;
+        let productQuantityInCart;
+        let quantityToSet;
+        let optionModel = productHelper.getCurrentOptionModel(product.optionModel, options);
 
-    let totalQtyRequested = 0;
-    let canBeAdded = false;
-    let inventoryInfo = null;
-    let moQtyIssue = false;
+        let totalQtyRequested = 0;
+        let canBeAdded = false;
+        let inventoryInfo = null;
+        let moQtyIssue = false;
 
-    let productLineItem;
-    let eswAtsValue = product.availabilityModel.inventoryRecord.ATS.value;
-    // Use addedEswPlis to keep correct data via getExistingProductLineItemInCart and countMultiOriginProductInCart
-    let addedEswPlis = productLineItems;
+        let productLineItem;
+        let eswAtsValue = product.availabilityModel.inventoryRecord.ATS.value;
+        // Use addedEswPlis to keep correct data via getExistingProductLineItemInCart and countMultiOriginProductInCart
+        let addedEswPlis = productLineItems;
 
-    if (product.bundle) {
-        canBeAdded = baseCartHelpers.checkBundledProductCanBeAdded(childProducts, productLineItems, quantity);
-    } else {
-        if (!isUpdateQuantity) {
-            totalQtyRequested = quantity + baseCartHelpers.getQtyAlreadyInCart(productId, productLineItems);
+        if (product.bundle) {
+            canBeAdded = baseCartHelpers.checkBundledProductCanBeAdded(childProducts, productLineItems, quantity);
         } else {
-            // handled in update|EditProductLineItems methods
-            totalQtyRequested = quantity;
-        }
-        perpetual = product.availabilityModel.inventoryRecord.perpetual;
-        // if multi origin is enabled, get the inventory details from the helper
-        if (eswCoreHelper.isEnabledMultiOrigin()) {
-            inventoryInfo = eswMultiOriginHelper.getProductOriginDetails({ productId: productId, quantity: totalQtyRequested });
-            if (!empty(inventoryInfo) && eswMultiOriginHelper.isProductAvailableInMultiOrigin(inventoryInfo, productId)) {
-                // Get value of origin from multi origin response
-                eswAtsValue = eswMultiOriginHelper.getInventoryAtsFromMultiOriginResponse(inventoryInfo, productId);
-            }
-            if (!(perpetual || totalQtyRequested <= eswAtsValue)) {
-                moQtyIssue = true;
-            }
-        }
-        canBeAdded = (perpetual || totalQtyRequested <= eswAtsValue);
-    }
-
-    if (!canBeAdded) {
-        result.error = true;
-        if (moQtyIssue) {
-            result.message = Resource.msgf(
-                'esw.mo.qty.error.message',
-                'esw',
-                null,
-                product.name
-            );
-        } else {
-            result.message = Resource.msgf(
-                'error.alert.selected.quantity.cannot.be.added.for',
-                'product',
-                null,
-                eswAtsValue,
-                product.name
-            );
-        }
-        return result;
-    }
-
-    let executeMultiOriginLogic = (eswCoreHelper.isEnabledMultiOrigin() && !empty(inventoryInfo) && inventoryInfo.length > 0);
-    if (!executeMultiOriginLogic) {
-        inventoryInfo = [{
-            productId: productId,
-            originIso: null,
-            quantity: quantity
-        }];
-    } else {
-        // We’re getting the full required quantity from getProductOriginDetails(),
-        // so we’re removing the already added quantities from the basket.
-        let existingLineItemsOfProduct = getExistingProductLineItemsInCart(product, productId, addedEswPlis, childProducts, options, null);
-        eswMultiOriginHelper.removeProductLineitemFromBasket(existingLineItemsOfProduct, currentBasket);
-        addedEswPlis = currentBasket.productLineItems;
-    }
-    for (let i = 0; i < inventoryInfo.length; i++) {
-        productInCart = getExistingProductLineItemInCart(
-            product, productId, addedEswPlis, childProducts, options,
-            (executeMultiOriginLogic) ? inventoryInfo[i].originIso : null
-        );
-        let moProductCountInCart = countMultiOriginProductInCart(productId, inventoryInfo[i].originIso, addedEswPlis);
-        // If the product is already in the cart, increase the quantity
-        if ((!executeMultiOriginLogic && productInCart) || (executeMultiOriginLogic && productInCart && moProductCountInCart > 0)) {
-            productQuantityInCart = (!executeMultiOriginLogic) ? productInCart.quantity.value : moProductCountInCart;
-            if (executeMultiOriginLogic) {
-                quantityToSet = moProductCountInCart + inventoryInfo[i].quantity;
+            if (!isUpdateQuantity) {
+                totalQtyRequested = quantity + baseCartHelpers.getQtyAlreadyInCart(productId, productLineItems);
             } else {
-                quantityToSet = quantity ? quantity + productQuantityInCart : productQuantityInCart + 1;
+                // handled in update|EditProductLineItems methods
+                totalQtyRequested = quantity;
             }
-            availableToSell = eswAtsValue;
-
-            if (availableToSell >= quantityToSet || perpetual) {
-                productInCart.setQuantityValue(quantityToSet);
-                result.uuid = productInCart.UUID;
-            } else {
-                result.error = true;
-                result.message = availableToSell === productQuantityInCart
-                    ? Resource.msg('error.alert.max.quantity.in.cart', 'product', null)
-                    : Resource.msg('error.alert.selected.quantity.cannot.be.added', 'product', null);
+            perpetual = product.availabilityModel.inventoryRecord.perpetual;
+            // if multi origin is enabled, get the inventory details from the helper
+            if (eswCoreHelper.isEnabledMultiOrigin()) {
+                inventoryInfo = eswMultiOriginHelper.getProductOriginDetails({ productId: productId, quantity: totalQtyRequested });
+                if (!empty(inventoryInfo) && eswMultiOriginHelper.isProductAvailableInMultiOrigin(inventoryInfo, productId)) {
+                    // Get value of origin from multi origin response
+                    eswAtsValue = eswMultiOriginHelper.getInventoryAtsFromMultiOriginResponse(inventoryInfo, productId);
+                }
+                if (!(perpetual || totalQtyRequested <= eswAtsValue)) {
+                    moQtyIssue = true;
+                }
             }
-        } else {
-            productLineItem = baseCartHelpers.addLineItem(
-                currentBasket,
-                product,
-                executeMultiOriginLogic ? inventoryInfo[i].quantity : quantity,
-                childProducts,
-                optionModel,
-                defaultShipment
-            );
-            result.uuid = productLineItem.UUID;
-            // Need to add custom attribute only upon new basket item
-            if (executeMultiOriginLogic && !empty(productLineItem)) {
-                productLineItem.custom.eswFulfilmentCountryIso = inventoryInfo[i].originIso;
-            }
-            addedEswPlis.add(productLineItem);
+            canBeAdded = (perpetual || totalQtyRequested <= eswAtsValue);
         }
-    }
 
+        if (!canBeAdded) {
+            result.error = true;
+            if (moQtyIssue) {
+                result.message = Resource.msgf(
+                    'esw.mo.qty.error.message',
+                    'esw',
+                    null,
+                    product.name
+                );
+            } else {
+                result.message = Resource.msgf(
+                    'error.alert.selected.quantity.cannot.be.added.for',
+                    'product',
+                    null,
+                    eswAtsValue,
+                    product.name
+                );
+            }
+            return result;
+        }
+
+        let executeMultiOriginLogic = (eswCoreHelper.isEnabledMultiOrigin() && !empty(inventoryInfo) && inventoryInfo.length > 0);
+        if (!executeMultiOriginLogic) {
+            inventoryInfo = [{
+                productId: productId,
+                originIso: null,
+                quantity: quantity
+            }];
+        } else {
+            // We’re getting the full required quantity from getProductOriginDetails(),
+            // so we’re removing the already added quantities from the basket.
+            let existingLineItemsOfProduct = getExistingProductLineItemsInCart(product, productId, addedEswPlis, childProducts, options, null);
+            eswMultiOriginHelper.removeProductLineitemFromBasket(existingLineItemsOfProduct, currentBasket);
+            addedEswPlis = currentBasket.productLineItems;
+        }
+        for (let i = 0; i < inventoryInfo.length; i++) {
+            productInCart = getExistingProductLineItemInCart(
+                product, productId, addedEswPlis, childProducts, options,
+                (executeMultiOriginLogic) ? inventoryInfo[i].originIso : null
+            );
+            let moProductCountInCart = countMultiOriginProductInCart(productId, inventoryInfo[i].originIso, addedEswPlis);
+            // If the product is already in the cart, increase the quantity
+            if ((!executeMultiOriginLogic && productInCart) || (executeMultiOriginLogic && productInCart && moProductCountInCart > 0)) {
+                productQuantityInCart = (!executeMultiOriginLogic) ? productInCart.quantity.value : moProductCountInCart;
+                if (executeMultiOriginLogic) {
+                    quantityToSet = moProductCountInCart + inventoryInfo[i].quantity;
+                } else {
+                    quantityToSet = quantity ? quantity + productQuantityInCart : productQuantityInCart + 1;
+                }
+                availableToSell = eswAtsValue;
+
+                if (availableToSell >= quantityToSet || perpetual) {
+                    productInCart.setQuantityValue(quantityToSet);
+                    result.uuid = productInCart.UUID;
+                } else {
+                    result.error = true;
+                    result.message = availableToSell === productQuantityInCart
+                        ? Resource.msg('error.alert.max.quantity.in.cart', 'product', null)
+                        : Resource.msg('error.alert.selected.quantity.cannot.be.added', 'product', null);
+                }
+            } else {
+                productLineItem = baseCartHelpers.addLineItem(
+                    currentBasket,
+                    product,
+                    executeMultiOriginLogic ? inventoryInfo[i].quantity : quantity,
+                    childProducts,
+                    optionModel,
+                    defaultShipment
+                );
+                result.uuid = productLineItem.UUID;
+                // Need to add custom attribute only upon new basket item
+                if (executeMultiOriginLogic && !empty(productLineItem)) {
+                    productLineItem.custom.eswFulfilmentCountryIso = inventoryInfo[i].originIso;
+                }
+                addedEswPlis.add(productLineItem);
+            }
+        }
+    } catch (error) {
+        eswCoreHelper.eswInfoLogger('addProductToCart Error', error, error.message, error.stack);
+    }
     return result;
 }
 
@@ -251,20 +254,72 @@ function addProductToCart(currentBasket, productId, quantity, childProducts, opt
  */
 function updateProductIDWithSameOrigin(productId, totalQtyRequested, matchingLineItem, currentBasket) {
     let result = {};
-    if (eswCoreHelper.isEnabledMultiOrigin()) {
-        let productDetails = matchingLineItem.product.bundle
-        ? collections.map(matchingLineItem.getBundledProductLineItems(), item => ({
-            pid: item.getProductID(),
-            quantity: item.getQuantity().getValue()
-        }))
-        : [];
-        result = addProductToCart(currentBasket, productId, (totalQtyRequested), productDetails, [], true);
-        result.lineItemId = matchingLineItem.productID;
+    try {
+        if (eswCoreHelper.isEnabledMultiOrigin()) {
+            let productDetails = matchingLineItem.product.bundle
+                ? collections.map(matchingLineItem.getBundledProductLineItems(), item => ({
+                    pid: item.getProductID(),
+                    quantity: item.getQuantity().getValue()
+                }))
+                : [];
+            result = addProductToCart(currentBasket, productId, (totalQtyRequested), productDetails, [], true);
+            result.lineItemId = matchingLineItem.productID;
+        }
+    } catch (error) {
+        eswCoreHelper.eswInfoLogger('updateProductIDWithSameOrigin Error', error, error.message, error.stack);
     }
 
     return result;
 }
 
+
+/**
+ * Checks if a product has enough stock in context of existing product line items
+ * @param {dw.catalog.Product} product - Target product
+ * @param {number} updateQuantity - Target quantity
+ * @param {string} matchingLineItemUUID - Product line item UUID to be updated
+ * @param {dw.util.Collection<dw.order.ProductLineItem>} productLineItems - Existing product line items
+ * @returns {boolean} - Whether the product has enough stock to be updated
+ */
+function checkInventoryIsEnough(product, updateQuantity, matchingLineItemUUID, productLineItems) {
+    if (eswCoreHelper.isEnabledMultiOrigin()) {
+        eswMultiOriginHelper.syncSingleProductMoInventoryWithSfcc(product, updateQuantity);
+    }
+    let inventoryRecord = product.availabilityModel.inventoryRecord;
+    let availableToSell = inventoryRecord.ATS.value;
+    let isPerpetual = !!inventoryRecord.perpetual;
+    let qtyAlreadyInCart = baseCartHelpers.getQtyAlreadyInCart(product.ID, productLineItems, matchingLineItemUUID);
+    let totalQtyRequested = updateQuantity + qtyAlreadyInCart;
+    let minOrderQuantity = product.minOrderQuantity.value;
+
+    return (totalQtyRequested <= availableToSell || isPerpetual) &&
+        (updateQuantity >= minOrderQuantity);
+}
+
+/**
+ * Checks if target product has enough stock to be updated in a given product line item
+ * @param {dw.catalog.Product} product - Target product
+ * @param {number} updateQuantity - Target quantity
+ * @param {dw.order.ProductLineItem} matchingLineItem - Product line item to be updated
+ * @param {dw.util.Collection<dw.order.ProductLineItem>} productLineItems - Existing product line items
+ * @returns {boolean} - Whether the product line item can be updated
+ */
+function checkPliCanBeUpdated(product, updateQuantity, matchingLineItem, productLineItems) {
+    if (!product || !matchingLineItem) return false;
+
+    if (!product.bundle) return checkInventoryIsEnough(product, updateQuantity, matchingLineItem.UUID, productLineItems);
+
+    let pliUUIDsByProductIDs = collections.reduce(matchingLineItem.bundledProductLineItems, function (result, item) {
+        result[item.productID] = item.UUID; // eslint-disable-line no-param-reassign
+        return result;
+    }, {});
+    return collections.every(product.bundledProducts, function (bundledProduct) {
+        return checkInventoryIsEnough(bundledProduct, updateQuantity, pliUUIDsByProductIDs[bundledProduct.ID], productLineItems);
+    });
+}
+
+
 base.addProductToCart = addProductToCart;
 base.updateProductIDWithSameOrigin = updateProductIDWithSameOrigin;
+base.checkPliCanBeUpdated = checkPliCanBeUpdated;
 module.exports = base;

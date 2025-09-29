@@ -14,6 +14,34 @@
 	border: 0;
 }
 
+.esw-register-button {
+    position: relative;
+    border: none;
+    width: 100%;
+    height: auto;
+    color: var(--color-primary-contrast, #fff);
+    background: none;
+    background-color: #84bd00;
+    min-height: 36px;
+    transition: box-shadow .2s ease-in-out;
+    cursor: pointer;
+    align-items: center;
+    box-shadow: 0 2px 2px #0003;
+    font-family: var(--primary-font, "Arial", sans-serif);
+    letter-spacing: unset;
+    font-weight: 400;
+    text-transform: uppercase;
+    line-height: inherit;
+    padding: 1px 6px;
+    border-radius: var(--button-border-radius, 0);
+}
+
+@media screen and (min-width: 768px) {
+    .register-btn-mrgn {
+        margin-top: 12px;
+    }
+}
+
 @media screen and (min-width: 48rem) {
   .esw-country-selector {
     border-bottom: none;
@@ -400,6 +428,7 @@
 .product-not-available-msg-cart {
   padding-top: 0.625rem;
   color: #900;
+  float: left;
 }
 
 .selector-container .selectCountry {

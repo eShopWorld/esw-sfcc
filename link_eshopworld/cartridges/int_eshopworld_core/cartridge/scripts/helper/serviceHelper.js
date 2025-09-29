@@ -31,7 +31,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
     if (currentBasket != null) {
         if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
             let lineItemsV3 = eswServiceHelperV3.getLineItemsV3(order, shopperCountry, shopperCurrency);
-            let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal, shopperCurrency, (!empty(order) ? true : null));
+            let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal, shopperCurrency, (!empty(order) ? true : null), shopperCountry);
             if (empty(shopperCurrency)) {
                 shopperCurrency = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
             }
@@ -276,7 +276,13 @@ function getCartDiscounts(cart, beforeDiscountParam, shopperCurrency, isExternal
             /* eslint-disable no-continue */
             continue;
         }
-        let discountValue = empty(isExternalCall) ? eswHelper.getMoneyObject((eachPriceAdjustment.priceValue * -1), false, false, true).value : eswServiceHelperV3.getHeadlessCartDiscountamount(shopperCurrency, eachPriceAdjustment);
+        let discountValue;
+        // skip priceadjustments and FXrates for threshold order level discounts only
+        if (eachPriceAdjustment.custom && eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
+            discountValue = empty(isExternalCall) ? eswHelper.getMoneyObject((eachPriceAdjustment.priceValue * -1), true, false, true).value : eswServiceHelperV3.getHeadlessCartDiscountamount(shopperCurrency, eachPriceAdjustment);
+        } else {
+            discountValue = empty(isExternalCall) ? eswHelper.getMoneyObject((eachPriceAdjustment.priceValue * -1), false, false, true).value : eswServiceHelperV3.getHeadlessCartDiscountamount(shopperCurrency, eachPriceAdjustment);
+        }
         if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
             let cartDiscount = {
                 'shopperCurrencyCartDiscountAmount': {
@@ -648,6 +654,7 @@ function reArrangeOverrideShippingBasedOnCustomerSelection(isOverrideCountry, se
  * @returns {Object} target object
  */
 function getShippingRates(v2Flag, shopperCurrency) {
+    let currencyExponent = !empty(session.privacy.rounding) && 'currencyExponent' in JSON.parse(session.privacy.rounding) ? JSON.parse(session.privacy.rounding).currencyExponent : 3;
     let cart = BasketMgr.getCurrentOrNewBasket(),
         shippingOverrides = eswHelper.getOverrideShipping(),
         isOverrideCountry,
@@ -681,7 +688,7 @@ function getShippingRates(v2Flag, shopperCurrency) {
                             'deliveryOptionOverridePriceInfo': {
                                 'price': {
                                     'currency': currencyIso,
-                                    'amount': discountObj.finalPrice.toFixed(3)
+                                    'amount': discountObj.finalPrice.toFixed(currencyExponent)
                                 },
                                 'discounts': discountObj.ShippingDiscounts
                             },

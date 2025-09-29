@@ -17,22 +17,26 @@ const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEsw
  * @param {string} view - the view of the line item (basket or order)
  */
 function ProductLineItems(productLineItems, view) {
-    base.call(this, productLineItems, view);
-    let currentBasket = BasketMgr.getCurrentBasket();
-    if (!empty(currentBasket) && eswCoreHelper.isEnabledMultiOrigin() && productLineItems) {
-        let modifiedPlis = [];
-        let basketProductLineItems = currentBasket.productLineItems;
-        let plis = this.items;
-        for (let i = 0; i < plis.length; i++) {
-            let pli = plis[i];
-            collections.forEach(basketProductLineItems, function (basketPli) {
-                if (basketPli.UUID === pli.UUID) {
-                    pli.eswOriginIso = basketPli.custom.eswFulfilmentCountryIso;
-                }
-            });
-            modifiedPlis.push(pli);
+    try {
+        base.call(this, productLineItems, view);
+        let currentBasket = BasketMgr.getCurrentBasket();
+        if (!empty(currentBasket) && eswCoreHelper.isEnabledMultiOrigin() && productLineItems) {
+            let modifiedPlis = [];
+            let basketProductLineItems = currentBasket.productLineItems;
+            let plis = this.items;
+            for (let i = 0; i < plis.length; i++) {
+                let pli = plis[i];
+                collections.forEach(basketProductLineItems, function (basketPli) {
+                    if (basketPli.UUID === pli.UUID) {
+                        pli.eswOriginIso = basketPli.custom.eswFulfilmentCountryIso;
+                    }
+                });
+                modifiedPlis.push(pli);
+            }
+            this.items = modifiedPlis;
         }
-        this.items = modifiedPlis;
+    } catch (error) {
+        eswCoreHelper.eswInfoLogger('ProductLineItems Model Error', error, error.message, error.stack);
     }
 }
 

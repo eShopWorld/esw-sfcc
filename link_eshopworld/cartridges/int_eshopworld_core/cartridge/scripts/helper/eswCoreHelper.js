@@ -14,6 +14,7 @@ const URLUtils = require('dw/web/URLUtils');
 const ContentMgr = require('dw/content/ContentMgr');
 
 const eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
 const Constants = require('*/cartridge/scripts/util/Constants');
 
 const getEswHelper = {
@@ -40,6 +41,12 @@ const getEswHelper = {
     },
     isEnabledMultiOrigin: function () {
         return this.getEShopWorldModuleEnabled() && Site.getCustomPreferenceValue('eswMultiOriginEnabled');
+    },
+    isEswSelfHostedOcEnabled: function () {
+        return this.getEShopWorldModuleEnabled() && Site.getCustomPreferenceValue('isEswSelfHostedOcEnabled');
+    },
+    getEswSelfhostedOcPageUrlPref: function () {
+        return Site.getCustomPreferenceValue('eswSelfhostedOcPageUrl');
     },
     /**
      * Checks if the ESW Embedded Checkout feature is enabled.
@@ -844,12 +851,16 @@ const getEswHelper = {
      */
     getOrderDiscount: function (cart, localizeCountryObj) {
         let orderLevelProratedDiscount = 0;
+        let siteId = Site.getID();
         try {
             if (!empty(localizeCountryObj) && 'localizeCountryObj' in localizeCountryObj) {
                 localizeCountryObj = localizeCountryObj.localizeCountryObj;
             }
             let Money = require('dw/value/Money');
             let that = this;
+            if (siteId === Constants.SITE_GENESIS_SITE_ID) {
+                that.removeThresholdPromo(cart);
+            }
             orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
             let shopperCurrency;
             if (empty(request.httpCookies['esw.currency'])) {
@@ -885,17 +896,23 @@ const getEswHelper = {
      */
     getOrderProratedDiscount: function (cart, applyRounding) {
         let orderLevelProratedDiscount = 0;
-        let discountValue;
+        let discountValue = 0;
+        let discount;
         let allPriceAdjustmentIter = cart.priceAdjustments.iterator();
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
             if (eachPriceAdjustment.priceValue) {
                 if (!empty(applyRounding) && applyRounding) {
-                    discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true, null, true).value;
+                    discount = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true, null, true);
                 } else {
-                    discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true).value;
+                    discount = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true);
                 }
-                if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
+
+                if ('custom' in eachPriceAdjustment && eachPriceAdjustment.custom.thresholdDiscountType === 'order' && eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
+                    // Used the original price instead of the converted price for threshold promotions
+                    orderLevelProratedDiscount += eachPriceAdjustment.price.value;
+                } else if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
+                    discountValue = !empty(discount) ? discount.value : 0;
                     orderLevelProratedDiscount += discountValue;
                 }
             }
@@ -1517,6 +1534,8 @@ const getEswHelper = {
                     continue;
                 }
                 if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER && this.isThresholdEnabled(priceAdjustment.promotion)) {
+                    // skip FXrates for threshold order level discounts only
+                    fxRate = 1;
                     discountType = this.getDiscountType(priceAdjustment.promotion);
                     Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
                     if (Discount === '0.1') {
@@ -1667,7 +1686,9 @@ const getEswHelper = {
                             }
                         });
                     }
-                    delete session.privacy.confirmedOrderID;
+                    if (empty(session.privacy.keepOrderIDForRegistration)) {
+                        delete session.privacy.confirmedOrderID;
+                    }
                     return true;
                 }
                 if (!currentBasket) {
@@ -1935,14 +1956,14 @@ const getEswHelper = {
      * @returns {Object} returns processes response Object
      */
     handleWebHooks: function (reqBody, requestType) {
+        const eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
         let obj = reqBody,
-            responseJSON = {},
-            eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
+            responseJSON = {};
         if (!this.isValidEswAuthorization()) {
             response.setStatus(401);
             logger.error('ESW Process Webhooks Check Error: Basic Authentication Token did not match OR requestType not Available in request Headers');
         } else {
-            this.eswInfoLogger('ProcessWebhook Log', JSON.stringify(reqBody));
+            this.eswInfoLogger('ProcessWebhook Log [' + requestType + ']', JSON.stringify(reqBody));
             try {
                 if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
@@ -1954,9 +1975,12 @@ const getEswHelper = {
                     responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
                 } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.oms.orderholdstatusupdatedevent') {
                     responseJSON = eswOrderProcessHelper.processKonbiniPayment(obj);
+                } else if (obj && !empty(obj) && requestType === Constants.ESW_ORDER_PAYMENT_STATUS_EVENT_NAME) {
+                    responseJSON = eswOrderProcessHelper.handlePostOrderOrderHook(obj);
                 }
             } catch (error) {
                 logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
+                this.eswInfoLogger('WebHooks processing encountered an error', '', error.message, error.stack);
             }
         }
         return responseJSON;
@@ -2114,7 +2138,6 @@ const getEswHelper = {
      * Sets OAuth Token
      */
     setOAuthToken: function () {
-        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
         let oAuthObj = eswCoreService.getOAuthService();
         let formData = {
             grant_type: 'client_credentials',
@@ -2125,6 +2148,7 @@ const getEswHelper = {
         let oAuthResult = oAuthObj.call(formData);
         if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
             logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+            this.eswInfoLogger('STS Authentification error', oAuthResult.error, oAuthResult.errorMessage, oAuthResult.msg);
         }
         let eswAuthTokenChunks = this.splitStringIntoChunks(JSON.parse(oAuthResult.object).access_token, Constants.STR_QUOTA_LIMIT);
         // Store chunks in session.privacy with dynamic variable names
@@ -2379,6 +2403,13 @@ const getEswHelper = {
             countryUrlParamKey: countryUrlParamKey,
             countryUrlParamVal: countryUrlParamVal
         };
+    },
+    /**
+     * Gets the ESW Sync Post Order Updates site preference value.
+     * @returns {boolean} The value of eswSyncPostOrderUpdates site preference.
+     */
+    isEswPostOrderSyncEnabled: function () {
+        return Site.getCustomPreferenceValue('eswSyncPostOrderUpdates');
     },
     /**
      * This params can be built using this.getSfCountryUrlParam function
@@ -2679,7 +2710,6 @@ const getEswHelper = {
     fetchJwksFromEsw: function () {
         try {
             let log = dw.system.Logger.getLogger('EShopWorldInfo', 'EswInfoLog');
-            let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
             let fetchJwksFromEswService = eswCoreService.getJwksFromEswService();
             let fetchJwksFromEswServiceResult = fetchJwksFromEswService.call();
             if (fetchJwksFromEswServiceResult.status === 'ERROR' || empty(fetchJwksFromEswServiceResult.object)) {
@@ -2726,7 +2756,64 @@ const getEswHelper = {
         return [(address.address1 || ''), (address.city || ''), (address.postalCode || '')].join(' - ');
     },
     /**
-     * Process the retailerCartId from ocPayloadJson
+     * function to return if Azure Insight logging is enabled
+     * @returns {bool} TRUE if Azure Insight logging is enabled, FALSE otherwise
+     */
+    isEswAzureInsightLogsEnabled: function () {
+        return Site.getCustomPreferenceValue('eswEnableAzureInsightLogs');
+    },
+    /**
+     * function to return the Azure Instrumentation Key (iKey)
+     * @returns {string|null} The iKey as a string if configured, null otherwise
+     */
+    getEswAzureInsightiKey: function () {
+        return this.isEswAzureInsightLogsEnabled()
+        ? Site.getCustomPreferenceValue('eswAzureInsightiKey')
+        : null;
+    },
+    /**
+ * Return the countries configs
+ * @returns {Array} - array of countries
+ */
+    getCountriesConfigurations: function () {
+        try {
+            let allCountriesCO = this.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
+                countriesArr = [];
+            if (allCountriesCO.count > 0) {
+                while (allCountriesCO.hasNext()) {
+                    let countryDetail = allCountriesCO.next();
+                    let countryCode = countryDetail.getCustom().countryCode;
+                    if (!empty(countryCode)) {
+                        countriesArr.push({
+                            countryCode: countryCode,
+                            isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
+                            name: countryDetail.getCustom().name,
+                            defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
+                            eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
+                            baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
+                            isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
+                            isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
+                            ESW_HUB_Address: {
+                                hubAddress: countryDetail.getCustom().hubAddress,
+                                hubAddressState: countryDetail.getCustom().hubAddressState,
+                                hubAddressCity: countryDetail.getCustom().hubAddressCity,
+                                hubAddressPostalCode: countryDetail.getCustom().hubAddressPostalCode
+                            },
+                            eswPackage: {
+                                eswToSfcc: countryDetail.getCustom().eswToSfcc,
+                                sfccToEsw: countryDetail.getCustom().sfccToEsw
+                            }
+                        });
+                    }
+                }
+            }
+            return countriesArr;
+        } catch (error) {
+            logger.error('Error while fetching Countries Configurations {0} ', error);
+        }
+        return [];
+    },
+     /* Process the retailerCartId from ocPayloadJson
      * @param {Object} retailerCartId - The payload JSON object
      * @returns {Object} - Processed retailerCartId parts
      */
@@ -2747,8 +2834,7 @@ const getEswHelper = {
      */
     generatePreOrderUsingBasket: function () {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-            preorderServiceObj = eswCoreService.getPreorderServiceV2(),
+        let preorderServiceObj = eswCoreService.getPreorderServiceV2(),
             eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
             redirectPreference = eswHelper.getRedirect();
         if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
@@ -2770,7 +2856,17 @@ const getEswHelper = {
             requestObj.shopperCheckoutExperience.metadataItems = [];
         }
         requestObj.shopperCheckoutExperience.metadataItems.push({ name: 'dwsid', value: request.httpCookies.dwsid.value });
-
+        // Add metadata items for self-hosted OC if enabled
+        if (this.isEswSelfHostedOcEnabled()) {
+            const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
+            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestObj.retailerCartId);
+            if (!empty(selfHostedOcMetadata)) {
+                requestObj.retailerCheckoutExperience.metadataItems.push({
+                    Name: selfHostedOcMetadata.metadataName,
+                    Value: selfHostedOcMetadata.metadataValue
+                });
+            }
+        }
         eswHelper.validatePreOrder(requestObj, true);
         session.privacy.confirmedOrderID = currentBasket.UUID;
         let result = preorderServiceObj.call(JSON.stringify(requestObj));
@@ -2888,12 +2984,12 @@ const getEswHelper = {
             }
         }
     },
-     /* Add currency symbol or formatted money object to a price range string
-     * @param {string} priceRange - A string representing a price range (e.g., "65.00 - 180.01")
-     * @param {dw.order.OrderAddress} selectedCountryDetail - Object that contains selectedCountryDetail
-     * @param {Object} selectedCountryLocalizeObj - Object that contains selectedCountryLocalizeObj
-     * @returns {string} - A string with currency symbols or formatted money objects
-     */
+    /* Add currency symbol or formatted money object to a price range string
+    * @param {string} priceRange - A string representing a price range (e.g., "65.00 - 180.01")
+    * @param {dw.order.OrderAddress} selectedCountryDetail - Object that contains selectedCountryDetail
+    * @param {Object} selectedCountryLocalizeObj - Object that contains selectedCountryLocalizeObj
+    * @returns {string} - A string with currency symbols or formatted money objects
+    */
     updatePriceFilterWithCurrency: function (priceRange, selectedCountryDetail, selectedCountryLocalizeObj) {
         try {
             let currency,
@@ -3005,6 +3101,38 @@ const getEswHelper = {
         return headersArr;
     },
     /**
+     * Grt OCAPI admin token
+     * @returns {Object} - OCAPI token or Error
+     */
+    getAdminOAuthToken: function () {
+        let ocapiDataServiceAuth = eswCoreService.getDataOcapiAuthToken();
+        let ocapiAuthServiceRes = ocapiDataServiceAuth.call();
+        if (ocapiAuthServiceRes && ocapiAuthServiceRes.isOk()) {
+            return {
+                success: true,
+                token: ocapiAuthServiceRes.getObject().access_token
+            };
+        } else {
+            let errorMsg = 'Failed to get Admin OAuth Token';
+            let details = '';
+            if (ocapiAuthServiceRes) {
+                details = `Status: ${
+                    ocapiAuthServiceRes.getStatus()},
+                    Error: ${ocapiAuthServiceRes.getError()},
+                    Message: ${ocapiAuthServiceRes.getErrorMessage()
+                    }`;
+                errorMsg += `. ${details}`;
+            } else {
+                details = 'Service result is null or undefined.';
+                errorMsg += `. ${details}`;
+            }
+            return {
+                success: false,
+                error: errorMsg
+            };
+        }
+    },
+    /**
       * Get default currency for selected country and set currency
       * @return {string} - defaultCurrencyCode - payment Information
       */
@@ -3023,6 +3151,299 @@ const getEswHelper = {
         }
 
         return defaultCurrencyCode;
+    },
+    /**
+     * Get ESW Country Adjustments for localize country
+     * @param {string} shopperCountry - shopperCountry
+     * @returns {array} returns selected country adjustment
+     */
+    getESWCountryRoundingRules: function (shopperCountry) {
+        try {
+            let roundingModels = this.getPricingAdvisorData().roundingModels,
+                country = !empty(shopperCountry) ? shopperCountry : request.httpCookies['esw.location'];
+            let roundingModel = [];
+            if (!empty(country) && !empty(roundingModels)) {
+                roundingModel = roundingModels.filter(function (roundingModelObj) {
+                    return roundingModelObj.deliveryCountryIso === country;
+                });
+            }
+            return roundingModel;
+        } catch (error) {
+            logger.error('Error while getting rounding rules {0} {1}', error.message, error.stack);
+        }
+        return null;
+    },
+    /* eslint-disable no-undef */
+    /* eslint-disable no-mixed-operators */
+    getCheckoutSamplePayload: function () {
+        return {
+            contactDetails: [],
+            retailerPromoCodes: [],
+            lineItems: [
+                {
+                    quantity: 1,
+                    estimatedDeliveryDateFromRetailer: null,
+                    lineItemId: 1,
+                    product: {
+                        productCode: '69309284M-2',
+                        upc: null,
+                        title: 'Modern Striped Dress Shirt',
+                        description: 'Modern Striped Dress Shirt',
+                        productUnitPriceInfo: {
+                            price: {
+                                currency: 'EUR',
+                                amount: '173.520'
+                            },
+                            discounts: []
+                        },
+                        imageUrl: null,
+                        productUrl: null,
+                        color: 'Blue',
+                        size: '15L',
+                        isNonStandardCatalogItem: false,
+                        metadataItems: null,
+                        isReturnProhibited: false
+                    },
+                    cartGrouping: 'Group 1',
+                    metadataItems: null
+                }
+            ],
+            shopperCurrencyIso: 'EUR',
+            pricingSynchronizationId: 'PBVPBV_IE_abc87dc3-f921-407e-9dbf-ab2d3f5eed73',
+            deliveryCountryIso: 'IE',
+            retailerCheckoutExperience: {
+                BaseUrl: null,
+                ContinueShoppingUrl: null,
+                BackToCartUrl: null,
+                logoURL: null,
+                metadataItems: [
+                    {
+                        Name: 'OrderConfirmationBase64EncodedAuth_TestOnly',
+                        Value: '1 parameters'
+                    },
+                    {
+                        Name: 'InventoryCheckBase64EncodedAuth_TestOnly',
+                        Value: '1 parameters'
+                    },
+                    {
+                        Name: 'InventoryCheckUri_TestOnly',
+                        Value: URLUtils.https('EShopWorld-ValidateInventory').toString()
+                    },
+                    {
+                        Name: 'OrderConfirmationUri_TestOnly',
+                        Value: URLUtils.https('EShopWorld-Notify').toString()
+                    }
+                ]
+            },
+            shopperCheckoutExperience: {
+                useDeliveryContactDetailsForPaymentContactDetails: true,
+                emailMarketingOptIn: false,
+                smsMarketingOptIn: false,
+                registeredProfileId: null,
+                shopperCultureLanguageIso: 'en-US',
+                expressPaymentMethod: null,
+                metadataItems: null,
+                registration: {
+                    showRegistration: false
+                },
+                sessionTimeout: 30
+            },
+            deliveryOptions: [
+                {
+                    deliveryOption: 'EXP2',
+                    deliveryOptionOverridePriceInfo: {
+                        price: {
+                            currency: 'EUR',
+                            amount: '35.000'
+                        },
+                        discounts: []
+                    },
+                    metadataItems: null
+                }
+            ],
+            retailerCartId: '00006902'
+        };
+    },
+    getCatalogServicePayload: function () {
+        return {
+            productCode: '2xi9orvams8',
+            name: '8bgdmt42v5t',
+            description: 'qk6hdfti0s',
+            material: 'FABRIC 53% cotton, 21% polyester, 21% acrylic, 4% viscose, 1% polyester, lining 100% polyester',
+            countryOfOrigin: 'IT',
+            hsCode: '62043290',
+            hsCodeRegion: 'EU',
+            category: null,
+            gender: null,
+            ageGroup: null,
+            size: null,
+            weight: null,
+            weightUnit: null,
+            url: null,
+            imageUrl: null,
+            unitPrice: null,
+            dangerousGoods: null,
+            additionalProductCode: null,
+            variantProductCode: null
+        };
+    },
+    getRetailerBrandCode: function () {
+        return Site.getCustomPreferenceValue('eswRetailerBrandCode');
+    },
+    getPackageFeedPayload: function () {
+        return {
+            brandCode: this.getRetailerBrandCode(),
+            orderReference: 'ABC1234567890',
+            packageReference: 'AAA1234567890',
+            orderType: 'CHECKOUT',
+            weight: {
+                weight: 12.34,
+                weightUnit: 'KG'
+            },
+            shippingDocumentationRequested: false,
+            returnDocumentationRequested: false,
+            shippingStatus: 'Complete',
+            parentOrderReference: 'ABC1234567890',
+            carrierId: 123,
+            carrierReference: 'ABC1234567890',
+            distributionCentre: 'USDC1',
+            hubCode: 'AMS',
+            additionalImportInformation: 'Additional Import Information',
+            isBackOrder: false,
+            dangerousGoods: false,
+            consignee: {
+                firstName: 'First Name',
+                lastName: 'Last Name',
+                address1: 'Address 1',
+                address2: 'Address 2',
+                address3: 'Address 3',
+                city: 'City',
+                postalCode: 'Post Code',
+                poBox: 'PO Box 123',
+                region: 'US',
+                country: 'US',
+                gender: 'Female',
+                email: 'test@test.com',
+                telephone: '0123456789',
+                unit: 'Unit 456'
+            },
+            shippingInfo: {
+                amount: 123.45,
+                currency: 'USD'
+            },
+            dimensions: {
+                dimHeight: '12.34',
+                dimLength: '12.34',
+                dimWidth: '12.34',
+                dimWeight: '12.34',
+                dimMeasurementUnit: 'INCH'
+            },
+            goodsDescription: 'Goods Description',
+            serviceLevel: 'POST',
+            packageItems: [
+                {
+                    productCode: 'ABC1234567890',
+                    lineItemId: 1,
+                    quantity: 1,
+                    productDescription: 'Product Description',
+                    productCustomsDescription: 'US',
+                    countryOfOrigin: 'US',
+                    weight: {
+                        weight: 12.34,
+                        weightUnit: 'KG'
+                    },
+                    unitPrice: {
+                        amount: 123.45,
+                        currency: 'USD'
+                    },
+                    hsCode: 'ABC123456',
+                    fta: false,
+                    dangerousGoods: false,
+                    serialNumber: 'ABC123456',
+                    warrantyId: 'ABC123456'
+                }
+            ],
+            additionalCarrierData: {
+                additionalCarrierData1: 'Additional Carrier Data 1',
+                additionalCarrierData2: 'Additional Carrier Data 2',
+                additionalCarrierData3: 'Additional Carrier Data 3',
+                additionalCarrierData4: 'Additional Carrier Data 4',
+                additionalCarrierData5: 'Additional Carrier Data 5'
+            },
+            palletId: 'ABC123456',
+            metadata: {}
+        };
+    },
+    /**
+     *
+     * @param {string} type - Type of info; ESW Service info
+     * @param {string} errorMessage - error Message
+     * @param {string} stackTrace - Stack Trace of error
+     * @returns {Object} - request payload
+     */
+    getAZInsightRequestPayload: function (type, errorMessage, stackTrace) {
+        let requestPayload = null;
+        let key = this.getEswAzureInsightiKey();
+        try {
+            // Validate input parameters
+            if (!type || !key) {
+                throw new Error('Invalid input parameters: type and key are required.');
+            }
+
+            let Resource = require('dw/web/Resource');
+            let currentDate = new Date();
+            let isoString = currentDate.toISOString();
+
+            requestPayload = {
+                name: 'Microsoft.ApplicationInsights.Event',
+                time: isoString,
+                iKey: key,
+                tags: {},
+                data: {
+                    baseType: 'EventData',
+                    baseData: {
+                        ver: Resource.msg('esw.cartridges.version.number', 'esw', null),
+                        eswCartridgeVersion: Resource.msg('global.version.number', 'version', null),
+                        name: type,
+                        properties: {
+                            retailer: Site.getCustomPreferenceValue('eswRetailerBrandCode'),
+                            errorMessage: errorMessage,
+                            stack: stackTrace,
+                            errorCode: '',
+                            errorStatusCode: ''
+                        }
+                    }
+                }
+            };
+        } catch (error) {
+            logger.error('Error while setting up AZ insight {0} {1}', error.message, error.stack);
+            return null;
+        }
+        return requestPayload;
+    },
+    /**
+     * Checks the basket for restricted products and sets session/error message if found.
+     *
+     * Iterates through all product line items in the basket and checks if any product is restricted
+     * using the isProductRestricted method. If a restricted product is found, sets privacy variables
+     * (eswProductRestricted, restrictedProductID).
+     *
+     * @param {dw.order.Basket} basket - The current user's basket
+     * @returns {boolean} true if a restricted product is found, false otherwise
+     */
+    handleRestrictedProductsInBasket: function (basket) {
+        if (!basket) return false;
+        let productLineItems = basket.productLineItems.toArray();
+        for (let i = 0; i < productLineItems.length; i++) {
+            let cartProduct = productLineItems[i].product;
+            let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+            if (cartProduct && eswHelper.isProductRestricted(cartProduct.custom)) {
+                session.privacy.eswProductRestricted = true;
+                session.privacy.restrictedProductID = cartProduct.ID;
+                return true;
+            }
+        }
+        return false;
     }
 };
 

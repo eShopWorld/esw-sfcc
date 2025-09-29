@@ -58,6 +58,7 @@ function execute() {
             }
         } catch (e) {
             Logger.error('ASN shipment service call failed: {0}: {1}', e.message, e.stack);
+            eswHelper.eswInfoLogger('eswRetailerOutboundShippment Error', e, e.message, e.stack);
             return new Status(Status.ERROR);
         }
     }

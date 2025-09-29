@@ -1,0 +1,19 @@
+<isloop items="${pdict.transformedData}" var="section">
+    <h2>${section.data[0].sectionName}</h2>
+    <table class="esw-product-table" id="generic-pair-value-table">
+        <thead>
+            <tr>
+                 <td class="table_header w e s">${Resource.msg('label.data.table.key', 'eswbm', null)}</td>
+                 <td class="table_header w e s">${Resource.msg('label.data.table.value', 'eswbm', null)}</td>
+            </tr>
+        </thead>
+        <tbody>
+            <isloop items="${section.data}" var="row">
+                <tr class="${row.class}">
+                    <td class="table_detail middle e s left">${row.key}</td>
+                    <td class="table_detail middle e s left">${row.value}</td>
+                </tr>
+            </isloop>
+        </tbody>
+    </table>
+</isloop>

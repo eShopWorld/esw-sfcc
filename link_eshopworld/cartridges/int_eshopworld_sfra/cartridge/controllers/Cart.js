@@ -73,19 +73,16 @@ server.prepend(
         eswHelper.rebuildCartUponBackFromESW();
         let BasketMgr = require('dw/order/BasketMgr'),
             currentBasket = BasketMgr.getCurrentBasket();
-        // eslint-disable-next-line no-restricted-syntax, guard-for-in
-        for (let lineItemNumber in currentBasket.productLineItems) {
-            let cartProduct = currentBasket.productLineItems[lineItemNumber].product;
-            if (eswHelper.isProductRestricted(cartProduct.custom)) {
-                session.privacy.eswProductRestricted = true;
-                session.privacy.restrictedProductID = cartProduct.ID;
-            }
-        }
         let viewData = res.getViewData();
         if (currentBasket && eswCoreHelper.getEShopWorldModuleEnabled() && request.httpCookies['esw.location'] && eswCoreHelper.checkIsEswAllowedCountry(request.httpCookies['esw.location'].value)) {
             // Set override shipping methods if configured
             eswCoreHelper.applyShippingOverrideMethod(currentBasket);
         }
+
+        if (currentBasket) {
+            eswCoreHelper.handleRestrictedProductsInBasket(currentBasket, viewData);
+        }
+
         res.setViewData(viewData);
         return next();
     }
@@ -104,11 +101,26 @@ server.prepend(
  */
 server.append('Show', function (req, res, next) {
     let viewData = res.getViewData();
-    // Group product for multi origin
+    let CartModel = require('*/cartridge/models/cart');
+    let BasketMgr = require('dw/order/BasketMgr');
+    let Transaction = require('dw/system/Transaction');
+    let currentBasket = BasketMgr.getCurrentBasket();
+    // // Group product for multi origin
     if (eswCoreHelper.isEnabledMultiOrigin() && viewData && viewData.items) {
         viewData.items = eswMultiOriginHelper.groupCartPlis(viewData.items);
     }
     res.setViewData(viewData);
+    // Ensure all shipments have methods
+    Transaction.wrap(function () {
+        eswCoreHelper.removeThresholdPromo(currentBasket);
+    });
+    // Update the basket model if needed
+    let basketModel = new CartModel(currentBasket);
+    res.render('cart/cart', basketModel);
+    // After rendering cart page, clear product restriction flag so error only shows once
+    if (!empty(session.privacy.eswProductRestricted)) {
+        delete session.privacy.eswProductRestricted;
+    }
     next();
 });
 
@@ -351,44 +363,23 @@ server.replace('UpdateQuantity', function (req, res, next) {
     let availableToSell = 0;
 
     let totalQtyRequested = 0;
-    let qtyAlreadyInCart = 0;
     let minOrderQuantity = 0;
     let perpetual = false;
     let canBeUpdated = false;
-    let bundleItems;
     let bonusDiscountLineItemCount = currentBasket.bonusDiscountLineItems.length;
-
-    if (matchingLineItem) {
-        if (matchingLineItem.product.bundle) {
-            bundleItems = matchingLineItem.bundledProductLineItems;
-            canBeUpdated = collections.every(bundleItems, function (item) {
-                let quantityToUpdate = updateQuantity *
-                    matchingLineItem.product.getBundledProductQuantity(item.product).value;
-                qtyAlreadyInCart = cartHelper.getQtyAlreadyInCart(
-                    item.productID,
-                    productLineItems,
-                    item.UUID
-                );
-                totalQtyRequested = quantityToUpdate + qtyAlreadyInCart;
-                availableToSell = item.product.availabilityModel.inventoryRecord.ATS.value;
-                perpetual = item.product.availabilityModel.inventoryRecord.perpetual;
-                minOrderQuantity = item.product.minOrderQuantity.value;
-                return (totalQtyRequested <= availableToSell || perpetual) &&
-                    (quantityToUpdate >= minOrderQuantity);
-            });
-        } else {
-            availableToSell = matchingLineItem.product.availabilityModel.inventoryRecord.ATS.value;
-            perpetual = matchingLineItem.product.availabilityModel.inventoryRecord.perpetual;
-            qtyAlreadyInCart = cartHelper.getQtyAlreadyInCart(
-                productId,
-                productLineItems,
-                matchingLineItem.UUID
-            );
-            totalQtyRequested = updateQuantity + qtyAlreadyInCart;
-            minOrderQuantity = matchingLineItem.product.minOrderQuantity.value;
-            canBeUpdated = (totalQtyRequested <= availableToSell || perpetual) &&
-                (updateQuantity >= minOrderQuantity);
-        }
+    if (eswCoreHelper.isEnabledMultiOrigin()) {
+        let inventoryUpdateRes = eswMultiOriginHelper.syncSingleProductMoInventoryWithSfcc(matchingLineItem.getProduct(), updateQuantity);
+        availableToSell = inventoryUpdateRes.eswAtsValue;
+        perpetual = matchingLineItem.product.availabilityModel.inventoryRecord.perpetual;
+        totalQtyRequested = updateQuantity;
+        minOrderQuantity = matchingLineItem.product.minOrderQuantity.value;
+        canBeUpdated = (totalQtyRequested <= availableToSell || perpetual) && (updateQuantity >= minOrderQuantity);
+    } else {
+        availableToSell = matchingLineItem.product.availabilityModel.inventoryRecord.ATS.value;
+        perpetual = matchingLineItem.product.availabilityModel.inventoryRecord.perpetual;
+        totalQtyRequested = updateQuantity;
+        minOrderQuantity = matchingLineItem.product.minOrderQuantity.value;
+        canBeUpdated = (totalQtyRequested <= availableToSell || perpetual) && (updateQuantity >= minOrderQuantity);
     }
 
     let response;
@@ -436,7 +427,7 @@ server.replace('UpdateQuantity', function (req, res, next) {
         let basketModel = new CartModel(currentBasket);
         // Custom Start: esw integration
         if (eswCoreHelper.isEnabledMultiOrigin()) {
-            basketModel.items = eswMultiOriginHelper.groupCartPlis(basketModel.items);
+            basketModel.items = eswMultiOriginHelper.groupCartPlis(basketModel.items, productId, req.querystring.uuid);
             var cartItem = arrayHelper.find(basketModel.items, function (item) {
                 return item.id === response.lineItemId;
             });
@@ -509,6 +500,10 @@ server.replace('RemoveProductLineItem', function (req, res, next) {
                     if (shipmentToRemove.productLineItems.empty && !shipmentToRemove.default) {
                         currentBasket.removeShipment(shipmentToRemove);
                     }
+                    // Clear restrictedProductID if this product was restricted
+                    if (session.privacy.restrictedProductID && item.productID === session.privacy.restrictedProductID) {
+                        delete session.privacy.restrictedProductID;
+                    }
                     isProductLineItemFound = true;
                     // Custom Start: esw integration
                     if (!eswCoreHelper.isEnabledMultiOrigin()) {
@@ -527,7 +522,9 @@ server.replace('RemoveProductLineItem', function (req, res, next) {
         let basketModel = new CartModel(currentBasket);
         let basketModelPlus = {
             basket: basketModel,
-            toBeDeletedUUIDs: bonusProductsUUIDs
+            toBeDeletedUUIDs: bonusProductsUUIDs,
+            restrictedProductID: session.privacy.restrictedProductID || null,
+            notAvailableMsg: Resource.msg('cart.esw.product.notavailable', 'esw', null)
         };
         res.json(basketModelPlus);
     } else {
@@ -727,29 +724,6 @@ server.replace('EditProductLineItem', function (req, res, next) {
             errorMessage: Resource.msg('error.cannot.update.product', 'cart', null)
         });
     }
-
-    return next();
-});
-
-server.append('SelectShippingMethod', function (req, res, next) {
-    const BasketMgr = require('dw/order/BasketMgr');
-    const Transaction = require('dw/system/Transaction');
-    const CartModel = require('*/cartridge/models/cart');
-    const basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
-    const PromotionMgr = require('dw/campaign/PromotionMgr');
-
-    let currentBasket = BasketMgr.getCurrentBasket();
-
-    Transaction.wrap(function () {
-        eswHelper.adjustThresholdDiscounts(currentBasket);
-        PromotionMgr.applyDiscounts(currentBasket);
-        basketCalculationHelpers.calculateTotals(currentBasket);
-        // Upon applying shipping method, remove threshold promo if it exists
-        eswHelper.removeThresholdPromo(currentBasket);
-    });
-
-    let updatedBasketModel = new CartModel(currentBasket);
-    res.json(updatedBasketModel);
 
     return next();
 });
