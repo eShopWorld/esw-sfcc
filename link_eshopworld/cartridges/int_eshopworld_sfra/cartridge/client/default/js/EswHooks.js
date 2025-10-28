@@ -188,12 +188,14 @@ function updateCountryList() {
     });
 
     $('.headerDropdown, .footerDropdown').click(function () {
-        let eswLandingPageUrl = $(this).attr('data-url');
-        let dataObj = {
-            eswLandingPageUrl: eswLandingPageUrl,
-            dropDownSelection: 'true'
-        };
-        window.openEswCountrySwitcher(dataObj);
+        if ($(this).find('.esw-country-selector.selectCountry').length > 0) {
+            let eswLandingPageUrl = $(this).attr('data-url');
+            let dataObj = {
+                eswLandingPageUrl: eswLandingPageUrl,
+                dropDownSelection: 'true'
+            };
+            window.openEswCountrySwitcher(dataObj);
+        }
     });
 
     $(document).on('click', '.selected-link', function () {
@@ -390,7 +392,7 @@ function formatPrice(priceElement) {
  *
  */
 function currencyDisplayFormatting() {
-    let selectedCountryAdjustment = window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
+    let selectedCountryAdjustment = window.SitePreferences && window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
     let showTrailingZero = selectedCountryAdjustment && selectedCountryAdjustment.currencyDisplay ? selectedCountryAdjustment.currencyDisplay.showTrailingZeros : true;
     if (showTrailingZero) {
         return;

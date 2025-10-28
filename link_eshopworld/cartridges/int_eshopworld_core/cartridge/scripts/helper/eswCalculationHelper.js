@@ -9,6 +9,7 @@ const Money = require('dw/value/Money');
 const logger = require('dw/system/Logger');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Constants = require('*/cartridge/scripts/util/Constants');
+const pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
 
 const getEswCalculationHelper = {
     /**
@@ -28,6 +29,10 @@ const getEswCalculationHelper = {
         let selectedCountryInfo = !empty(selectedCountryInfoObjParam) ? selectedCountryInfoObjParam : null;
         if (!eswHelper.getEShopWorldModuleEnabled()) {
             return price;
+        }
+        // If spark dynamic pricing conversion is enabled, return the price as is without any calculations
+        if(eswHelper.isEswEnabledSparkPricingConversion()){
+           return (formatted == null) ? formatMoney(new Money(billingPrice, eswHelper.getBaseCurrency())) : new Money(billingPrice, eswHelper.getBaseCurrency());
         }
         try {
             let baseCurrency = eswHelper.getBaseCurrencyPreference(),
@@ -111,30 +116,79 @@ const getEswCalculationHelper = {
      * This function is used to get total of cart or productlineitems based on input
      */
     getSubtotalObject: function (cart, isCart, listPrice, unitPrice, localizeObj, conversionPrefs) {
+        let total = 0;
+        let currencyCode = '';
         try {
-            let total = 0;
-            let currencyCode = '';
-            let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+            // Spark Dynamic Pricing Conversion: skip conversion logic
+            if (eswHelper.isEswEnabledSparkPricingConversion()) {
+                if (isCart) {
+                    let productLineItems = cart.getProductLineItems();
+                    for (let productLineItem in productLineItems) {
+                        let itemTotal = this.getSubtotalObject(productLineItems[productLineItem], false, false, false, localizeObj, conversionPrefs);
+                        total += itemTotal instanceof Money ? itemTotal.value : itemTotal;
+                    }
+                } else {
+                    let cartBasePrice = 0;
+                    if (!empty(cart.optionProductLineItems)) {
+                        for (let option in cart.optionProductLineItems) {
+                            cartBasePrice += cart.optionProductLineItems[option].adjustedPrice.value;
+                        }
+                    }
+                    cartBasePrice += cart.basePrice.value;
+                    total = cartBasePrice * cart.quantity.value;
+                    currencyCode = cart.basePrice.currencyCode || (cart.optionProductLineItems && cart.optionProductLineItems[0] && cart.optionProductLineItems[0].adjustedPrice.currencyCode) || 'USD';
+                    if (listPrice) {
+                        if (unitPrice) {
+                            total /= cart.quantity.value;
+                        }
+                        return new Money(total, currencyCode);
+                    }
+                    if (cart.getAdjustedPrice().getValue() > 0) {
+                        cart.priceAdjustments.toArray().forEach(function (adjustment) {
+                            if (adjustment.appliedDiscount.type === dw.campaign.Discount.TYPE_FIXED_PRICE) {
+                                total = adjustment.appliedDiscount.fixedPrice * adjustment.quantity;
+                                if (adjustment.quantity < cart.quantity.value) {
+                                    total += (cart.quantity.value - adjustment.quantity) * cart.basePrice.value;
+                                }
+                                if (!empty(cart.optionProductLineItems)) {
+                                    for (let option in cart.optionProductLineItems) {
+                                        total += cart.optionProductLineItems[option].adjustedPrice.value;
+                                    }
+                                }
+                            } else {
+                                let adjustedUnitPrice = adjustment.price;
+                                total -= (adjustedUnitPrice) * -1;
+                            }
+                        });
+                    }
+                }
+                if (unitPrice) {
+                    total /= cart.quantity.value;
+                }
+                let shopperCurrency = currencyCode;
+                return new Money(total, shopperCurrency);
+            }
+            // ...Code for conversion...
+            let calculatedCartBasePrice = 0;
             if (isCart) {
                 let productLineItems = cart.getProductLineItems();
-                // eslint-disable-next-line guard-for-in, no-restricted-syntax
                 for (let productLineItem in productLineItems) {
-                    total += this.getSubtotalObject(productLineItems[productLineItem], false, false, false, localizeObj, conversionPrefs);
+                    let itemTotal = this.getSubtotalObject(productLineItems[productLineItem], false, false, false, localizeObj, conversionPrefs);
+                    total += itemTotal instanceof Money ? itemTotal.value : itemTotal;
                 }
             } else {
                 let cartBasePrice = 0;
                 if (!empty(cart.optionProductLineItems)) {
-                    // eslint-disable-next-line guard-for-in, no-restricted-syntax
                     for (let option in cart.optionProductLineItems) {
                         cartBasePrice += cart.optionProductLineItems[option].adjustedPrice.value;
                     }
                 }
                 cartBasePrice += cart.basePrice.value;
-                if ((empty(localizeObj) && empty(conversionPrefs) && !empty(request.httpCookies['esw.currency'])) || (!empty(request.httpCookies['esw.location']))) {
+                if ((empty(localizeObj) && empty(conversionPrefs) && request.httpCookies && !empty(request.httpCookies['esw.currency'])) || (request.httpCookies && !empty(request.httpCookies['esw.location']))) {
                     total = eswHelper.getMoneyObject(cartBasePrice, false, false).value * cart.quantity.value;
                     currencyCode = !empty(request.httpCookies['esw.currency']) ? request.httpCookies['esw.currency'].value : eswHelper.applyDefaultCurrencyForCountry();
                 } else {
-                    let calculatedCartBasePrice = pricingHelper.getConvertedPrice(cartBasePrice, localizeObj, conversionPrefs);
+                    calculatedCartBasePrice = pricingHelper.getConvertedPrice(cartBasePrice, localizeObj, conversionPrefs);
                     total = calculatedCartBasePrice * cart.quantity.value;
                     currencyCode = localizeObj.localizeCountryObj.currencyCode;
                 }
@@ -142,7 +196,7 @@ const getEswCalculationHelper = {
                     if (unitPrice) {
                         total /= cart.quantity.value;
                     }
-                    return new dw.value.Money(total, currencyCode);
+                    return new Money(total, currencyCode);
                 }
                 let that = eswHelper;
                 if (cart.getAdjustedPrice().getValue() > 0) {
@@ -157,7 +211,6 @@ const getEswCalculationHelper = {
                                     total += (cart.quantity.value - adjustment.quantity) * that.getMoneyObject(cart.basePrice.value, false, false).value;
                                 }
                                 if (!empty(cart.optionProductLineItems)) {
-                                    // eslint-disable-next-line guard-for-in, no-restricted-syntax
                                     for (let option in cart.optionProductLineItems) {
                                         total += cart.optionProductLineItems[option].adjustedPrice.value;
                                     }
@@ -167,18 +220,15 @@ const getEswCalculationHelper = {
                                 total -= (adjustedUnitPrice) * -1;
                             }
                         } else {
-                            // eslint-disable-next-line no-lonely-if
                             if (adjustment.appliedDiscount.type === dw.campaign.Discount.TYPE_FIXED_PRICE) {
                                 total = pricingHelper.getConvertedPrice(Number(adjustment.appliedDiscount.fixedPrice), localizeObj, conversionPrefs) * adjustment.quantity;
                                 if (adjustment.quantity < cart.quantity.value) {
                                     total += (cart.quantity.value - adjustment.quantity) * calculatedCartBasePrice;
                                 }
                             } else {
-                                // eslint-disable-next-line no-param-reassign
                                 localizeObj.applyRoundingModel = 'false';
                                 let adjustedUnitPrice = pricingHelper.getConvertedPrice(adjustment.price / cart.quantity.value, localizeObj, conversionPrefs);
                                 total -= (adjustedUnitPrice * cart.quantity.value) * -1;
-                                // eslint-disable-next-line no-param-reassign
                                 localizeObj.applyRoundingModel = 'true';
                             }
                         }
@@ -191,12 +241,12 @@ const getEswCalculationHelper = {
                 total /= cart.quantity.value;
             }
             let shopperCurrency = null;
-            if (!empty(request.httpParameters.get('country-code'))) {
-                // Fix for headless
+            let countryCode = null;
+            if (request.httpParameters && !empty(request.httpParameters.get('country-code'))) {
                 countryCode = request.httpParameters.get('country-code');
                 let cDetail = eswHelper.getSelectedCountryDetail(countryCode[0]);
                 shopperCurrency = cDetail.defaultCurrencyCode;
-            } else if (!empty(request.httpCookies['esw.currency'])) {
+            } else if (request.httpCookies && !empty(request.httpCookies['esw.currency'])) {
                 shopperCurrency = request.httpCookies['esw.currency'].value;
             } else if (!empty(localizeObj)) {
                 shopperCurrency = localizeObj.localizeCountryObj.currencyCode;
@@ -206,7 +256,7 @@ const getEswCalculationHelper = {
             }
             return new Money(total, shopperCurrency);
         } catch (error) {
-            logger.error('Error in getting subtotal price {0} {1}', error.message, error.stack);
+            logger.error('Error in getting subtotal price {0} {1}', error && error.message ? error.message : '', error && error.stack ? error.stack : '');
             return false;
         }
     }

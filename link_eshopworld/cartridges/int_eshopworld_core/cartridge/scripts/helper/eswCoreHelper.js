@@ -57,12 +57,26 @@ const getEswHelper = {
         let result = false;
         try {
             const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
-            result = !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath());
+            result = Site.getCustomPreferenceValue('eswIsIframeCheckoutEnabled') && !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath());
         } catch (e) {
             // if cartridge is not inculded then gracefully return false from the function
             result = false;
         }
         return this.getEShopWorldModuleEnabled() && result;
+    },
+    isEswEnabledSparkPricingConversion: function () {
+        try{
+            const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+            let countryCode = this.getAvailableCountry();
+            let selectedCountryDetail = this.getSelectedCountryDetail(countryCode);
+            let isFixedPriceCountry = selectedCountryDetail ? selectedCountryDetail.isFixedPriceModel : false;
+            return !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath())
+                    && this.getEShopWorldModuleEnabled() 
+                    && Site.getCustomPreferenceValue('eswIsSparkDynamicPricingEnabled') 
+                    && !isFixedPriceCountry;
+        }catch(e){
+            return false;
+        }
     },
     getEswHeadlessSiteUrl: function () {
         return Site.getCustomPreferenceValue('eswHeadlessSiteUrl');
@@ -76,7 +90,7 @@ const getEswHelper = {
         let embScriptPath = null;
         try {
             const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
-            if (this.isEswEnabledEmbeddedCheckout()) {
+            if (this.isEswEnabledEmbeddedCheckout() || this.isEswEnabledSparkPricingConversion()) {
                 embScriptPath = embCheckoutHelper.getEswEmbCheckoutScriptPath();
             }
         } catch (e) {
@@ -374,7 +388,7 @@ const getEswHelper = {
         return Site.getCustomPreferenceValue('eswLocalizedPromotions');
     },
     isFrontendConversionEnabled: function () {
-        return Site.getCustomPreferenceValue('eswEnableFrontendPricesConversion');
+        return Site.getCustomPreferenceValue('eswEnableFrontendPricesConversion') && !this.isEswEnabledSparkPricingConversion();
     },
     isSkipFlaggedLocalPriceEnabled: function () {
         return Site.getCustomPreferenceValue('eswSkipFlaggedLocalPrice');
@@ -2311,9 +2325,31 @@ const getEswHelper = {
         let totalIncludingOrderDiscount = lineItemContainer.getAdjustedMerchandizeTotalPrice(true);
         let orderDiscount = isESWSupportedCountry ? this.getOrderDiscount(lineItemContainer) : totalExcludingOrderDiscount.subtract(totalIncludingOrderDiscount);
 
+        let isEswThresholdDiscount = false;
+        let priceAdjustmentsItr = lineItemContainer.getPriceAdjustments().iterator();
+        while(priceAdjustmentsItr.hasNext()) {
+            // check at priceAdjustment level for threshold
+            let priceAdjustments = priceAdjustmentsItr.next();
+            if(priceAdjustments.promotionID.indexOf('thresholdPromo') > -1 && isEswThresholdDiscount === false){
+                isEswThresholdDiscount = true;
+                break;
+            }
+            // check at promotion level for threshold
+            let promo = priceAdjustments.getPromotion();
+            if(!empty(promo) && isEswThresholdDiscount === false){
+                if('isEswThresholdPromotion' in promo.getCustom()){
+                    isEswThresholdDiscount = (promo.getCustom().isEswThresholdPromotion === true);
+                    if(isEswThresholdDiscount){
+                        break;
+                    }
+                }
+            }
+        }
+
         return {
             value: orderDiscount.value,
-            formatted: formatMoney(orderDiscount)
+            formatted: formatMoney(orderDiscount),
+            isEswThresholdDiscount: isEswThresholdDiscount
         };
     },
     /**
@@ -2575,7 +2611,9 @@ const getEswHelper = {
    */
     getDeliveryDiscountsCurrencyCode: function (localizeObj, session) {
         try {
-            if (localizeObj && localizeObj.localizeCountryObj) {
+            if (this.isEswEnabledSparkPricingConversion()) {
+                return this.getBaseCurrency();
+            } else if (localizeObj && localizeObj.localizeCountryObj) {
                 return localizeObj.localizeCountryObj.currencyCode;
             } else if (session && session.privacy && !empty(session.privacy.fxRate)) {
                 return JSON.parse(session.privacy.fxRate).toShopperCurrencyIso;
@@ -2830,9 +2868,10 @@ const getEswHelper = {
     },
     /**
      * Generate preOrder request for the embeded checkout
+     * @param {Array} promotionsCallouts - promotions callouts array: example ["pid":["promoCallout1","promoCallout2"]]
      * @returns {Object} - order request response object
      */
-    generatePreOrderUsingBasket: function () {
+    generatePreOrderUsingBasket: function (promotionsCallouts) {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
         let preorderServiceObj = eswCoreService.getPreorderServiceV2(),
             eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
@@ -2847,7 +2886,7 @@ const getEswHelper = {
         }
         eswHelper.setOAuthToken();
 
-        let requestObj = eswServiceHelper.preparePreOrder();
+        let requestObj = eswServiceHelper.preparePreOrder(null,null,null,null,promotionsCallouts);
         let BasketMgr = require('dw/order/BasketMgr');
         let currentBasket = BasketMgr.getCurrentBasket();
         let eswRetailerCartId = currentBasket.UUID + '__' + Date.now();
@@ -2887,28 +2926,31 @@ const getEswHelper = {
     },
     getPWAHeadlessAccessToken: function (reqObj) {
         let accessToken = '';
+        let regex = /^authorizationParted(\d+)$/;
+        let regexPeaToken = /^accessTokenParted(\d+)$/;
+        let headlessToken = false;
+        let accessTokenParts = [];
         if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
             let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
             // eslint-disable-next-line no-restricted-syntax
             for (let metaObj in metadataItems) {
-                if ((metadataItems[metaObj] && metadataItems[metaObj].name === 'accessTokenPart1') || (metadataItems[metaObj] && metadataItems[metaObj].name === 'authorization')) {
-                    accessToken = metadataItems[metaObj].value;
-                    if (metadataItems[metaObj] && metadataItems[metaObj].name === 'authorization') {
-                        accessToken = { authorization: accessToken };
+                if ((metadataItems[metaObj] && metadataItems[metaObj].name.match(regexPeaToken)) || (metadataItems[metaObj] && metadataItems[metaObj].name.match(regex))) {
+                    if (metadataItems[metaObj] && metadataItems[metaObj].name.match(regexPeaToken)) {
+                        let partNum = +metadataItems[metaObj].name.replace('accessTokenParted', '');
+                        accessTokenParts[partNum - 1] = metadataItems[metaObj].value;
+                    } else if (metadataItems[metaObj] && metadataItems[metaObj].name.match(regex)) {
+                        let partNum = +metadataItems[metaObj].name.replace('authorizationParted', '');
+                        accessTokenParts[partNum - 1] = metadataItems[metaObj].value;
+                        headlessToken = true;
                     }
                 }
             }
         }
-        ['cartItems', 'lineItems'].forEach(function (key) {
-            if (!empty(reqObj[key]) && !empty(reqObj[key][0].metadataItems)) {
-                let metadataItems = reqObj[key][0].metadataItems;
-                for (let i = 0; i < metadataItems.length; i++) {
-                    if (metadataItems[i] && metadataItems[i].name === 'accessTokenPart2') {
-                        accessToken += metadataItems[i].value;
-                    }
-                }
-            }
-        });
+        accessToken = accessTokenParts.join('');
+
+        if (accessToken.length > 0 && headlessToken) {
+            return { authorization: accessToken };
+        }
         return accessToken;
     },
     /**
@@ -3444,6 +3486,32 @@ const getEswHelper = {
             }
         }
         return false;
+    },
+    setCurrencyISO: function (localizeObj) {
+        let currencyIso;
+        if (this.isEswEnabledSparkPricingConversion()) {
+            currencyIso = this.getBaseCurrency();
+        } else if (!empty(localizeObj)) {
+            currencyIso = localizeObj.localizeCountryObj.currencyCode;
+        } else {
+            currencyIso = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
+        }
+        return currencyIso;
+    },
+    applySparkClassToDom: function (className) {
+        if(this.isEswEnabledSparkPricingConversion()){
+            const sparkHelper = require('*/cartridge/scripts/helper/eswSparkHelper');
+            return sparkHelper.applySparkClassToDom(className);
+        }
+        return '';
+    },
+    // Split the token into chunks
+    splitAccessToken: function(accessToken, chunkLength) {
+        let parts = [];
+        for (let i = 0; i < accessToken.length; i += chunkLength) {
+            parts.push(accessToken.slice(i, i + chunkLength));
+        }
+        return parts;
     }
 };
 

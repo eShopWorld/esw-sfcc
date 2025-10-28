@@ -15,7 +15,7 @@
         <p class="order-receipt-label"><span>${Resource.msg('label.order.discount', 'common', null)}</span></p>
     </div>
     <div class="col-6 end-lines">
-        <p class="text-right"><span class="order-discount-total">- ${pdict.order.totals.orderLevelDiscountTotal.formatted}</span></p>
+        <p class="text-right"><span class="order-discount-total ${eswHelper.applySparkClassToDom('esw-discount')}">- ${pdict.order.totals.orderLevelDiscountTotal.formatted}</span></p>
     </div>
 </div>
 

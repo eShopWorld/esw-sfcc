@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+<type-extension type-id="SitePreferences">
+        <custom-attribute-definitions>
+			 <attribute-definition attribute-id="eswSparkScriptURL">
+                <display-name xml:lang="x-default">ESW SPARK Script Path</display-name>
+                <description xml:lang="x-default">ESW provided Javascript URL to enable SPARK feature</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswCheckoutIframeCookieName">
+                <display-name xml:lang="x-default">ESW SPARK Cookie Name</display-name>
+                <description xml:lang="x-default">The iFrame cookie name setup in SPARK</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <default-value>Checkout</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswIsSparkDynamicPricingEnabled">
+                <display-name xml:lang="x-default">ESW SPARK Dynamic Pricing Enabled</display-name>
+                <description xml:lang="x-default">Enable/Disable SPARK Dynamic Pricing which converts prices using SPARK script</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswIsIframeCheckoutEnabled">
+                <display-name xml:lang="x-default">ESW SPARK iFrame Checkout Enabled</display-name>
+                <description xml:lang="x-default">Enable/Disable SPARK iFrame Checkout feature</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <default-value>false</default-value>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+			<attribute-group group-id="ESW SPARK Integration Configuration">
+                <display-name xml:lang="x-default">ESW SPARK Integration Configuration</display-name>
+                <attribute attribute-id="eswSparkScriptURL"/>
+                <attribute attribute-id="eswCheckoutIframeCookieName"/>
+                <attribute attribute-id="eswIsSparkDynamicPricingEnabled"/>
+                <attribute attribute-id="eswIsIframeCheckoutEnabled"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+</metadata>

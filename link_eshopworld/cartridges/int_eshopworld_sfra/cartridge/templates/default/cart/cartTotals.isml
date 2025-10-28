@@ -8,7 +8,7 @@
             </isif>
         </div>
         <div class="col-4">
-            <p class="text-right shipping-cost">${pdict.totals.totalShippingCost}</p>
+            <p class="text-right shipping-cost ${eswHelper.applySparkClassToDom('esw-cart-surcharge esw-shipping-cost')}">${pdict.totals.totalShippingCost}</p>
         </div>
     </div>
 </isif>
@@ -21,31 +21,29 @@
         <p>${Resource.msg('label.shipping.discount', 'common', null)}</p>
     </div>
     <div class="col-4">
-        <p class="text-right shipping-discount-total">- ${pdict.totals.shippingLevelDiscountTotal.formatted}</p>
+        <p class="text-right shipping-discount-total ${eswHelper.applySparkClassToDom('esw-discount')}">- ${pdict.totals.shippingLevelDiscountTotal.formatted}</p>
     </div>
 </div>
 
 <!-- Sales Tax -->
-<isif condition="${!eswHelper.getEShopWorldTaxInformationEnabled() || !eswHelper.getEShopWorldModuleEnabled() || !eswHelper
-                 .isESWSupportedCountry()}">
+<isif condition="${!eswHelper.getEShopWorldTaxInformationEnabled() || !eswHelper.getEShopWorldModuleEnabled() || !eswHelper.isESWSupportedCountry()}">
     <div class="row">
         <div class="col-8">
             <p>${Resource.msg('label.sales.tax', 'cart', null)}</p>
         </div>
         <div class="col-4">
-            <p class="text-right tax-total">${pdict.totals.totalTax}</p>
+            <p class="text-right tax-total ${eswHelper.applySparkClassToDom('esw-cart-surcharge esw-tax')}">${pdict.totals.totalTax}</p>
         </div>
     </div>
 </isif>
 
 <!--- Order Discount --->
-<div class="row order-discount <isif condition=" ${pdict.totals.orderLevelDiscountTotal.value === 0}">hide-order-discount
-    </isif>">
+<div class="row order-discount <isif condition=" ${pdict.totals.orderLevelDiscountTotal.value === 0}">hide-order-discount</isif>">
     <div class="col-8">
         <p>${Resource.msg('label.order.discount', 'common', null)}</p>
     </div>
     <div class="col-4">
-        <p class="text-right order-discount-total"> - ${pdict.totals.orderLevelDiscountTotal.formatted}</p>
+        <p class="text-right order-discount-total ${eswHelper.applySparkClassToDom('esw-discount')}"> - ${pdict.totals.orderLevelDiscountTotal.formatted}</p>
     </div>
 </div>
 
@@ -54,7 +52,7 @@
         <strong>${Resource.msg('label.estimatedtotal', 'cart', null)}</strong>
     </div>
     <div class="col-4">
-        <p class="text-right grand-total">${pdict.totals.grandTotal}</p>
+        <p class="text-right grand-total ${eswHelper.applySparkClassToDom('esw-cart-total')}">${pdict.totals.grandTotal}</p>
     </div>
 </div>
 

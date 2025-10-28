@@ -18,9 +18,10 @@ const URLUtils = require('dw/web/URLUtils');
  * @param {Object} order - order object
  * @param {Object} localizeObj - localizeObj object
  * @param {Object} conversionPrefs - conversionPrefs object
+ * @param {Array} promotionsCalloutsMessages - promotions callouts messages
  * @returns {Object} - line item pricing info
  */
-function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
+function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs, promotionsCalloutsMessages) {
     let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     localizeObj.applyRoundingModel = 'true';
     let finalPrice = pricingHelper.getConvertedPrice(item.basePrice.value, localizeObj, conversionPrefs) * item.quantity.value;

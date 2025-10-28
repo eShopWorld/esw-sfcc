@@ -16,7 +16,7 @@ const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHe
  * @returns {string} - if cookies not found then return blank string
  * otherwise, renders the landing page.
  */
-function handlePreOrderRequestV2() {
+function handlePreOrderRequestV2(promotionsCalloutsMessages) {
     let result;
     try {
         let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
@@ -33,7 +33,7 @@ function handlePreOrderRequestV2() {
         }
         eswHelper.setOAuthToken();
 
-        let requestObj = eswServiceHelper.preparePreOrder();
+        let requestObj = eswServiceHelper.preparePreOrder(null,null,null,null,promotionsCalloutsMessages);
         requestObj.retailerCartId = eswServiceHelper.createOrder();
         if (eswHelper.isEswSelfHostedOcEnabled()) {
             let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestObj.retailerCartId);

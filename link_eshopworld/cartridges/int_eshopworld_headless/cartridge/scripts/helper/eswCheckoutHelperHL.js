@@ -28,7 +28,14 @@ const CheckoutRequestBuilder = {
             if (!('metadataItems' in bodyJSON.shopperCheckoutExperience) || empty(bodyJSON.shopperCheckoutExperience.metadataItems)) {
                 bodyJSON.shopperCheckoutExperience.metadataItems = [];
             }
-            bodyJSON.shopperCheckoutExperience.metadataItems.push({ name: 'authorization', value: request.httpHeaders.authorization });
+            let splittedAccessToken = eswHelper.splitAccessToken(request.httpHeaders.authorization, 1000);
+
+            splittedAccessToken.forEach((part, index) => {
+                bodyJSON.shopperCheckoutExperience.metadataItems.push({
+                    name: `authorizationParted${index + 1}`,
+                    value: part
+                });
+            });
         } else {
             bodyJSON.retailerCartId = order.orderNo;
         }

@@ -56,6 +56,9 @@ function getProductLineMetadataItems(pli) {
  * @returns {string} promotionMessageFinal - Converted message
  */
 function convertPromotionMessage(promotionMessageString, selectedCountryDetail, selectedCountryLocalizeObj) {
+    if(eswHelper.isEswEnabledSparkPricingConversion()) {
+        return promotionMessageString;
+    }
     let promotionMessageFinal = null,
         eswPrice,
         selectedCurrency,
@@ -94,6 +97,29 @@ function convertPromotionMessage(promotionMessageString, selectedCountryDetail, 
 }
 
 /**
+ * Returns the promotion message for a given price adjustment and product.
+ * If a matching callout exists in promotionsCalloutsMessages, returns its calloutText.
+ * Otherwise, returns the default lineItemText.
+ *
+ * @param {Object} priceAdjustment - The price adjustment object.
+ * @param {Object} item - The product line item object (must have productID).
+ * @param {Object} promotionsCalloutsMessages - The callouts messages object.
+ * @returns {string} - The resolved promotion message.
+ */
+function getProductPromotionMessage(priceAdjustment, item, promotionsCalloutsMessages) {
+    var promotionMessage = priceAdjustment.lineItemText;
+    if (promotionsCalloutsMessages && promotionsCalloutsMessages[item.UUID]) {
+        let promotionCalloutObj = promotionsCalloutsMessages[item.UUID].find(function(promo) {
+            return promo.promotionID === priceAdjustment.promotionID;
+        });
+        if (!empty(promotionCalloutObj)) {
+            promotionMessage = promotionCalloutObj.calloutText;
+        }
+    }
+    return promotionMessage;
+}
+
+/**
  * function to get product unit price info
  * @param {Object} item - productLineItem
  * @param {Object} order - order
@@ -101,7 +127,7 @@ function convertPromotionMessage(promotionMessageString, selectedCountryDetail, 
  * @param {Object} conversionPrefs - conversionPrefs
  * @returns {Object} - line item pricing info
  */
-function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
+function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs, promotionsCalloutsMessages) {
     let currencyExponent = !empty(session.privacy.rounding) && 'currencyExponent' in JSON.parse(session.privacy.rounding) ? JSON.parse(session.privacy.rounding).currencyExponent : 3;
     if (!empty(order) && !empty(conversionPrefs) && 'selectedRoundingRule' in conversionPrefs) {
         currencyExponent = conversionPrefs.selectedRoundingRule[0].currencyExponent;
@@ -121,14 +147,11 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
         } else {
             finalPrice = eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
         }
-        if (!empty(localizeObj)) {
-            currencyCode = localizeObj.localizeCountryObj.currencyCode;
-        } else {
-            currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
-        }
+        currencyCode = eswHelper.setCurrencyISO(localizeObj);
         // Apply product level promotions
         // eslint-disable-next-line no-loop-func
         collections.forEach(item.priceAdjustments, function (priceAdjustment) {
+            let promotionMessage = getProductPromotionMessage(priceAdjustment, item, promotionsCalloutsMessages.productDiscounts);
             if (priceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
                 if (!empty(localizeObj)) {
                     let selectedCountryDetail = eswHelper.getCountryDetailByParam(request.httpParameters);
@@ -168,7 +191,7 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) {
             finalPrice = finalPrice.toFixed(currencyExponent);
             itemDiscount = {
                 'title': priceAdjustment.promotionID,
-                'description': convertPromotionMessage(priceAdjustment.lineItemText),
+                'description': convertPromotionMessage(promotionMessage),
                 'discount': {
                     'currency': currencyCode,
                     'amount': discountedAmount
@@ -276,11 +299,11 @@ function getCartDiscountPriceInfo(cart, beforeDiscountParam, shopperCurrency, is
             beforeDiscount = beforeDiscountParam,
             obj = {},
             cartDiscounts = [],
-            currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode,
+            currencyCode = eswHelper.setCurrencyISO();
             allPriceAdjustmentIter = cart.priceAdjustments.iterator(),
             cartDiscount = {};
         if (!empty(shopperCurrency)) {
-            currencyCode = shopperCurrency;
+            currencyCode = eswHelper.isEswEnabledSparkPricingConversion() ? eswHelper.getBaseCurrency() : shopperCurrency;
         }
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
@@ -334,9 +357,10 @@ function getCartDiscountPriceInfo(cart, beforeDiscountParam, shopperCurrency, is
  * @param {Object} order - order
  * @param {Object} countryCode - countryCode
  * @param {Object} currencyCode - currencyCode
+ * @param {Array} promotionsCalloutsMessages - promotions callouts messages
 * @returns {Object} - cart items
  */
-function getLineItemsV3(order, countryCode, currencyCode) {
+function getLineItemsV3(order, countryCode, currencyCode, promotionsCalloutsMessages) {
     let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let Transaction = require('dw/system/Transaction');
     let currentBasket = order || BasketMgr.currentBasket,
@@ -347,7 +371,7 @@ function getLineItemsV3(order, countryCode, currencyCode) {
         localizeObj,
         conversionPrefs;
     if (empty(currencyCode)) {
-        currencyCode = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
+        currencyCode = eswHelper.setCurrencyISO();
     }
     if (!empty(order)) {
         localizeObj = {
@@ -360,7 +384,6 @@ function getLineItemsV3(order, countryCode, currencyCode) {
         };
 
         conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
-        let customizationHelper = require('*/cartridge/scripts/helper/customizationHelper');
 
         let totalDiscount = eswHelper.getOrderDiscountHL(order, localizeObj, conversionPrefs).value,
             remainingDiscount = totalDiscount; // eslint-disable-line no-unused-vars
@@ -405,7 +428,7 @@ function getLineItemsV3(order, countryCode, currencyCode) {
                 'upc': null,
                 'title': productTitle,
                 'description': item.productName, // we are using product name/title instead of description. ESW checkout page displays description as product title. same field is used for product title name in ESW OMS which is used for logistic flows.
-                'productUnitPriceInfo': !empty(order) ? getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs) : getProductUnitPriceInfo(item),
+                'productUnitPriceInfo': !empty(order) ? getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs, promotionsCalloutsMessages) : getProductUnitPriceInfo(item, null, null, null, promotionsCalloutsMessages),
                 'imageUrl': !empty(eswImageType) ? item.product.getImage(eswImageType, 0).httpURL.toString() : '',
                 'productUrl': URLUtils.https('Product-Show', 'pid', item.product.ID).toString(),
                 'color': !empty(color) ? color : '',
