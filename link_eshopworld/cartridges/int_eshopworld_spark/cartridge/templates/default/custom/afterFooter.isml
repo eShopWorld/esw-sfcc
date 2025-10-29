@@ -1,0 +1,13 @@
+<iscomment>
+    This template is used to include custom scripts after the footer on all pages.
+</iscomment>
+<iscontent type="text/html" charset="UTF-8" compact="true" />
+<isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper}" scope="page" />
+<isset name="ecLtiScriptPath" value="${eswHelper.getEswEmbCheckoutScriptPath()}" scope="page" />
+
+<isif condition="${!empty(ecLtiScriptPath)}">
+    <script id="esw-spark-script" defer="defer" src="${ecLtiScriptPath}"></script>
+    <isif condition="${eswHelper.isEswEnabledSparkPricingConversion()}">
+        <script id="esw-spark-common-script" defer="defer" src="${URLUtils.staticURL('/js/spark-common.js')}"></script>
+    </isif>
+</isif>

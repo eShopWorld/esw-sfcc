@@ -1,59 +1,34 @@
 {
-    "root": true,
-    "extends": "airbnb-base/legacy",
-    "ignorePatterns": ["temp.js", "**/esw-pwa-app/*.js"],
-    "globals": {
-        "dw": false,
-        "customer": false,
-        "session": false,
-        "request": false,
-        "response": false,
-        "empty": false,
-        "$": false
-    },
-    "rules": {
-        "import/no-unresolved": "off",
-        "no-continue": "off",
-        "no-else-return": "off",
-        "no-param-reassign": "off",
-        "indent": [
-            "error",
-            4,
-            {
-                "SwitchCase": 1,
-                "VariableDeclarator": 1
-            }
-        ],
-        "func-names": "off",
-        "require-jsdoc": "error",
-        "valid-jsdoc": [
-            "error",
-            {
-                "preferType": {
-                    "Boolean": "boolean",
-                    "Number": "number",
-                    "object": "Object",
-                    "String": "string"
-                },
-                "requireReturn": false
-            }
-        ],
-        "vars-on-top": "off",
-        "global-require": "off",
-        "no-shadow": [
-            "error",
-            {
-                "allow": [
-                    "err",
-                    "callback"
-                ]
-            }
-        ],
-        "linebreak-style": "off",
-        "max-len": "off",
-        "one-var": "off"
-    },
-    "parserOptions": {
-        "ecmaVersion": 6
-    }
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 6
+  },
+  "rules": {
+    "no-plusplus": "off",
+    "operator-linebreak": "off",
+    "indent": "off",
+    "function-paren-newline": "off",
+    "function-call-argument-newline": "off",
+    "lines-around-directive": "off",
+    "no-multiple-empty-lines": "off",
+    "spaced-comment": "off",
+    "strict": "off",
+    "no-tabs": "off",
+    "prefer-exponentiation-operator": "off",
+    "no-restricted-syntax": "off",
+    "comma-dangle": "off",
+    "object-curly-newline": "off",
+    "eol-last": "off",
+    "no-undef": "off",
+    "re": "off",
+    "no-dupe-else-if": "off"
+  },
+  "reportUnusedDisableDirectives": false
 }

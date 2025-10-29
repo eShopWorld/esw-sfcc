@@ -1,6 +1,6 @@
 <div class="quantity-form">
     <label class="line-item-pricing-info quantity-label" for="quantity-${lineItem.UUID}">${Resource.msg('field.selectquantity','cart',null)}</label>
-    <select class="form-control quantity custom-select"
+    <select class="form-control quantity custom-select ${eswHelper.applySparkClassToDom('esw-cart-quantity')}"
             data-uuid="${lineItem.UUID}"
             data-pid="${lineItem.id}"
             data-action="${pdict.actionUrls.updateQuantityUrl}"

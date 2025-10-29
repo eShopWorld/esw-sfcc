@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * @namespace Checkout
+ * @namespace EShopWorld
  */
 
 const server = require('server');
@@ -31,7 +31,6 @@ server.get('EswEmbeddedCheckout', function (req, res, next) {
     });
     next();
 });
-
 
 server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
     let preorderServiceObj = eswCoreService.getSFCCOcapi();

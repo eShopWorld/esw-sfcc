@@ -5,13 +5,20 @@
     ],
     "rules": {
         "at-rule-no-unknown": [true, { "ignoreAtRules": ["include", "each", "mixin", "if", "else", "content"] } ],
-        "indentation": 4,
-        "scss/at-import-no-partial-leading-underscore": true,
+        "length-zero-no-unit": true,
+        "color-function-notation": "legacy",
+        "alpha-value-notation": "number",
+        "color-hex-length": "short",
+        "selector-class-pattern": "^[a-z0-9-]+$",
+        "no-duplicate-selectors": true,
+        "media-feature-range-notation": "prefix",
+        "scss/load-no-partial-leading-underscore": true,
         "scss/at-import-partial-extension-blacklist": ["scss"],
         "scss/dollar-variable-no-missing-interpolation": true,
         "scss/media-feature-value-dollar-variable": "always",
         "scss/selector-no-redundant-nesting-selector": true,
         "at-rule-empty-line-before": [ "always", { "ignoreAtRules": ["else"], "ignore": ["blockless-after-same-name-blockless", "inside-block"] } ],
-        "block-closing-brace-newline-after": [ "always", { "ignoreAtRules": ["if", "else"] } ]
+        "function-url-quotes": "always",
+        "rule-empty-line-before": ["always", { "except": ["first-nested"], "ignore": ["after-comment"] } ]
     }
 }

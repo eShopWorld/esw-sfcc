@@ -18,7 +18,7 @@
         
         <del>
             <span class="strike-through list">
-                <span class="value" content="${price.decimalPrice}">
+                <span class="value ${eswHelper.applySparkClassToDom('esw-general-price')}" content="${price.decimalPrice}">
                     <span class="sr-only">
                         ${Resource.msg('label.price.reduced.from', 'pricing', null)}
                     </span>
@@ -41,22 +41,21 @@
     </isif>
     
     <isif condition="${!empty(price) || !empty(matchingLineItem)}">
-        <span class="sales">
+        <span class="sales ${eswHelper.applySparkClassToDom('esw-cart-line-item-unit-price')}">
             <isif condition="${isLowPrice == 'range-low'}">
-                <span class="value" content="${price.decimalPrice}">
+                <span class="value ${eswHelper.applySparkClassToDom('esw-cart-line-item-unit-price')}" content="${price.decimalPrice}">
             </isif>
             <isif condition="${isLowPrice == 'range-high'}">
-                <span class="value" content="${price.decimalPrice}">
+                <span class="value ${eswHelper.applySparkClassToDom('esw-cart-line-item-unit-price')}" content="${price.decimalPrice}">
             </isif>
             <isif condition="${isLowPrice == null}">
-                <span class="value" content="${price.decimalPrice}">
+                <span class="value ${eswHelper.applySparkClassToDom('esw-cart-line-item-unit-price')}" content="${price.decimalPrice}">
             </isif>
             <isif condition="${!empty(matchingLineItem)}">
                 ${price}
             <iselse>
                 ${price.decimalPrice}
             </isif>
-            </span>
         </span>
     </isif>
 </span>

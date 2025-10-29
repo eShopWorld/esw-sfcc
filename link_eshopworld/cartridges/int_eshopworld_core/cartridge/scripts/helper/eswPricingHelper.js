@@ -159,9 +159,9 @@ const eswPricingHelper = {
     * @returns {number} returns calculated localized price
     */
     getConvertedPrice: function (localizePrice, localizeObj, conversionPrefs) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         conversionPrefs = conversionPrefs || this.getConversionPreference(localizeObj);
-
-        if (!empty(conversionPrefs.selectedFxRate) && !this.isFixedPriceCountry(localizeObj.localizeCountryObj.countryCode)) {
+        if (!eswHelper.isEswEnabledSparkPricingConversion() || (!empty(conversionPrefs.selectedFxRate) && !this.isFixedPriceCountry(localizeObj.localizeCountryObj.countryCode))) {
             let applyRoundingModel = (typeof localizeObj.applyRoundingModel === 'string') ? localizeObj.applyRoundingModel.toLowerCase() === 'true' : localizeObj.applyRoundingModel;
             let applyCountryAdjustments = (typeof localizeObj.applyCountryAdjustments === 'string') ? localizeObj.applyCountryAdjustments.toLowerCase() === 'true' : localizeObj.applyCountryAdjustments;
             localizePrice = (applyCountryAdjustments) ? this.applyESWCountryAdjustments(localizePrice, conversionPrefs.selectedCountryAdjustments) : localizePrice;

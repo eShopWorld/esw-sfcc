@@ -9,7 +9,7 @@ const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelp
 
 const eswEmbCheckoutHelper = {
     getEswEmbCheckoutScriptPath: function () {
-        return Site.getCustomPreferenceValue('eswCheckoutIframeScriptPath');
+        return Site.getCustomPreferenceValue('eswSparkScriptURL');
     },
     getEswIframeFallbackUrl: function () {
         return null;

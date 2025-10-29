@@ -3,6 +3,14 @@
 		{
 			"name": "dw.ocapi.shop.order.beforePOST",
 			"script": "./ocapi/shop/hooks/orderHooks.js"
+		},
+		{
+            "name": "app.template.afterFooter",
+            "script": "./storefront/afterFooter.js"
+        },
+		{
+			"name":"app.template.htmlHead",
+			"script":"./storefront/htmlHead.js"
 		}
 	]
 }

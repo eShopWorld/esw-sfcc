@@ -1,0 +1,4 @@
+<iscomment>
+    This template is used to include custom scripts in the <head> section on all pages.
+</iscomment>
+<link rel="stylesheet" href="${URLUtils.staticURL('/css/spark.css')}" />

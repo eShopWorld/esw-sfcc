@@ -227,6 +227,11 @@ server.get('PreOrderRequest', function (req, res, next) {
     let basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
     let currentBasket = null;
 
+    let promotionsCallouts = {productDiscounts: [], couponDiscounts: []};
+    if(eswHelper.isEswEnabledSparkPricingConversion() && req.querystring.promotionsCallouts) {
+        promotionsCallouts = JSON.parse(req.querystring.promotionsCallouts);
+    }
+
     eswHelper.setEnableMultipleFxRatesCurrency(req);
 
     let isAjax = Object.hasOwnProperty.call(request.httpHeaders, 'x-requested-with');
@@ -259,9 +264,9 @@ server.get('PreOrderRequest', function (req, res, next) {
     try {
         let preOrderrequestHelper = require('*/cartridge/scripts/helper/preOrderRequestHelper');
         if (eswHelper.isEswEnabledEmbeddedCheckout()) {
-            result = eswHelper.generatePreOrderUsingBasket();
+            result = eswHelper.generatePreOrderUsingBasket({productDiscounts: promotionsCallouts.productDiscounts, couponDiscounts: promotionsCallouts.couponDiscounts});
         } else {
-            result = preOrderrequestHelper.handlePreOrderRequestV2();
+            result = preOrderrequestHelper.handlePreOrderRequestV2({productDiscounts: promotionsCallouts.productDiscounts, couponDiscounts: promotionsCallouts.couponDiscounts});
         }
         let eswShopperAccessToken = '';
         if (result.status === 'REDIRECT') {

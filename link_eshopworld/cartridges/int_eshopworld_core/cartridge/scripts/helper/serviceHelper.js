@@ -22,15 +22,16 @@ const Constants = require('*/cartridge/scripts/util/Constants');
  * @param {string} shopperCountry - countryCode of the shopper
  * @param {string} shopperCurrency - currencyCode of the shopper
  * @param {string} shopperLocale - LanguageISOCode of the shopper (current locale)
+ * @param {Array} promotionsCalloutsMessages - promotions callouts messages
  * @returns {Object} - request object
  */
-function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) {
+function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale, promotionsCalloutsMessages) {
     let preorderCheckoutServiceName = eswHelper.getCheckoutServiceName();
     let currentBasket = order || BasketMgr.getCurrentBasket();
     let requestObj = {};
     if (currentBasket != null) {
         if (preorderCheckoutServiceName.indexOf('EswCheckoutV3Service') !== -1) {
-            let lineItemsV3 = eswServiceHelperV3.getLineItemsV3(order, shopperCountry, shopperCurrency);
+            let lineItemsV3 = eswServiceHelperV3.getLineItemsV3(order, shopperCountry, shopperCurrency, promotionsCalloutsMessages);
             let cartDiscounts = eswServiceHelperV3.getCartDiscountPriceInfo(currentBasket, lineItemsV3.finalCartSubtotal, shopperCurrency, (!empty(order) ? true : null), shopperCountry);
             if (empty(shopperCurrency)) {
                 shopperCurrency = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
@@ -38,7 +39,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
             if (!empty(cartDiscounts.discounts)) {
                 requestObj = {
                     'contactDetails': getContactDetails(currentBasket.getCustomerEmail(), shopperCountry),
-                    'retailerPromoCodes': getRetailerPromoCodes(order),
+                    'retailerPromoCodes': getRetailerPromoCodes(order, shopperCountry, promotionsCalloutsMessages),
                     'lineItems': lineItemsV3.lineItems,
                     'cartDiscountPriceInfo': cartDiscounts,
                     'shopperCurrencyIso': shopperCurrency,
@@ -51,7 +52,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
             } else {
                 requestObj = {
                     'contactDetails': getContactDetails(currentBasket.getCustomerEmail(), shopperCountry),
-                    'retailerPromoCodes': getRetailerPromoCodes(order),
+                    'retailerPromoCodes': getRetailerPromoCodes(order, shopperCountry, promotionsCalloutsMessages),
                     'lineItems': lineItemsV3.lineItems,
                     'shopperCurrencyIso': shopperCurrency,
                     'pricingSynchronizationId': eswHelper.getPricingSynchronizationId(),
@@ -67,7 +68,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
             if (!empty(cartDiscounts) && cartDiscounts.length > 0) {
                 requestObj = {
                     'contactDetails': getContactDetails(currentBasket.getCustomerEmail(), shopperCountry),
-                    'retailerPromoCodes': getRetailerPromoCodes(order),
+                    'retailerPromoCodes': getRetailerPromoCodes(order, shopperCountry, promotionsCalloutsMessages),
                     'cartItems': cartItemsV2.cartItems,
                     'cartDiscounts': cartDiscounts,
                     'shopperCurrencyIso': shopperCurrency,
@@ -79,7 +80,7 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
             } else {
                 requestObj = {
                     'contactDetails': getContactDetails(currentBasket.getCustomerEmail(), shopperCountry),
-                    'retailerPromoCodes': getRetailerPromoCodes(order),
+                    'retailerPromoCodes': getRetailerPromoCodes(order, shopperCountry, promotionsCalloutsMessages),
                     'cartItems': cartItemsV2.cartItems,
                     'shopperCurrencyIso': shopperCurrency,
                     'deliveryCountryIso': shopperCountry || request.getHttpCookies()['esw.location'].value,
@@ -93,22 +94,47 @@ function preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale) 
     return requestObj;
 }
 
+function getCouponCalloutMsg(defaultCalloutMsg, couponCode, promotionsCalloutsMessages){
+    let couponCallourtMsg = defaultCalloutMsg;
+    let couponDiscountObj = promotionsCalloutsMessages.couponDiscounts.find(function(coupon){
+        return coupon.coupon_code === couponCode;
+    });   
+    if(!empty(couponDiscountObj)){
+        couponCallourtMsg = couponDiscountObj.coupon_calloutMsg;
+    }
+    return couponCallourtMsg;
+}
+
 /**
  * function to get promo or voucher codes entered on the cart by the shopper
  * @param {Object} order - Order API object
+ * @param {string} shopperCountry - shopperCountry
  * @returns {Object} - Coupons
  */
-function getRetailerPromoCodes(order) {
+function getRetailerPromoCodes(order, shopperCountry, promotionsCalloutsMessages) {
     let currentBasket = order || BasketMgr.currentBasket;
     let coupons = [];
     // eslint-disable-next-line no-prototype-builtins
     if ((currentBasket.hasOwnProperty('couponLineItems') || currentBasket.couponLineItems) && !empty(currentBasket.couponLineItems)) {
         collections.forEach((currentBasket.couponLineItems), function (couponLineItem) {
             let couponObject = {};
+            let promotion = couponLineItem.getPromotion();
             couponObject.promoCode = couponLineItem.couponCode;
             couponObject.title = !empty(couponLineItem.getPriceAdjustments()) ? eswServiceHelperV3.convertPromotionMessage(couponLineItem.getPriceAdjustments()[0].promotion.name) : '';
-            // eslint-disable-next-line no-prototype-builtins
-            couponObject.description = !empty(couponLineItem.getPriceAdjustments()) ? couponLineItem.getPriceAdjustments()[0].promotion.hasOwnProperty('description') ? couponLineItem.getPriceAdjustments()[0].promotion.description.toString() : '' : ''; // eslint-disable-line no-nested-ternary
+            if (promotion) {
+                if (empty(shopperCountry)) {
+                    let param = request.httpParameters;
+                    shopperCountry = !empty(param['country-code']) && !empty(param['country-code'][0]) ? param['country-code'][0] : null;
+                }
+                let calloutMsg = promotion.getCalloutMsg();
+                if (!empty(shopperCountry)) {
+                    let selectedCountryDetail = eswHelper.getCountryDetailByParam(shopperCountry);
+                    let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
+                    couponObject.description = !empty(calloutMsg) && 'markup' in calloutMsg ? eswServiceHelperV3.convertPromotionMessage(calloutMsg.markup, selectedCountryDetail, selectedCountryLocalizeObj) : '';
+                } else {
+                    couponObject.description = getCouponCalloutMsg(!empty(calloutMsg) && 'markup' in calloutMsg ? eswServiceHelperV3.convertPromotionMessage(calloutMsg.markup) : '', couponLineItem.couponCode, promotionsCalloutsMessages);
+                }
+            }
             coupons.push(couponObject);
         });
     }
@@ -678,8 +704,7 @@ function getShippingRates(v2Flag, shopperCurrency) {
             for (let rate in isOverrideCountry[0].shippingMethod.ID) {
                 let shippingMethod = this.applyShippingMethod(null, isOverrideCountry[0].shippingMethod.ID[rate], eswHelper.getAvailableCountry(), false);
                 if (shippingMethod != null && cart.adjustedShippingTotalPrice.valueOrNull != null) {
-                    let currencyIso = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : shopperCurrency;
-                    currencyIso = empty(currencyIso) ? session.getCurrency().currencyCode : currencyIso;
+                    let currencyIso = eswHelper.setCurrencyISO();
                     let adjustedShippingCost = (isConversionDisabled || cart.adjustedShippingTotalPrice.value === 0) ? cart.adjustedShippingTotalPrice : eswHelper.getMoneyObject(cart.adjustedShippingTotalPrice, true, false, false);
                     if (!v2Flag) {
                         let discountObj = eswServiceHelperV3.getDeliveryDiscounts(cart, isConversionDisabled);
@@ -718,8 +743,7 @@ function getShippingRates(v2Flag, shopperCurrency) {
     } else if (!empty(cart.defaultShipment) && !empty(cart.defaultShipment.shippingPriceAdjustments)) {
         let shippingRates = [];
         let discountObj = {};
-        let currencyIso = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : shopperCurrency;
-        currencyIso = empty(currencyIso) ? session.getCurrency().currencyCode : currencyIso;
+        let currencyIso = eswHelper.setCurrencyISO();
         collections.forEach(cart.defaultShipment.shippingPriceAdjustments, function (adjustment) {
             if (adjustment.appliedDiscount.type == dw.campaign.Discount.TYPE_FREE || adjustment.custom.thresholdDiscountType === 'free') {
                 if (!v2Flag) {
@@ -752,8 +776,7 @@ function getShippingRates(v2Flag, shopperCurrency) {
         return shippingRates;
     } else if (cart.adjustedShippingTotalPrice.value == 0) {
         let shippingRates = [];
-        let currencyIso = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : shopperCurrency;
-        currencyIso = empty(currencyIso) ? session.getCurrency().currencyCode : currencyIso;
+        let currencyIso = eswHelper.setCurrencyISO();
         if (!v2Flag) {
             shippingRate = {
                 'deliveryOption': 'POST',

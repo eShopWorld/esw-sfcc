@@ -1,26 +1,34 @@
 <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
 
 <isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
-	<isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page"/>
-	<isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(lineItem)}" scope="page"/>
-	<isset name="eswMoFormattedTotalPrice" value="${lineItem.priceTotal.eswMoFormattedTotalPrice}" scope="page"/>
+	<isset name="formatMoney" value="${require('dw/util/StringUtils').formatMoney}" scope="page" />
+	<isset name="matchingLineItem" value="${eswHelper.getMatchingLineItem(lineItem)}" scope="page" />
+	<isset name="eswMoFormattedTotalPrice" value="${lineItem.priceTotal.eswMoFormattedTotalPrice}" scope="page" />
 	<isset name="eswMoFormattedNonAdjustedPrice" value="${lineItem.priceTotal.eswMoFormattedNonAdjustedPrice}"
-		scope="page"/>
+		scope="page" />
 	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
 		<isif condition=${lineItem.priceTotal.nonAdjustedPrice}>
-			${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedNonAdjustedPrice : formatMoney(lineItem.priceTotal.nonAdjustedPrice)}
+			<span class="${eswHelper.applySparkClassToDom('esw-general-price')}" data-bp-lti="${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedNonAdjustedPrice : formatMoney(lineItem.priceTotal.nonAdjustedPrice)}">
+				${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedNonAdjustedPrice : formatMoney(lineItem.priceTotal.nonAdjustedPrice)}
+			</span>
 		</isif>
 	</div>
-	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">
+	<div class="pricing line-item-total-price-amount item-total-${lineItem.uuid}">
 		<isif condition="${!empty(matchingLineItem)}">
-			${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedTotalPrice : formatMoney(eswHelper.getSubtotalObject(matchingLineItem,false))}
+				<span class="${eswHelper.applySparkClassToDom('esw-cart-line-item-total-price')}" data-bp-lti="${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedTotalPrice : formatMoney(eswHelper.getSubtotalObject(matchingLineItem, false))}">
+					${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedTotalPrice : formatMoney(eswHelper.getSubtotalObject(matchingLineItem, false))}
+				</span>
 			<iselse/>
-			${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedTotalPrice : lineItem.priceTotal.price}
+				<span class="${eswHelper.applySparkClassToDom('esw-cart-line-item-total-price')}" data-bp-lti="${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedTotalPrice : lineItem.priceTotal.price}">
+					${eswHelper.isEnabledMultiOrigin() ? eswMoFormattedTotalPrice : lineItem.priceTotal.price}
+				</span>
 		</isif>
 	</div>
 	<iselse/>
-	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif>">
+	<div class="strike-through <isif condition=${!lineItem.priceTotal.nonAdjustedPrice}>non-adjusted-price</isif> ${eswHelper.applySparkClassToDom('esw-general-price')}" data-bp-lti="${lineItem.priceTotal.nonAdjustedPrice}">
 		${lineItem.priceTotal.nonAdjustedPrice}
 	</div>
-	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID}">${lineItem.priceTotal.price}</div>
+	<div class="pricing line-item-total-price-amount item-total-${lineItem.UUID} ${eswHelper.applySparkClassToDom('esw-cart-line-item-total-price')}" data-bp-lti=" ${lineItem.priceTotal.price}">
+		${lineItem.priceTotal.price}
+	</div>
 </isif>

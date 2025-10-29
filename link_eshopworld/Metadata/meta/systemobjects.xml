@@ -1846,19 +1846,6 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value></default-value>
             </attribute-definition>
-             <attribute-definition attribute-id="eswCheckoutIframeScriptPath">
-                <display-name xml:lang="x-default">ESW SPARK Script Path</display-name>
-                <description xml:lang="x-default">The iFrame script path to be included in the header</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-            </attribute-definition>
-            <attribute-definition attribute-id="eswCheckoutIframeCookieName">
-                <display-name xml:lang="x-default">ESW SPARK Cookie Name</display-name>
-                <description xml:lang="x-default">The iFrame cookie name setup in SPARK</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <default-value>Checkout</default-value>
-            </attribute-definition>
             <attribute-definition attribute-id="eswOcapiClientId">
                 <display-name xml:lang="x-default">ESW SFCC OCAPI Client ID</display-name>
                 <description xml:lang="x-default">SFCC OCAPI client ID to be use for basket and order related operations in case of embedded checkout</description>
@@ -1924,6 +1911,7 @@ Example: &#13;
                 <attribute attribute-id="eswEnableTaxInformation"/>
                 <attribute attribute-id="eswEnableSplitShipment"/>
                 <attribute attribute-id="eswSyncPostOrderUpdates"/>
+                <attribute attribute-id="eswOcapiClientId"/>
             </attribute-group>
             <attribute-group group-id="ESW Retailer Display Configuration">
                 <display-name xml:lang="x-default">ESW Retailer Display Configuration</display-name>
@@ -1996,12 +1984,6 @@ Example: &#13;
                 <attribute attribute-id="eswEnableAzureInsightLogs"/>
                 <attribute attribute-id="eswAzureInsightiKey"/>
             </attribute-group>
-            <attribute-group group-id="ESW SPARK Integration Configuration">
-                <display-name xml:lang="x-default">ESW SPARK Integration Configuration</display-name>
-                <attribute attribute-id="eswCheckoutIframeScriptPath"/>
-                <attribute attribute-id="eswCheckoutIframeCookieName"/>
-                <attribute attribute-id="eswOcapiClientId"/>
-            </attribute-group>
         </group-definitions>
     </type-extension>
     <type-extension type-id="Promotion">
@@ -2039,7 +2021,7 @@ Example: &#13;
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="ESW Settings for Promotion Threshold">
-                <display-name xml:lang="x-default">ESW Settings for Promotion Threshold</display-name>
+                <display-name xml:lang="x-default">ESW Settings for Promotion Threshold (This feature is not available when Spark Price Conversion is enabled.)</display-name>
                 <attribute attribute-id="eswLocalizedThresholdEnabled"/>
                 <attribute attribute-id="eswPromotionDiscountType"/>
                 <attribute attribute-id="eswMinThresholdAmount"/>

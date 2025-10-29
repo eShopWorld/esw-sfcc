@@ -1,0 +1,32 @@
+/* stylelint-disable */
+
+.esw-iframe-checkout-container{
+	margin-bottom:20px;
+}
+.esw-iframe-checkout iframe{
+	width: 100%;
+	border: 0;
+}
+
+.esw-iframe-checkout iframe{
+	min-height: 900px;
+}
+
+
+
+/* Hide all spark changed elements */
+.esw-general-price,
+.esw-cart-line-item-unit-price,
+.esw-cart-line-item-total-price,
+.esw-cart-quantity,
+.esw-discount,
+.esw-cart-surcharge,
+.esw-cart-total,
+.esw-minicart-subtotal,
+.esw-price {
+	visibility: hidden;
+}
+
+.esw-spark-hidden{
+	display: none !important;
+}
