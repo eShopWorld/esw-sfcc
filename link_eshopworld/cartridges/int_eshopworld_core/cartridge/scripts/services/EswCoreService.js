@@ -1,10 +1,10 @@
 'use strict';
+
 /**
  * Helper script to get all ESW services
- **/
+ * */
 const LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-// const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-
+const eswServices = require('*/cartridge/scripts/helper/eswServices.js');
 const eShopWorldServices = {
     /*
      * service for setting headers
@@ -26,6 +26,19 @@ const eShopWorldServices = {
     getOAuthService: function () {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let oAuthService = LocalServiceRegistry.createService('EswOAuthService', {
+            createRequest: function (service, params) {
+                service.URL = eswServices.getEswServiceUrl('EswOAuthService');
+                service.setRequestMethod('POST');
+                service.addHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                let body = Object.keys(params)
+                    .map(function (key) {
+                        return key + '=' + encodeURIComponent(params[key]);
+                    })
+                    .join('&');
+
+                return body;
+            },
             parseResponse: function (service, listOutput) {
                 eswHelper.eswInfoLogger('Esw OAuth Response', listOutput.text);
                 return listOutput.text;
@@ -53,6 +66,19 @@ const eShopWorldServices = {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let priceFeedOAuthServiceName = eswHelper.getSelectedPriceFeedInstance() === 'production' ? 'EswPriceFeedOAuthService.PROD' : 'EswOAuthService';
         let oAuthService = LocalServiceRegistry.createService(priceFeedOAuthServiceName, {
+            createRequest: function (service, params) {
+                service.URL = eswServices.getEswServiceUrl(priceFeedOAuthServiceName);
+                service.setRequestMethod('POST');
+                service.addHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                let body = Object.keys(params)
+                    .map(function (key) {
+                        return key + '=' + encodeURIComponent(params[key]);
+                    })
+                    .join('&');
+
+                return body;
+            },
             parseResponse: function (service, listOutput) {
                 eswHelper.eswInfoLogger('Esw Price Feed OAuth Response', listOutput.text);
                 return listOutput.text;
@@ -94,6 +120,7 @@ const eShopWorldServices = {
         let priceFeedServiceName = eswHelper.getSelectedPriceFeedInstance() === 'production' ? 'EswPriceFeedService.PROD' : 'EswPriceFeedService';
         let priceFeedV4Service = LocalServiceRegistry.createService(priceFeedServiceName, {
             createRequest: function (service, params) {
+                service.URL = eswServices.getEswServiceUrl(service.configuration.getID());
                 eShopWorldServices.createRequest(service, params);
             },
             parseResponse: function (service, listOutput) {
@@ -124,7 +151,10 @@ const eShopWorldServices = {
                 service.addHeader('Content-Type', 'application/json');
                 service.addHeader('Authorization', bearerToken);
                 // eslint-disable-next-line no-param-reassign
-                service.URL = (!empty(eswHelper.getRussianStorageDataUrl()) && eswHelper.getAvailableCountry() === 'RU') ? eswHelper.getRussianStorageDataUrl() : service.URL;
+                let resolvedUrl = eswServices.getEswServiceUrl(preorderCheckoutServiceName);
+                service.URL = (!empty(eswHelper.getRussianStorageDataUrl()) && eswHelper.getAvailableCountry() === 'RU')
+                    ? eswHelper.getRussianStorageDataUrl()
+                    : resolvedUrl;
                 service.setRequestMethod('post');
                 eswHelper.eswInfoLogger('Esw Pre Order Request : ', params);
                 return params;
@@ -152,6 +182,7 @@ const eShopWorldServices = {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let packageServiceV4 = LocalServiceRegistry.createService('EswPackageV4Service', {
             createRequest: function (service, params) {
+                service.URL = eswServices.getEswServiceUrl(service.configuration.getID());
                 let bearerToken = 'Bearer ' + params.eswOAuthToken;
                 service.addHeader('Content-Type', 'application/json');
                 service.addHeader('Authorization', bearerToken);
@@ -288,6 +319,7 @@ const eShopWorldServices = {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let catalogService = LocalServiceRegistry.createService('ESWCatalogService', {
             createRequest: function (service, params) {
+                service.URL = eswServices.getEswServiceUrl(service.configuration.getID());
                 let bearerToken = 'Bearer ' + params.eswOAuthToken;
                 service.addHeader('Content-Type', 'application/json');
                 service.addHeader('Authorization', bearerToken);
@@ -319,6 +351,7 @@ const eShopWorldServices = {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         return LocalServiceRegistry.createService('EswGetAsnPackage', {
             createRequest: function (service, params) {
+                service.URL = eswServices.getEswServiceUrl(service.configuration.getID());
                 let bearerToken = 'Bearer ' + params.eswOAuthToken;
                 let svcUrl = service.URL + '?FromDate=' + params.requestBody.FromDate + '&ToDate=' + params.requestBody.ToDate;
                 service.addHeader('Content-Type', 'application/json');
@@ -340,7 +373,7 @@ const eShopWorldServices = {
             createRequest: function (service, params) {
                 service.addHeader('Content-Type', 'application/json');
                 service.setRequestMethod('POST');
-                 // Use params.requestBody if it exists, otherwise use params directly
+                // Use params.requestBody if it exists, otherwise use params directly
                 let requestBody = params.requestBody || params;
                 return JSON.stringify(requestBody);
             },
@@ -372,10 +405,15 @@ const eShopWorldServices = {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let orderCreationService = LocalServiceRegistry.createService('ESWOrderCreation', {
             createRequest: function (service, params) {
-                let Site = require('dw/system/Site').getCurrent();
-                let siteId = Site.getID();
-                service.URL = service.URL.replace(/{SiteID}+/g, siteId);
-                service.URL += params.endpoint;
+                service.URL = eswServices.getEswServiceUrl('ESWOrderCreation');
+                if (!empty(service.URL) && service.URL.toLowerCase().indexOf('{siteid}') !== -1) {
+                    let Site = require('dw/system/Site').getCurrent();
+                    let siteId = Site.getID();
+                    service.URL = service.URL.replace(/{SiteID}+/g, siteId);
+                }
+                if (!empty(params.endpoint)) {
+                    service.URL += params.endpoint;
+                }
                 service.addHeader('Content-Type', 'application/json');
                 if (params.dwsid) {
                     service.addHeader('Cookie', 'dwsid=' + params.dwsid);
@@ -403,13 +441,14 @@ const eShopWorldServices = {
         });
         return orderCreationService;
     },
-     /* Service call to ESW fetch Jwks
-     * @returns {Object} - Service response
-     */
+    /* Service call to ESW fetch Jwks
+    * @returns {Object} - Service response
+    */
     getJwksFromEswService: function () {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         return LocalServiceRegistry.createService('EswGetJwksService', {
             createRequest: function (service) {
+                service.URL = eswServices.getEswServiceUrl(service.configuration.getID());
                 service.setRequestMethod('GET');
             },
             parseResponse: function (service, svcResponse) {
@@ -441,6 +480,7 @@ const eShopWorldServices = {
     syncMoInventoryWithSfcc: function () {
         return LocalServiceRegistry.createService('EswMoInventorySync', {
             createRequest: function (service, args) {
+                service.URL = eswServices.getEswServiceUrl(service.configuration.getID());
                 service.setRequestMethod('PATCH');
                 service.addHeader('Content-Type', 'application/json');
                 service.URL = service.URL.replace(/{productID}+/g, args.productId);

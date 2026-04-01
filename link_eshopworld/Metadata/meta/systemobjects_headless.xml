@@ -109,6 +109,12 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswPreOrderRequest">
+                <display-name xml:lang="x-default">ESW PreOrderRequest</display-name>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
     </type-extension>
 
@@ -150,6 +156,20 @@ Value(s) Example: usd|cad|gbp</description>
                 <externally-managed-flag>false</externally-managed-flag>
                 <min-length>0</min-length>
             </attribute-definition>
+            <attribute-definition attribute-id="eswIsPwaKitMappingEnabled">
+                <display-name xml:lang="x-default">ESW Is PWA Kit Mapping Enabled</display-name>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+                <default-value>false</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="eswPwaUrlExpansionPairs">
+                <display-name xml:lang="x-default">ESW PWA URL Expansion Pairs</display-name>
+                <type>set-of-string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
 			<attribute-group group-id="ESW Headless Integration Configuration">
@@ -157,6 +177,11 @@ Value(s) Example: usd|cad|gbp</description>
                 <attribute attribute-id="eswBasketPricingMapping"/>
 				<attribute attribute-id="eswPriceBookKeyWords"/>
                 <attribute attribute-id="eswHeadlessSiteUrl"/>
+                <attribute attribute-id="eswIsPwaKitMappingEnabled"/>
+            </attribute-group>
+            <attribute-group group-id="ESW PWA Integration Configuration">
+                <display-name xml:lang="x-default">ESW PWA Integration Configuration</display-name>
+                <attribute attribute-id="eswPwaUrlExpansionPairs"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

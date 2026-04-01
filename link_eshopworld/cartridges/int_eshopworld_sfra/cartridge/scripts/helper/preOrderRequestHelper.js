@@ -13,7 +13,7 @@ const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHe
 
 /**
  * Handle Pre-Order V2. It prepares Pre-Order service request and calls it.
- * @returns {string} - if cookies not found then return blank string
+ * @returns {any} - preorder object or
  * otherwise, renders the landing page.
  */
 function handlePreOrderRequestV2(promotionsCalloutsMessages) {
@@ -33,7 +33,7 @@ function handlePreOrderRequestV2(promotionsCalloutsMessages) {
         }
         eswHelper.setOAuthToken();
 
-        let requestObj = eswServiceHelper.preparePreOrder(null,null,null,null,promotionsCalloutsMessages);
+        let requestObj = eswServiceHelper.preparePreOrder(null, null, null, null, promotionsCalloutsMessages);
         requestObj.retailerCartId = eswServiceHelper.createOrder();
         if (eswHelper.isEswSelfHostedOcEnabled()) {
             let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestObj.retailerCartId);
@@ -47,6 +47,13 @@ function handlePreOrderRequestV2(promotionsCalloutsMessages) {
         eswHelper.validatePreOrder(requestObj, true);
         session.privacy.confirmedOrderID = requestObj.retailerCartId;
         result = preorderServiceObj.call(JSON.stringify(requestObj));
+        try {
+            // Works only if call is for E2E testing
+            const e2eHelpers = require('*/cartridge/scripts/helpers/e2eHelpers');
+            return e2eHelpers.returnPreorderWithPayload(result, requestObj);
+        } catch (e) {
+            //do nothing
+        }
     } catch (error) {
         eswHelper.eswInfoLogger('handlePreOrderRequestV2 Error', error, error.message, error.stack);
     }

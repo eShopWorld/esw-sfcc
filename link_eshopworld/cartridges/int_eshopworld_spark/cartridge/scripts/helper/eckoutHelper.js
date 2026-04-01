@@ -99,12 +99,12 @@ const eswEmbCheckoutHelper = {
     updateEmbeddedCheckoutOrderAttributes: function (order, obj) {
         let logger = require('dw/system/Logger');
         try {
-            let fxRate = eswHelper.getESWCurrencyFXRate(obj.checkoutTotal.shopper.currency, obj.deliveryCountryIso);
+            let fxRate = eswHelper.getESWCurrencyFXRate(('checkoutTotal' in obj ? obj.checkoutTotal.shopper.currency: order.custom.eswShopperCurrencyCode), obj.deliveryCountryIso);
             if (eswHelper.isEswEnabledEmbeddedCheckout()) {
                 this.setCustomerOrderCustomObject(obj.retailerCartId, order);
                 order.custom.eswBasketUuid = obj.retailerCartId;
                 order.custom.eswShopperIpAddress = this.getShopperIpAddressValue(obj);
-                order.custom.eswShopperCurrencyTotalOrderDiscount = eswHelper.getOrderDiscount(order, { currencyCode: obj.checkoutTotal.shopper.currency }).value;
+                order.custom.eswShopperCurrencyTotalOrderDiscount = eswHelper.getOrderDiscount(order, { currencyCode: ('checkoutTotal' in obj ? obj.checkoutTotal.shopper.currency: order.custom.eswShopperCurrencyCode) }).value;
                 order.custom.eswFxrate = !empty(fxRate) && fxRate.length > 0 ? fxRate[0].rate : '';
                 order.removeRemoteHost();
             }
@@ -122,76 +122,80 @@ const eswEmbCheckoutHelper = {
     processUpdateOrderAttributes: function (orderId, obj, req) {
         let order = OrderMgr.getOrder(orderId);
         let responseJSON = {};
-        let totalCheckoutAmount = ('checkoutTotal' in obj) ? obj.checkoutTotal.shopper.amount : obj.shopperCurrencyPaymentAmount.substring(3);
-        let paymentCardBrand = ('paymentDetails' in obj) ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand;
-        // If order already confirmed & processed
-        if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
-            responseJSON.ResponseText = 'Order already exists';
-        }
+        let totalCheckoutAmount = 'checkoutTotal' in obj ? obj.checkoutTotal.shopper.amount : obj.shopperCurrencyPaymentAmount.substring(3);
+        let paymentCardBrand = 'paymentDetails' in obj ? obj.paymentDetails.methodCardBrand : obj.paymentMethodCardBrand;
         // If order not found or Failed in SFCC
-        if (empty(order) || order.status.value === Order.ORDER_STATUS_FAILED) {
+        if (empty(order)) {
             response.setStatus(400);
             responseJSON.ResponseCode = '400';
-            responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
-        } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
+            responseJSON.ResponseText = empty(order) ? 'Order not found' : 'Order Failed';
+        } else if(order.status.value === Order.ORDER_STATUS_FAILED){
             OrderMgr.undoFailOrder(order);
-        }
-        // If order exist with created status in SFCC then perform order confirmation
-        if (order.status.value === Order.ORDER_STATUS_CREATED) {
-            let currentMethodID = order.shipments[0].shippingMethodID;
-            ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req, currentMethodID);
-            // update ESW order custom attributes
-            if ('checkoutTotal' in obj) { // OC response v3.0
-                ocHelper.updateEswOrderAttributesV3(obj, order);
-            } else { // OC response v2.0
-                ocHelper.updateEswOrderAttributesV2(obj, order);
+        } else {
+            // If order already confirmed & processed
+            if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
+                responseJSON.ResponseText = 'Order already exists';
             }
-            // update ESW order Item custom attributes
-            let ocLineItemObject = ('lineItems' in obj) ? obj.lineItems : obj.cartItems;
-            if (ocLineItemObject != null && ocLineItemObject[0].product.productCode) {
-                let cartItem;
-                // eslint-disable-next-line no-restricted-syntax, guard-for-in
-                for (let lineItem in order.productLineItems) {
-                    cartItem = this.getCartItem(ocLineItemObject, order, lineItem);
-                    if ('lineItems' in obj) { // OC response v3.0
-                        ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
-                    } else { // OC response v2.0
-                        ocHelper.updateEswOrderItemAttributesV2(obj, order.productLineItems[lineItem], cartItem);
-                    }
-                }
-                if ('lineItems' in obj) { // OC response v3.0
-                    ocHelper.updateOrderLevelAttrV3(obj, order);
-                }
-                this.updateEmbeddedCheckoutOrderAttributes(order, obj);
-            }
-        // update ESW order Item custom attributes
-            ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
-        // update ESW Payment instrument custom attributes
-            ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
-            OrderMgr.placeOrder(order);
-            if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId)) {
-                ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId, obj.shopperCheckoutExperience.saveAddressForNextPurchase);
-            }
-        // Add konbini related order information
-            let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
-            if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
-                if (eswHelper.isEswPostOrderSyncEnabled()) {
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
-                    order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+            // If order exist with created status in SFCC then perform order confirmation
+            if (order.status.value === Order.ORDER_STATUS_CREATED) {
+                let currentMethodID = order.shipments[0].shippingMethodID;
+                ocHelper.setApplicableShippingMethods(order, obj.deliveryOption.deliveryOption, obj.deliveryCountryIso, req, currentMethodID);
+                // update ESW order custom attributes
+                if ('checkoutTotal' in obj) {
+                    // OC response v3.0
+                    ocHelper.updateEswOrderAttributesV3(obj, order);
                 } else {
-                    order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
-                    order.setExportStatus(Order.EXPORT_STATUS_READY);
-                    if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
-                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    // OC response v2.0
+                    ocHelper.updateEswOrderAttributesV2(obj, order);
+                }
+                // update ESW order Item custom attributes
+                let ocLineItemObject = 'lineItems' in obj ? obj.lineItems : obj.cartItems;
+                if (ocLineItemObject != null && ocLineItemObject[0].product.productCode) {
+                    let cartItem;
+                    // eslint-disable-next-line no-restricted-syntax, guard-for-in
+                    for (let lineItem in order.productLineItems) {
+                        cartItem = this.getCartItem(ocLineItemObject, order, lineItem);
+                        if ('lineItems' in obj) {
+                            // OC response v3.0
+                            ocHelper.updateEswOrderItemAttributesV3(obj, order.productLineItems[lineItem], cartItem);
+                        } else {
+                            // OC response v2.0
+                            ocHelper.updateEswOrderItemAttributesV2(obj, order.productLineItems[lineItem], cartItem);
+                        }
+                    }
+                    if ('lineItems' in obj) {
+                        // OC response v3.0
+                        ocHelper.updateOrderLevelAttrV3(obj, order);
+                    }
+                    this.updateEmbeddedCheckoutOrderAttributes(order, obj);
+                }
+                // update ESW order Item custom attributes
+                ocHelper.updateShopperAddressDetails(obj.contactDetails, order);
+                // update ESW Payment instrument custom attributes
+                ocHelper.updateEswPaymentAttributes(order, totalCheckoutAmount, paymentCardBrand);
+                OrderMgr.placeOrder(order);
+                if (!empty(obj.shopperCheckoutExperience) && !empty(obj.shopperCheckoutExperience.registeredProfileId)) {
+                    ocHelper.saveAddressinAddressBook(obj.contactDetails, obj.shopperCheckoutExperience.registeredProfileId, obj.shopperCheckoutExperience.saveAddressForNextPurchase);
+                }
+                // Add konbini related order information
+                let isKonbiniOrder = ocHelper.processKonbiniOrderConfirmation(obj, order, totalCheckoutAmount, paymentCardBrand);
+                if (typeof isKonbiniOrder === 'undefined' || !isKonbiniOrder) {
+                    if (eswHelper.isEswPostOrderSyncEnabled()) {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_NOTCONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_NOTEXPORTED);
+                        order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
+                    } else {
+                        order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
+                        order.setExportStatus(Order.EXPORT_STATUS_READY);
+                        if (eswHelper.isUpdateOrderPaymentStatusToPaidAllowed()) {
+                            order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                        }
                     }
                 }
             }
         }
         return responseJSON;
     }
-
 };
-
 
 module.exports.eswEmbCheckoutHelper = eswEmbCheckoutHelper;

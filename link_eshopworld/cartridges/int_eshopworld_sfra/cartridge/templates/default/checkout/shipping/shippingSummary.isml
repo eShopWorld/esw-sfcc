@@ -1,3 +1,4 @@
+<isif condition="${!pdict.order.isAllDigital}">
 <isset name="eswHelper" value="${require('*/cartridge/scripts/helper/eswHelper').getEswHelper()}" scope="page" />
 <!--- Shipping Address --->
 <isif condition="${eswHelper.getEShopWorldModuleEnabled()}">
@@ -150,5 +151,6 @@
             </div>
         </isif>
     </div>
+</isif>
 </isif>
 </isif>

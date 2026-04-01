@@ -91,7 +91,7 @@ eswHelper.getOrderTotalWithShippingCost = function (totalShippingCost) {
 };
 
 /*
- * FUnction is used to return matching line item from current basket
+ * Function is used to return matching line item from current basket
  */
 eswHelper.getMatchingLineItem = function (lineItem) {
     let currentBasket = dw.order.BasketMgr.getCurrentBasket();
@@ -102,6 +102,26 @@ eswHelper.getMatchingLineItem = function (lineItem) {
         });
     }
     return matchingLineItem;
+};
+
+/*
+ * Function is used to return sale price for ajax calls as per template implementation
+ */
+eswHelper.getItemUpdatedSalePrice = function (items) {
+    if (!items || !items.length) {
+        return items;
+    }
+    for (let i = 0; i < items.length; i++) {
+        let item = items[i];
+        if (item && item.price && item.price.sales && item.price.sales.formatted) {
+            let matchingLineItem = eswHelper.getMatchingLineItem(item);
+            if (matchingLineItem && matchingLineItem.quantity) {
+                let matchingLineItemPrice = formatMoney(eswHelper.getUnitPriceCost(matchingLineItem));
+                items[i].price.sales.formatted = matchingLineItemPrice;
+            }
+        }
+    }
+    return items;
 };
 
 /*

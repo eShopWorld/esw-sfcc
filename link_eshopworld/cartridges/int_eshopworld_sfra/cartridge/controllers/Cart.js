@@ -105,7 +105,9 @@ server.append('Show', function (req, res, next) {
     let BasketMgr = require('dw/order/BasketMgr');
     let Transaction = require('dw/system/Transaction');
     let currentBasket = BasketMgr.getCurrentBasket();
-    // // Group product for multi origin
+    // Check if cart contains only digital products
+    viewData.isOnlyDigitalProductsInCart = eswHelper.isOnlyDigitalProductsInCart(currentBasket);
+    // Group product for multi origin
     if (eswCoreHelper.isEnabledMultiOrigin() && viewData && viewData.items) {
         viewData.items = eswMultiOriginHelper.groupCartPlis(viewData.items);
     }
@@ -311,6 +313,7 @@ server.append(
             eswHelper.removeThresholdPromo(currentBasket);
         });
         let basketModel = new CartModel(currentBasket);
+        basketModel.items = eswHelper.getItemUpdatedSalePrice(basketModel.items);
         if (eswCoreHelper.isEnabledMultiOrigin() && basketModel && basketModel.items) {
             basketModel.items = eswMultiOriginHelper.groupCartPlis(basketModel.items);
         }
@@ -358,7 +361,7 @@ server.replace('UpdateQuantity', function (req, res, next) {
     let updateQuantity = parseInt(req.querystring.quantity, 10);
     let productLineItems = currentBasket.productLineItems;
     let matchingLineItem = collections.find(productLineItems, function (item) {
-        return item.productID;
+        return item.productID === productId;
     });
     let availableToSell = 0;
 

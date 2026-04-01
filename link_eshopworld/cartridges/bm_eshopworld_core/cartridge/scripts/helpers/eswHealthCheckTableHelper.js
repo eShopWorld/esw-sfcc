@@ -13,8 +13,8 @@ function getImpactMessage(serviceId, isUrlSet) {
             return isUrlSet
                 ? Resource.msg('label.sts.should.work', 'eswbm', null)
                 : Resource.msg('label.sts.will.fail', 'eswbm', null);
-
         case 'EswCheckoutV3Service.SFRA':
+        case 'EswCheckoutV2Service.SFRA':
             return isUrlSet
                 ? Resource.msg('label.checkout.v3.should.work', 'eswbm', null)
                 : Resource.msg('label.checkout.v3.will.fail', 'eswbm', null);
@@ -65,12 +65,21 @@ function getImpactMessage(serviceId, isUrlSet) {
  * @returns {Array} - An array of transformed service objects with three columns: Service ID, URL, and Impact.
  */
 function transformServiceDataForTable(sampleJson) {
-    if (!sampleJson || !Array.isArray(sampleJson.services)) {
-        throw new Error('Invalid input: sampleJson must contain a "services" array');
+    if (!sampleJson || (!Array.isArray(sampleJson.services) && typeof sampleJson.services !== 'object')) {
+        throw new Error('Invalid input: sampleJson must contain a "services" array or object');
     }
 
+    // Convert object to array if needed
+    let servicesArr = Array.isArray(sampleJson.services)
+        ? sampleJson.services
+        : Object.keys(sampleJson.services).map(function (key) {
+            let obj = sampleJson.services[key];
+            obj.name = key;
+            return obj;
+        });
+
     // Transform the services array
-    return sampleJson.services.map(function (service) {
+    return servicesArr.map(function (service) {
         const isUrlSet = !!service.serviceUrl;
 
         const statusCode = service.responses && Array.isArray(service.responses) && service.responses[0]
@@ -87,9 +96,11 @@ function transformServiceDataForTable(sampleJson) {
         }
 
         return {
-            serviceId: service.serviceId,
+            name: service.name,
+            inUse: service.inUse,
+            lastExecuted: service.lastExecuted,
             url: service.serviceUrl || Resource.msg('label.service.url.not.set', 'eswbm', null),
-            impact: getImpactMessage(service.serviceId, isUrlSet),
+            impact: getImpactMessage(service.name, isUrlSet),
             statusCode: statusCode !== null ? String(statusCode) : '',
             class: className
         };
@@ -182,6 +193,10 @@ function getServicesMock(fakeBearerToken) {
             payload: checkoutPayload,
             type: 'service'
         },
+        'EswCheckoutV2Service.SFRA': {
+            payload: checkoutPayload,
+            type: 'service'
+        },
         ESWCatalogService: {
             payload: {
                 eswOAuthToken: fakeBearerToken,
@@ -200,12 +215,100 @@ function getServicesMock(fakeBearerToken) {
             },
             type: 'service'
         },
+        EswOcapiOrderService: {
+            payload: {
+                bearerToken: fakeBearerToken,
+                requestBody: []
+            },
+            type: 'service'
+        },
         EswOcapiDataAuthService: {
             payload: {
                 grant_type: 'client_credentials',
                 scope: 'data_api',
                 client_id: eswHelper.getClientID(),
                 client_secret: eswHelper.getClientSecret()
+            },
+            type: 'service'
+        },
+        ESWOrderCreation: {
+            payload: {
+                endpoint: '/orders',
+                Authorization: 'Bearer your-valid-access-token',
+                requestBody: {
+                    order_no: '00012345',
+                    customer_info: {
+                        customer_id: 'test-customer-001',
+                        email: 'testuser@example.com'
+                    },
+                    product_items: [
+                        {
+                            product_id: 'sku12345',
+                            quantity: 2,
+                            price: {
+                                currency: 'USD',
+                                amount: 59.99
+                            }
+                        },
+                        {
+                            product_id: 'sku67890',
+                            quantity: 1,
+                            price: {
+                                currency: 'USD',
+                                amount: 39.99
+                            }
+                        }
+                    ],
+                    shipping_address: {
+                        first_name: 'John',
+                        last_name: 'Doe',
+                        address1: '123 Main St',
+                        city: 'San Francisco',
+                        postal_code: '94105',
+                        country_code: 'US'
+                    },
+                    billing_address: {
+                        first_name: 'John',
+                        last_name: 'Doe',
+                        address1: '123 Main St',
+                        city: 'San Francisco',
+                        postal_code: '94105',
+                        country_code: 'US'
+                    },
+                    payment_instruments: [
+                        {
+                            payment_method_id: 'CREDIT_CARD',
+                            payment_card: {
+                                card_type: 'Visa',
+                                card_number: '4111111111111111',
+                                expiration_month: 12,
+                                expiration_year: 2028
+                            },
+                            amount: {
+                                currency: 'USD',
+                                value: 159.97
+                            }
+                        }
+                    ],
+                    shipment_method: 'ground',
+                    custom_attributes: {
+                        eswOrderRef: 'ESW-TEST-001'
+                    }
+                }
+            },
+            type: 'service'
+        },
+        EswMoInventorySync: {
+            payload: {
+                accessToken: eswHelper.getAdminOAuthToken().token,
+                inventory_ID: 'inventory_m',
+                productId: '013742003192M',
+                requestBody: {
+                    allocation: {
+                        amount: 5000
+                    },
+                    stock_level: 300
+                }
             },
             type: 'service'
         }
@@ -235,10 +338,8 @@ function getResponses(validServices) {
 
         try {
             if (serviceData && serviceData.type === 'service') {
-                const isServiceEnabled = eswHealthCheckHelper.isServiceInUse(serviceID);
-                const isUsingService = isServiceEnabled.inUse;
-
-                serviceResponse = isUsingService ? eswHealthCheckHelper.getServiceRes(serviceID, serviceData) : null;
+                // Always call getServiceRes with the payload, regardless of inUse
+                serviceResponse = eswHealthCheckHelper.getServiceRes(serviceID, serviceData);
 
                 if (serviceResponse && serviceResponse.status === 'OK') {
                     status = 'SUCCESS';

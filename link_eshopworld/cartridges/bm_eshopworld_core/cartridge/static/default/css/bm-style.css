@@ -107,6 +107,13 @@ td.bordered {
   border-collapse: collapse;
 }
 
+.esw-custom-table {
+  table-layout: fixed;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 .esw-product-table tr td:first-child {
   border-left: 1px solid #eee;
   width: 85px;

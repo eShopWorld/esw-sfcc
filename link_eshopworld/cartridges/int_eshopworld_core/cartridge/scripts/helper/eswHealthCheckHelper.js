@@ -53,6 +53,7 @@ const eswHealthCheckHelper = {
     getServiceRes: function (serviceName, serviceTestJson) {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
+        let eswOcapiServiceHelper = require('*/cartridge/scripts/services/EswOcapiService').getEswOcapiServices;
         let serviceResponse = {};
         try {
             switch (serviceName) {
@@ -95,6 +96,18 @@ const eswHealthCheckHelper = {
                     break;
                 case 'EswOcapiDataAuthService':
                     serviceResponse = eswCoreService.getDataOcapiAuthToken().call(serviceTestJson.payload);
+                    break;
+                case 'ESWOrderCreation':
+                    serviceResponse = eswCoreService.getSFCCOcapi().call(serviceTestJson.payload);
+                    break;
+                case 'EswOcapiBasketService':
+                    serviceResponse = eswOcapiServiceHelper.ocapiBasketService().call(serviceTestJson.payload);
+                    break;
+                case 'EswOcapiOrderService':
+                    serviceResponse = eswOcapiServiceHelper.ocapiOrderService().call(serviceTestJson.payload);
+                    break;
+                case 'EswMoInventorySync':
+                    serviceResponse = eswCoreService.syncMoInventoryWithSfcc().call(serviceTestJson.payload);
                     break;
                 default:
                 // Do nothing

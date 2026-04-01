@@ -1,0 +1,39 @@
+{
+  "endpoints": [
+    {
+      "endpoint": "getBmConfigs",
+      "schema": "schema.yaml",
+      "implementation": "bmConfigs.js"
+    },
+    {
+      "endpoint": "getSupportedCountries",
+      "schema": "schema.yaml",
+      "implementation": "supportedCountries.js"
+    },
+    {
+      "endpoint": "getGeoIpAlert",
+      "schema": "schema.yaml",
+      "implementation": "geoIpAlert.js"
+    },
+    {
+      "endpoint": "getAbandonmentCart",
+      "schema": "schema.yaml",
+      "implementation": "abandonmentCart.js"
+    },
+    {
+      "endpoint": "getEswTestContent",
+      "schema": "schema.yaml",
+      "implementation": "eswTestContent.js"
+    },
+    {
+      "endpoint": "getRegisterCustomer",
+      "schema": "schema.yaml",
+      "implementation": "registerCustomer.js"
+    },
+    {
+      "endpoint": "getOrderNumber",
+      "schema": "schema.yaml",
+      "implementation": "getOrderNumber.js"
+    }
+  ]
+}

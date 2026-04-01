@@ -39,7 +39,7 @@ function getEswCartShippingCost(shippingCost) {
     if (!eswHelper.isShippingCostConversionEnabled()) {
         return new dw.value.Money(shippingCost.decimalValue, request.getHttpCookies()['esw.currency'].value);
     }
-    return eswHelper.getMoneyObject(shippingCost, true, false, false);
+    return eswHelper.getMoneyObject(shippingCost, true, false, true);
 }
 
 /**

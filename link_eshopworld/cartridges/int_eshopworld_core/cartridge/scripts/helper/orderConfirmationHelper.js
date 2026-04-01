@@ -72,7 +72,7 @@ const getEswOcHelper = {
     * @returns {obj}  - Discounts
     */
     getDeliveryDiscountsInfo: function (deliveryOptions, currency) {
-        if (empty(deliveryOptions)) {
+        if (empty(deliveryOptions) || empty(deliveryOptions.deliveryOptionPriceInfo)) {
             return [];
         }
         let obj = {},
@@ -186,14 +186,26 @@ const getEswOcHelper = {
         this.checkAndSetOrderCustomAttribute(order, 'eswEmailMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
         this.checkAndSetOrderCustomAttribute(order, 'eswDeliveryOption', obj.deliveryOption.deliveryOption);
         this.checkAndSetOrderCustomAttribute(order, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn || false);
+        this.checkAndSetOrderCustomAttribute(order, 'eswPostMarketingOptIn', !empty(obj.shopperCheckoutExperience.postMarketingOptIn) ? obj.shopperCheckoutExperience.postMarketingOptIn : false);
+        this.checkAndSetOrderCustomAttribute(order, 'eswPhoneMarketingOptIn', !empty(obj.shopperCheckoutExperience.phoneMarketingOptIn) ? obj.shopperCheckoutExperience.phoneMarketingOptIn : false);
 
         let shoppercurrencyAmount = Number(obj.checkoutTotal.shopper.amount);
         let retailercurrencyAmount = Number(obj.checkoutTotal.retailer.amount);
 
         this.checkAndSetOrderCustomAttribute(order, 'eswFxrateOc', (shoppercurrencyAmount / retailercurrencyAmount).toFixed(Constants.DECIMAL_LENGTH));
         this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyTotalOrderDiscount', order.custom.eswShopperCurrencyTotalOrderDiscount / (shoppercurrencyAmount / retailercurrencyAmount));
-        this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryPriceInfo', Number(obj.deliveryOption.deliveryOptionPriceInfo.price.shopper.amount));
-        this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryPriceInfo', Number(obj.deliveryOption.deliveryOptionPriceInfo.price.retailer.amount));
+        let deliveryOption = obj.deliveryOption;
+        let priceInfo = !empty(deliveryOption) && !empty(deliveryOption.deliveryOptionPriceInfo)
+            ? deliveryOption.deliveryOptionPriceInfo.price
+            : null;
+
+        if (!empty(priceInfo) && !empty(priceInfo.shopper) && !empty(priceInfo.shopper.amount)) {
+            this.checkAndSetOrderCustomAttribute(order, 'eswShopperCurrencyDeliveryPriceInfo', Number(priceInfo.shopper.amount));
+        }
+
+        if (!empty(priceInfo) && !empty(priceInfo.retailer) && !empty(priceInfo.retailer.amount)) {
+            this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyDeliveryPriceInfo', Number(priceInfo.retailer.amount));
+        }
 
         this.checkAndSetOrderCustomAttribute(order, 'eswPaymentMethod', (obj.paymentDetails && obj.paymentDetails.method) ? obj.paymentDetails.method : null);
         this.checkAndSetOrderCustomAttribute(order, 'eswFraudHold', (obj.fraudHold && obj.fraudHold) ? obj.fraudHold : null);
@@ -231,6 +243,12 @@ const getEswOcHelper = {
             if (!empty(obj.shopperCheckoutExperience.smsMarketingOptIn)) {
                 this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn);
             }
+            if (!empty(obj.shopperCheckoutExperience.phoneMarketingOptIn)) {
+                this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswPhoneMarketingOptIn', obj.shopperCheckoutExperience.phoneMarketingOptIn);
+            }
+            if (!empty(obj.shopperCheckoutExperience.postMarketingOptIn)) {
+                this.checkAndSetOrderCustomAttribute(order.customer.profile, 'eswPostMarketingOptIn', obj.shopperCheckoutExperience.postMarketingOptIn);
+            }
         } else {
             let existedCustomer = CustomerMgr.getCustomerByLogin(!empty(obj.contactDetails[0].email) ? obj.contactDetails[0].email : obj.contactDetails[1].email);
             if (!empty(existedCustomer) && obj.shopperCheckoutExperience.emailMarketingOptIn === true) {
@@ -238,6 +256,12 @@ const getEswOcHelper = {
             }
             if (!empty(existedCustomer) && obj.shopperCheckoutExperience.smsMarketingOptIn === true) {
                 this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswSMSMarketingOptIn', obj.shopperCheckoutExperience.smsMarketingOptIn);
+            }
+            if (!empty(existedCustomer) && !empty(obj.shopperCheckoutExperience.phoneMarketingOptIn)) {
+                this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswPhoneMarketingOptIn', obj.shopperCheckoutExperience.phoneMarketingOptIn);
+            }
+            if (!empty(existedCustomer) && !empty(obj.shopperCheckoutExperience.postMarketingOptIn)) {
+                this.checkAndSetOrderCustomAttribute(existedCustomer.profile, 'eswPostMarketingOptIn', obj.shopperCheckoutExperience.postMarketingOptIn);
             }
         }
     },
@@ -297,6 +321,9 @@ const getEswOcHelper = {
             this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFee', Number(itemCashOnDeliveryTaxesObj.shopper.amount));
             this.checkAndSetOrderCustomAttribute(lineItem, 'eswShopperCashOnDeliveryTaxFeeCurrency', itemCashOnDeliveryTaxesObj.shopper.currency);
         }
+
+        // Need to store as boolean value
+        lineItem.custom.eswIsDigitalProduct = !!((cartItem[0].product.category && cartItem[0].product.category.toLowerCase() === 'digital'));
         lineItem.custom.eswFulfilmentCountryIso = !empty(cartItem[0].fulfilmentCountryIso) ? cartItem[0].fulfilmentCountryIso : '';
         lineItem.custom.eswDeliveryOption = !empty(cartItem[0].deliveryOption) ? cartItem[0].deliveryOption : '';
         if (!empty(cartItem[0].articles)) {
@@ -543,6 +570,9 @@ const getEswOcHelper = {
         this.checkAndSetOrderCustomAttribute(order, 'eswRetailerCurrencyPaymentAmount', Number(obj.retailerCurrencyPaymentAmount.substring(3)));
         this.checkAndSetOrderCustomAttribute(order, 'eswEmailMarketingOptIn', obj.shopperCheckoutExperience.emailMarketingOptIn);
         this.checkAndSetOrderCustomAttribute(order, 'eswSMSMarketingOptIn', !empty(obj.shopperCheckoutExperience.smsMarketingOptIn) ? obj.shopperCheckoutExperience.smsMarketingOptIn : false);
+        this.checkAndSetOrderCustomAttribute(order, 'eswPostMarketingOptIn', !empty(obj.shopperCheckoutExperience.postMarketingOptIn) ? obj.shopperCheckoutExperience.postMarketingOptIn : false);
+        this.checkAndSetOrderCustomAttribute(order, 'eswPhoneMarketingOptIn', !empty(obj.shopperCheckoutExperience.phoneMarketingOptIn) ? obj.shopperCheckoutExperience.phoneMarketingOptIn : false);
+
         this.checkAndSetOrderCustomAttribute(order, 'eswDeliveryOption', obj.deliveryOption.deliveryOption);
         // Storing CoD attributes
         if (obj.charges && !empty(obj.charges.retailerCurrencyCashOnDelivery)) {

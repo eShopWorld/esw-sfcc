@@ -32,85 +32,6 @@ const eswHelperHL = {
         }
         return coupons;
     },
-    /*  function to return basket and required info from order
-    * @param {string} eswClientLastOrderId - eswClientLastOrderId API object
-    * @returns {Object} - the basket object
-    */
-    generateBasketFromOrder: function (eswClientLastOrderId, sgRequest) {
-        let OrderMgr = require('dw/order/OrderMgr'),
-            BasketMgr = require('dw/order/BasketMgr'),
-            Transaction = require('dw/system/Transaction');
-        let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        if (!empty(sgRequest)) {
-            eswHelper = require('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper').getEswHelper();
-        }
-
-        let orderItems = { products: [] },
-            basketItems = { products: [] },
-            coupons = [],
-            order = null;
-        if (!empty(eswClientLastOrderId) && eswClientLastOrderId !== 'null') {
-            order = OrderMgr.getOrder(eswClientLastOrderId);
-
-            if (order && !empty(order) &&
-                (order.status.value === dw.order.Order.ORDER_STATUS_FAILED ||
-                order.status.value === dw.order.Order.ORDER_STATUS_CREATED ||
-                order.status.value === dw.order.Order.ORDER_STATUS_NEW)) {
-                eswHelper.rebuildCartUponBackFromESW(order.getOrderNo());
-
-                if (order.status.value === dw.order.Order.ORDER_STATUS_CREATED) {
-                    Transaction.wrap(function () {
-                        OrderMgr.failOrder(order, true);
-                    });
-                }
-
-                let allLineItems = order.getAllLineItems().iterator();
-
-                while (allLineItems.hasNext()) {
-                    let currentLineItem = allLineItems.next();
-                    if (currentLineItem instanceof dw.order.ProductLineItem) {
-                        orderItems.products.push({
-                            productId: currentLineItem.getProductID(),
-                            price: currentLineItem.getPriceValue(),
-                            quantity: currentLineItem.getQuantityValue()
-                        });
-                    }
-                }
-
-                // Re-iterate since previous iterator is consumed
-                allLineItems = order.getAllLineItems().iterator();
-                while (allLineItems.hasNext()) {
-                    let lineItem = allLineItems.next();
-                    if (lineItem instanceof dw.order.ProductLineItem) {
-                        basketItems.products.push({
-                            productId: lineItem.getProductID(),
-                            lineItemId: lineItem.getUUID()
-                        });
-                    }
-                }
-
-                coupons = this.getRetailerPromoCodes(order);
-            } else {
-                response.setStatus(404);
-                return {
-                    Error: 'The order is either unavailable or was not successfully placed. Please verify the details and try again.'
-                };
-            }
-        }
-
-        let customerBasket = BasketMgr.getCurrentOrNewBasket();
-        let currentBasketId = customerBasket.getUUID();
-        return {
-            orderLineItems: orderItems,
-            basketId: currentBasketId,
-            couponCodes: coupons,
-            removeLineItems: !empty(order) ? (
-                order.status.value === dw.order.Order.ORDER_STATUS_NEW ||
-                order.status.value === dw.order.Order.ORDER_STATUS_OPEN
-            ) : false,
-            basketItems: basketItems
-        };
-    },
     /**
      * This function is used to get Order Pro-rated Discount
      * @param {Object} order - Order API object
@@ -142,6 +63,35 @@ const eswHelperHL = {
         localizeObj.selectedFxRate = conversionPrefs.selectedFxRate[0];
         localizeObj.selectedCountryAdjustments = conversionPrefs.selectedCountryAdjustments[0];
         return eswHelper.getOrderDiscount(order, localizeObj);
+    },
+    /**
+    * This function is used to get order discount if it exist
+    * @param {Object} order - Order API object
+    * @param {Object} localizeObj - local country currency preference
+    * @param {Object} conversionPrefs - the conversion preferences which contains selected fxRate, countryAdjustments and roundingRule
+    * @returns {Object} order discount
+    */
+    getOrderDiscount: function (order, localizeObj, conversionPrefs) {
+        let totalDiscount = 0;
+        let Money = require('dw/value/Money');
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+        let orderLevelProratedDiscount = this.getOrderProratedDiscount(order);
+        if (order != null) {
+            // eslint-disable-next-line guard-for-in
+            for (let lineItemNumber in order.productLineItems) { // eslint-disable-line no-restricted-syntax
+                let item = order.productLineItems[lineItemNumber];
+                // Apply order level discount
+                if (orderLevelProratedDiscount > 0 && item.proratedPrice.value < item.adjustedPrice.value) {
+                    localizeObj.applyRoundingModel = 'false';
+                    totalDiscount += pricingHelper.getConvertedPrice(Number(item.adjustedPrice.value), localizeObj, conversionPrefs) - pricingHelper.getConvertedPrice(Number(item.proratedPrice.value), localizeObj, conversionPrefs);
+                    localizeObj.applyRoundingModel = 'true';
+                }
+            }
+        }
+        if (totalDiscount < 0) {
+            totalDiscount *= -1;
+        }
+        return new Money(totalDiscount, localizeObj.localizeCountryObj.currencyCode);
     },
     /**
      * This function is used to apply applicable shipping method and return applied shipping method
@@ -220,7 +170,11 @@ const eswHelperHL = {
     */
     getFinalOrderTotalsObject: function (cart, localizeObj, conversionPrefs) {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-        return new dw.value.Money((eswHelper.getSubtotalObject(cart, true, false, false, localizeObj, conversionPrefs).value - this.getOrderDiscountHL(cart, localizeObj, conversionPrefs).value), localizeObj.localizeCountryObj.currencyCode);
+        if (request.isSCAPI()) {
+            return new dw.value.Money((eswHelper.getSubtotalObject(cart, true, false, false, localizeObj, conversionPrefs).value - this.getOrderDiscount(cart, localizeObj, conversionPrefs).value), localizeObj.localizeCountryObj.currencyCode);
+        } else {
+            return new dw.value.Money((eswHelper.getSubtotalObject(cart, true, false, false, localizeObj, conversionPrefs).value - this.getOrderDiscountHL(cart, localizeObj, conversionPrefs).value), localizeObj.localizeCountryObj.currencyCode);
+        }
     },
     /**
      * function to get the product line item metadata sends custom attributes in
@@ -418,6 +372,97 @@ const eswHelperHL = {
         return discount;
     },
     /** Adjusts price of discounts based on threshold promotions
+     * @param {Object} currentBasket - Basket
+     * @param {number} cartTotalsPwa - cartTotalsPwa
+     * @param {Object} localizeObj - localizeObj
+     */
+    adjustThresholdDiscountsPwa: function (currentBasket, cartTotalsPwa, localizeObj) {
+        let collections = require('*/cartridge/scripts/util/collections'),
+            eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+        if (empty(currentBasket.priceAdjustments) && empty(currentBasket.getAllShippingPriceAdjustments())) {
+            return;
+        }
+        let allShippingPriceAdjustmentsIter = currentBasket.getAllShippingPriceAdjustments().iterator();
+        let cartTotals = cartTotalsPwa;
+        let shippingLineItem;
+        let fxRate = (!empty(localizeObj.selectedFxRate) && !empty(localizeObj.selectedFxRate.rate)) ? localizeObj.selectedFxRate.rate : '1';
+        if (allShippingPriceAdjustmentsIter.hasNext()) {
+            let shippingLineItemIter;
+            if (!empty(currentBasket.defaultShipment)) {
+                shippingLineItemIter = currentBasket.defaultShipment.getShippingLineItems().iterator();
+            } else {
+                shippingLineItemIter = currentBasket.object.defaultShipment.getShippingLineItems().iterator();
+            }
+            shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
+            /* Check if threshold Promo Already exists */
+            if (shippingLineItem) {
+                collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
+                    if (lineItemAdjustment.promotionID === 'thresholdPromo') {
+                        shippingLineItem.removeShippingPriceAdjustment(lineItemAdjustment);
+                    }
+                });
+            }
+        }
+        collections.forEach(currentBasket.priceAdjustments, function (eachPriceAdjustment) {
+            if (eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
+                currentBasket.removePriceAdjustment(eachPriceAdjustment);
+            }
+        });
+        let allLineItemIter = currentBasket.getAllLineItems().iterator();
+        let discountType,
+            Discount,
+            percentangeDiscountValue,
+            orderPriceAdjustment;
+        while (allLineItemIter.hasNext()) {
+            let priceAdjustment = allLineItemIter.next();
+            if (!(priceAdjustment instanceof dw.order.PriceAdjustment)) {
+                /* eslint-disable no-continue */
+                continue;
+            }
+            if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER && this.isThresholdEnabled(priceAdjustment.promotion)) {
+                discountType = this.getDiscountType(priceAdjustment.promotion);
+                Discount = this.getPromoThresholdAmount(cartTotals, priceAdjustment.promotion);
+                if (Discount === '0.1') {
+                    /* eslint-disable no-continue */
+                    continue;
+                }
+                /* eslint-disable eqeqeq */
+                if (discountType == 'amount_off') {
+                    orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(Discount / fxRate));
+                    orderPriceAdjustment.custom.thresholdDiscountType = 'order';
+                } else if (discountType == 'percentage_off') {
+                    percentangeDiscountValue = (cartTotals / 100) * Discount;
+                    orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(percentangeDiscountValue / fxRate));
+                    orderPriceAdjustment.custom.thresholdDiscountType = 'order';
+                }
+            } else if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_SHIPPING) {
+                if (this.isThresholdEnabled(priceAdjustment.promotion)) {
+                    discountType = this.getDiscountType(priceAdjustment.promotion);
+                    Discount = this.getPromoThresholdAmount(cartTotals, priceAdjustment.promotion);
+                    if (Discount === '0.1') {
+                        /* eslint-disable no-continue */
+                        continue;
+                    }
+                    let shippingPrice = !empty(currentBasket.defaultShipment) ? currentBasket.defaultShipment.adjustedShippingTotalPrice : currentBasket.object.defaultShipment.adjustedShippingTotalPrice;
+                    /* eslint-disable eqeqeq */
+                    /* eslint-disable new-cap */
+                    if (discountType == 'free' || Discount == '0') {
+                        let newPriceAdjustment = shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(shippingPrice.value));
+                        newPriceAdjustment.custom.thresholdDiscountType = 'free';
+                    } else if (discountType == 'amount_off') {
+                        shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(Discount / fxRate));
+                    } else if (discountType == 'percentage_off') {
+                        let shippingRate = shippingPrice * fxRate;
+                        percentangeDiscountValue = (shippingRate / 100) * Discount;
+                        shippingLineItem.createShippingPriceAdjustment('thresholdPromo', dw.campaign.AmountDiscount(percentangeDiscountValue / fxRate));
+                    }
+                }
+            }
+            currentBasket.updateTotals();
+            eswHelper.removeThresholdPromo(currentBasket);
+        }
+    },
+    /** Adjusts price of discounts based on threshold promotions
     * @param {Object} currentBasket - Basket
     * @param {Object} localizeObj - localized object
     * @param {Object} conversionPrefs - conversion preferences
@@ -465,6 +510,10 @@ const eswHelperHL = {
             if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER && this.isThresholdEnabled(priceAdjustment.promotion)) {
                 discountType = this.getDiscountType(priceAdjustment.promotion);
                 Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
+                if (Discount === '0.1') {
+                    /* eslint-disable no-continue */
+                    continue;
+                }
                 /* eslint-disable eqeqeq */
                 if (discountType == 'amount_off') {
                     orderPriceAdjustment = currentBasket.createPriceAdjustment('orderthresholdPromo', new dw.campaign.AmountDiscount(Discount / fxRate));

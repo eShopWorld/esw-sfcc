@@ -16,9 +16,9 @@ function changeAjaxCall(dataObj) {
             if (dataObj.changeAddressAjax) {
                 // eslint-disable-next-line no-alert
                 alert(dataObj.successMsg);
-                window.location.href = dataObj.redirect;
+                globalThis.location.href = dataObj.redirect;
             } else {
-                window.location.href = response.redirectUrl;
+                globalThis.location.href = response.redirectUrl;
             }
         }
     });
@@ -67,7 +67,7 @@ function setDefaultCurrency($selectedCurrency) {
  * @param {Object} dataObj - Data object
  * @param {string} selectedCountryParam - Selected country code e.g. IE, UK, US etc
  */
-window.openEswCountrySwitcher = function (dataObj, selectedCountryParam) {
+globalThis.openEswCountrySwitcher = function (dataObj, selectedCountryParam) {
     $.ajax({
         type: 'get',
         url: dataObj.eswLandingPageUrl,
@@ -114,7 +114,7 @@ function updateCountryList() {
                                 ';path=/;domain=' + domain +
                                 ';expires=expired;SameSite=None;Secure';
                 }
-                window.open(response.redirectURL, '_self');
+                globalThis.open(response.redirectURL, '_self');
             }
         });
     });
@@ -123,11 +123,11 @@ function updateCountryList() {
         $('.eswModal').hide();
         $('.modalBg').hide();
         let geoCountry = $('script#eswMattAutoOpen').attr('data-current-geo-location');
-        window.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
+        globalThis.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
     });
     $(document).on('click', '#continueButton', function () {
         let geoCountry = $('script#eswMattAutoOpen').attr('data-current-geo-location');
-        window.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
+        globalThis.localStorage.setItem('esw.GeoIpChangeIgnore', geoCountry);
     });
 
     // set currency first before reload
@@ -336,7 +336,7 @@ function applyRoundingMethod(price, model, roundingModel, isFractionalPart) {
  * @returns {number} - price
  */
 function applyRoundingModel(price) {
-    let roundingModel = window.SitePreferences.ESW_SELECTED_ROUNDING ? JSON.parse(window.SitePreferences.ESW_SELECTED_ROUNDING) : false;
+    let roundingModel = globalThis.SitePreferences.ESW_SELECTED_ROUNDING ? JSON.parse(globalThis.SitePreferences.ESW_SELECTED_ROUNDING) : false;
     // setting currency exponent value to 2 incase available to avoid rounding issues.
     if (roundingModel.currencyExponent && roundingModel.currencyExponent !== 0) {
         roundingModel.currencyExponent = 2;
@@ -392,7 +392,7 @@ function formatPrice(priceElement) {
  *
  */
 function currencyDisplayFormatting() {
-    let selectedCountryAdjustment = window.SitePreferences && window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
+    let selectedCountryAdjustment = globalThis.SitePreferences && globalThis.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(globalThis.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
     let showTrailingZero = selectedCountryAdjustment && selectedCountryAdjustment.currencyDisplay ? selectedCountryAdjustment.currencyDisplay.showTrailingZeros : true;
     if (showTrailingZero) {
         return;
@@ -450,13 +450,13 @@ function currencyDisplayFormatting() {
  */
 function convertPrice() {
     let priceElements = $('.esw-price:not(.esw-price-converted)');
-    let selectedCurrencySymbol = window.SitePreferences.ESW_CURRENCY_SYMBOL;
+    let selectedCurrencySymbol = globalThis.SitePreferences.ESW_CURRENCY_SYMBOL;
 
     // Update price elements
-    if (!window.SitePreferences.ESW_FIXED_COUNTRY) {
-        let selectedCountryAdjustment = window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(window.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
-        let selectedFxRate = window.SitePreferences.ESW_SELECTED_FXRATE ? JSON.parse(window.SitePreferences.ESW_SELECTED_FXRATE) : '';
-        let enableRounding = window.SitePreferences.ESW_ENABLE_ROUNDING;
+    if (!globalThis.SitePreferences.ESW_FIXED_COUNTRY) {
+        let selectedCountryAdjustment = globalThis.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT ? JSON.parse(globalThis.SitePreferences.ESW_SELECTED_COUNTRY_ADJUSTMENT) : '';
+        let selectedFxRate = globalThis.SitePreferences.ESW_SELECTED_FXRATE ? JSON.parse(globalThis.SitePreferences.ESW_SELECTED_FXRATE) : '';
+        let enableRounding = globalThis.SitePreferences.ESW_ENABLE_ROUNDING;
         if (!selectedFxRate) {
             return false;
         }
@@ -500,7 +500,7 @@ function convertPrice() {
  */
 function selectRegistrationTab() {
     // Get the query string from the URL
-    var queryString = window.location.search;
+    var queryString = globalThis.location.search;
 
     // Create a new URLSearchParams object
     var urlParams = new URLSearchParams(queryString);
@@ -524,7 +524,7 @@ $(document).ready(function () {
     $(document).ajaxComplete(function () {
         currencyDisplayFormatting();
     });
-    if (typeof window.SitePreferences !== 'undefined' && window.SitePreferences.ESW_ENABLE_PRICECONVERSION) {
+    if (typeof globalThis.SitePreferences !== 'undefined' && globalThis.SitePreferences.ESW_ENABLE_PRICECONVERSION) {
         convertPrice();
         $(document).ajaxComplete(function () {
             convertPrice();
@@ -536,6 +536,40 @@ $(document).ready(function () {
         }
     });
 });
+
+function handleCartOrPromotionUpdate(event, data) {
+    if (!data || !data.items || !data.items.forEach) {
+        return;
+    }
+    data.items.forEach(function (item) {
+        let itemUUID = item.eswUUID || item.UUID || item.uuid;
+        if (!itemUUID) {
+            return;
+        }
+        if (data.totals && data.totals.orderLevelDiscountTotal && data.totals.orderLevelDiscountTotal.value > 0) {
+            $('.coupons-and-promos').empty().append(data.totals.discountsHtml);
+        }
+        if (item.renderedPromotions) {
+            $('.item-' + itemUUID).empty().append(item.renderedPromotions);
+        } else {
+            $('.item-' + itemUUID).empty();
+        }
+        $('.uuid-' + itemUUID + ' .unit-price').empty().append(item.renderedPrice);
+        $('.line-item-price-' + itemUUID + ' .unit-price').empty().append(item.renderedPrice);
+        let $unitPrice = $('.line-item-price-' + itemUUID + ' .unit-price');
+
+        if ($unitPrice.find('.sales').length && item.price && item.price.sales && item.price.sales.formatted) {
+            $unitPrice.find('.sales .value')
+                .empty()
+                .text(item.price.sales.formatted);
+        }
+        if (item.priceTotal && item.priceTotal.renderedPrice) {
+            $('.item-total-' + itemUUID).empty().append(item.priceTotal.renderedPrice);
+        }
+    });
+}
+
+$(document).on('promotion:success', handleCartOrPromotionUpdate);
 
 // Multi origin cart totals update
 $('body').on('cart:update', function (e, data) {

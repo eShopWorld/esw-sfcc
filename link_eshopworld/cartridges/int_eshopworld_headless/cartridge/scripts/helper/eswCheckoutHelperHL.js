@@ -5,13 +5,97 @@
 
 // API Includes
 const Logger = require('dw/system/Logger');
+const Site = require('dw/system/Site').getCurrent();
 const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
 const pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+const Constants = require('*/cartridge/scripts/util/Constants');
 
 // Private Methods
 const CheckoutRequestBuilder = {
+    getPwaUrl: function () {
+        return Site.getCustomPreferenceValue('eswPwaUrl');
+    },
+    /**
+     * Get PWA shopper url
+     * @param {string} countryCode - country code
+     * @returns {string} - PWA shopper url
+     */
+    getPwaShopperUrl: function (countryCode) {
+        let baseUrl = this.getPwaUrl();
+        if (!empty(countryCode)) {
+            // eslint-disable-next-line no-param-reassign
+            countryCode = countryCode.toLowerCase();
+            baseUrl += '/' + countryCode;
+        }
+        return baseUrl;
+    },
+    /**
+     * function to get the Checkout metadata Items
+     * @param {string} shopperLocale - LanguageISOCode of the shopper (current locale)
+     * @returns {Object} - the metadataItems Array
+     */
+    getRetailerCheckoutMetadataItems: function (shopperLocale) {
+        let URLUtils = require('dw/web/URLUtils');
+        let metadataItems = eswHelper.getMetadataItems(),
+            currentInstance = eswHelper.getSelectedInstance(),
+            obj = {},
+            arr = [],
+            i = 0;
+        for (let item in metadataItems) {
+            let metadataItem = metadataItems[item];
+            i = metadataItem.indexOf('|');
+            if (currentInstance === 'production' && (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') !== -1 || metadataItem.indexOf('OrderConfirmationUri') !== -1)) {
+                continue; // eslint-disable-line no-continue
+            } else {
+                if (!eswHelper.getEnableInventoryCheck() && (metadataItem.indexOf('InventoryCheckUri') !== -1 || metadataItem.indexOf('InventoryCheckBase64EncodedAuth') !== -1)) {
+                    // eslint-disable-next-line no-continue
+                    continue;
+                }
+                obj.Name = metadataItem.substring(0, i);
+                if (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') !== -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
+                    obj.Value = eswHelper.encodeBasicAuth();
+                } else if (metadataItem.indexOf('OrderConfirmationUri') !== -1) {
+                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale)).toString();
+                } else if (metadataItem.indexOf('InventoryCheckUri') !== -1) {
+                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale)).toString();
+                } else {
+                    obj.Value = metadataItem.substring(i + 1);
+                }
+            }
+            arr.push(obj);
+            obj = {};
+        }
+        return arr;
+    },
+    /**
+     * function to get the additional PWA expansion pairs
+     * @param {string} shopperLocale - LanguageISOCode of the shopper (current locale)
+     * @param {string} shopperCountry - Shopper selected localize country
+     * @returns {Object} - expansion pairs in JSON format
+     */
+    getPWAExpansionPairs: function (shopperLocale, shopperCountry) {
+        let urlExpansionPairs = eswHelper.getPwaUrlExpansionPairs(),
+            pwaSiteMainUrl = this.getPwaShopperUrl(shopperCountry),
+            i = 0,
+            obj = {};
+        if (empty(urlExpansionPairs) || !urlExpansionPairs.length) {
+            obj.metadataItems = this.getRetailerCheckoutMetadataItems(shopperLocale);
+            return obj;
+        }
+        for (let index in urlExpansionPairs) {
+            i = urlExpansionPairs[index].indexOf('|');
+            let actionURL = urlExpansionPairs[index].split('|')[1];
+            if (actionURL.substring(0, 4).toLowerCase() === 'http') {
+                obj[urlExpansionPairs[index].substring(0, i)] = actionURL.replace(/{countryCode}+/g, !empty(shopperCountry) ? shopperCountry.toLowerCase() : '');
+            } else {
+                obj[urlExpansionPairs[index].substring(0, i)] = pwaSiteMainUrl + '/' + urlExpansionPairs[index].substring(i + 1);
+            }
+        }
+        obj.metadataItems = this.getRetailerCheckoutMetadataItems(shopperLocale);
+        return obj;
+    },
     /**
      * Composes the request body for PreOrder/ Checkout API call
      * @param {Object} order - Order API object
@@ -22,22 +106,61 @@ const CheckoutRequestBuilder = {
      */
     composeRequestBody: function (order, shopperCountry, shopperCurrency, shopperLocale) {
         let bodyJSON = eswServiceHelper.preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale);
+        if (request.isSCAPI()) {
+            bodyJSON.retailerCheckoutExperience = this.getPWAExpansionPairs(shopperLocale, shopperCountry);
+        }
         if (eswHelper.isEswEnabledEmbeddedCheckout()) {
             let eswRetailerCartId = order.UUID + '__' + Date.now();
             bodyJSON.retailerCartId = eswRetailerCartId.substring(0, 99);
             if (!('metadataItems' in bodyJSON.shopperCheckoutExperience) || empty(bodyJSON.shopperCheckoutExperience.metadataItems)) {
                 bodyJSON.shopperCheckoutExperience.metadataItems = [];
             }
-            let splittedAccessToken = eswHelper.splitAccessToken(request.httpHeaders.authorization, 1000);
-
-            splittedAccessToken.forEach((part, index) => {
-                bodyJSON.shopperCheckoutExperience.metadataItems.push({
-                    name: `authorizationParted${index + 1}`,
-                    value: part
+            if (request.isSCAPI()) {
+                let splittedAccessToken = eswHelper.splitAccessToken(order.custom.eswPreOrderRequest, 1000);
+                splittedAccessToken.forEach((part, index) => {
+                    bodyJSON.shopperCheckoutExperience.metadataItems.push({
+                        name: `accessTokenParted${index + 1}`,
+                        value: part
+                    });
                 });
-            });
+            } else {
+                let splittedAccessToken = eswHelper.splitAccessToken(request.httpHeaders.authorization, 1000);
+
+                splittedAccessToken.forEach((part, index) => {
+                    bodyJSON.shopperCheckoutExperience.metadataItems.push({
+                        name: `authorizationParted${index + 1}`,
+                        value: part
+                    });
+                });
+            }
+
         } else {
             bodyJSON.retailerCartId = order.orderNo;
+        }
+        if (!('registration' in bodyJSON.shopperCheckoutExperience) || empty(bodyJSON.shopperCheckoutExperience.registration)) {
+            let registration = {};
+            const Site = require('dw/system/Site').getCurrent();
+            let siteId = Site.getID();
+            let URLUtils = require('dw/web/URLUtils');
+            bodyJSON.shopperCheckoutExperience.registration = {};
+            let eswCheckoutRegisterationEnabled = eswHelper.isCheckoutRegisterationEnabled();
+            if (eswCheckoutRegisterationEnabled && !customer.authenticated) {
+                registration[Constants.IS_REGISTERATION_NEEDED_NAME] = Constants.IS_REGISTERATION_NEEDED_VALUE;
+                if (request.isSCAPI()) {
+                    registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_PWA_URL_VALUE).toString();
+                    registration[Constants.REGISTERATION_URL_NAME] += '?retailerCartId=' + bodyJSON.retailerCartId;
+                } else {
+                    if (siteId === Constants.SITE_GENESIS_SITE_ID) {
+                        registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_URL_VALUE_HEADLESS_SG).toString();
+                    } else {
+                        registration[Constants.REGISTERATION_URL_NAME] = URLUtils.https(Constants.REGISTERATION_URL_VALUE_HEADLESS_SFRA).toString();
+                    }
+                    registration[Constants.REGISTERATION_URL_NAME] += '?retailerCartId=' + bodyJSON.retailerCartId;
+                }
+            } else {
+                registration[Constants.IS_REGISTERATION_NEEDED_NAME] = false;
+            }
+            bodyJSON.shopperCheckoutExperience.registration = registration;
         }
         return bodyJSON;
     },
@@ -46,9 +169,8 @@ const CheckoutRequestBuilder = {
      * @returns {Object} - Service Object
      */
     getPreorderServiceV2: function () {
-        let preorderCheckoutServiceName = eswHelper.getCheckoutServiceName(),
-            param = request.httpParameters,
-            shopperCountry = param['country-code'][0];
+        let preorderCheckoutServiceName = eswHelper.getCheckoutServiceName();
+        let shopperCountry = eswHelper.getHeadlessLocale(request);
         let preorderServicev2 = dw.svc.LocalServiceRegistry.createService(preorderCheckoutServiceName, {
             createRequest: function (service, params) {
                 let bearerToken = 'Bearer ' + params.eswOAuthToken;
@@ -109,7 +231,7 @@ function callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocal
         let requestBody = CheckoutRequestBuilder.composeRequestBody(order, shopperCountry, shopperCurrency, shopperLocale);
         if (eswHelper.isEswSelfHostedOcEnabled()) {
             const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
-            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestBody.retailerCartId);
+            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestBody.retailerCartId, request.isSCAPI() ? shopperCountry: null);
             if (!empty(selfHostedOcMetadata)) {
                 requestBody.retailerCheckoutExperience.metadataItems.push({
                     Name: selfHostedOcMetadata.metadataName,
@@ -237,6 +359,13 @@ function setOverrideShippingMethods(order, localizeObj, conversionPrefs) {
             if (!empty(isOverrideCountry[0].shippingMethod.ID)) {
                 localizeObj.applyRoundingModel = 'true';
                 localizeObj.applyCountryAdjustments = 'false';
+                if (request.isSCAPI()) {
+                    let selectedCountryDetail = eswHelper.getSelectedCountryDetail(localizeObj.localizeCountryObj.countryCode);
+                    let isFixedPriceCountry = selectedCountryDetail ? selectedCountryDetail.isFixedPriceModel : false;
+                    if (!isFixedPriceCountry) {
+                        currencyIso = eswHelper.setCurrencyISO(localizeObj);
+                    }
+                }
                 let isConversionDisabled = 'disableConversion' in isOverrideCountry[0] && isOverrideCountry[0].disableConversion === 'true';
                 for (let rate in isOverrideCountry[0].shippingMethod.ID) {
                     shippingMethod = eswHelperHL.applyShippingMethod(cart, isOverrideCountry[0].shippingMethod.ID[rate], shopperCountry, false);

@@ -6,18 +6,22 @@
             <td class="table_header w e s">${Resource.msg('label.service.url', 'eswbm', null)}</td>
             <td class="table_header w e s">${Resource.msg('label.service.impact', 'eswbm', null)}</td>
             <td class="table_header w e s">${Resource.msg('label.service.status.code', 'eswbm', null)}</td>
+            <td class="table_header w e s">${Resource.msg('label.service.status.inuse', 'eswbm', null)}</td>
+            <td class="table_header w e s">${Resource.msg('label.service.status.lastExecuted', 'eswbm', null)}</td>
 
         </tr>
     </thead>
     <tbody>
         <isloop items="${pdict.transformedServices}" var="service">
             <tr class="${service.class}">
-                <td class="table_detail middle e s left">${service.serviceId}</td>
+                <td class="table_detail middle e s left">${service.name}</td>
                 <td class="table_detail middle e s left" data-url="${service.url}">${service.url}</td>
                 <td class="table_detail middle e s left">${service.impact}</td>
                 <td class="table_detail middle e s left status-code">
                     ${service.statusCode}
                 </td>
+                <td class="table_detail middle e s left">${service.inUse}</td>
+                <td class="table_detail middle e s left">${service.lastExecuted}</td>
             </tr>
         </isloop>
     </tbody>
