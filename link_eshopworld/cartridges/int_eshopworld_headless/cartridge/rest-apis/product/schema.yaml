@@ -1,0 +1,115 @@
+---
+openapi: 3.0.0
+info:
+  version: 1.0.1
+  title: Price
+paths:
+  /getBmConfigs:
+    get:
+      operationId: getBmConfigs
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+        - name: c_country
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: OK
+  /getSupportedCountries:
+    get:
+      operationId: getSupportedCountries
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+        - name: c_eswShopperTimezone
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: OK
+  /getGeoIpAlert:
+    get:
+      operationId: getGeoIpAlert
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+        - name: c_shopperCountry
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: OK
+  /getAbandonmentCart:
+    get:
+      operationId: getAbandonmentCart
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+        - name: c_eswClientLastOrderId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: OK
+  /getEswTestContent:
+    get:
+      operationId: getEswTestContent
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+      responses:
+        "200":
+          description: OK
+  /getRegisterCustomer:
+    get:
+      operationId: getRegisterCustomer
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+        - name: c_retailerCartId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: OK
+  /getOrderNumber:
+    get:
+      operationId: getOrderNumber
+      parameters:
+        - $ref: "#/components/parameters/siteId"
+        - name: c_orderNumber
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: OK
+security:
+  - ShopperToken:
+      - c_product
+components:
+  securitySchemes:
+    ShopperToken: {}
+    AmOAuth2:
+      type: oauth2
+  parameters:
+    siteId:
+      name: siteId
+      in: query
+      description: The site of the current request.
+      required: true
+      schema:
+        type: string
+        minLength: 1

@@ -65,6 +65,20 @@ exports.calculate = function (basket, isESWOrderCalculate, currentMethodID) {
     // and calculate total shipping costs
     ShippingMgr.applyShippingCost(basket);
 
+    // Force shipping cost to 0 if there are only digital products in the cart, 
+    // as digital products do not require shipping
+    if(eswHelper.isOnlyDigitalProductsInCart(basket)){
+        let shipments = basket.getShipments().iterator();
+        while (shipments.hasNext()) {
+            let shipment = shipments.next();
+            let shippingLineItems = shipment.getShippingLineItems().iterator();
+            while (shippingLineItems.hasNext()) {
+                let sli = shippingLineItems.next();
+                sli.setPriceValue(0.0); // Sets the base price of shipping to 0
+            }
+        }
+    }
+
     // ===================================================
     // =====   APPLY PROMOTION DISCOUNTS			 =====
     // =====   Apply product and order and 			 =====

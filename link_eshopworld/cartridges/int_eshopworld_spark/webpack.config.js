@@ -1,14 +1,14 @@
 'use strict';
 
-var path = require('path');
-var webpack = require('sgmf-scripts').webpack;
-var RemoveEmptyScriptsPlugin = require('webpack-remove-empty-scripts');
-var MiniCssExtractPlugin = require('mini-css-extract-plugin');
-var CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
-var jsFiles = require('sgmf-scripts').createJsPath();
-var scssFiles = require('sgmf-scripts').createScssPath();
+let path = require('node:path');
+let webpack = require('sgmf-scripts').webpack;
+let RemoveEmptyScriptsPlugin = require('webpack-remove-empty-scripts');
+let MiniCssExtractPlugin = require('mini-css-extract-plugin');
+let CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+let jsFiles = require('sgmf-scripts').createJsPath();
+let scssFiles = require('sgmf-scripts').createScssPath();
 
-var bootstrapPackages = {
+let bootstrapPackages = {
     Alert: 'exports-loader?Alert!bootstrap/js/src/alert',
     // Button: 'exports-loader?Button!bootstrap/js/src/button',
     Carousel: 'exports-loader?Carousel!bootstrap/js/src/carousel',

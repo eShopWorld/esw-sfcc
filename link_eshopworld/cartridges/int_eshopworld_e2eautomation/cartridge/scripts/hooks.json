@@ -1,0 +1,8 @@
+{
+	"hooks": [
+		{
+			"name": "dw.ocapi.shop.order.modifyPOSTResponse",
+			"script": "./ocapi/shop/hooks/orderHooks.js"
+		}
+	]
+}

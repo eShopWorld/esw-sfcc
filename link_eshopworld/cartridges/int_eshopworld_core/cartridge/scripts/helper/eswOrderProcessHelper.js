@@ -15,75 +15,43 @@ const eswOrderProcessHelper = {
      * @return {Object} - JSON response
      */
     markOrderAsReturn: function (reqBodyJson, requestType) {
+        let finalFunctionResponse = {
+            ResponseCode: Constants.ESW_NO_OPERATION_STATUS,
+            ResponseText: Constants.NO_ORDER_RETURN_PERFORMED_MSG
+        };
         try {
             let reqObj = reqBodyJson;
             let order = OrderMgr.getOrder(reqObj.ReturnOrder.BrandOrderReference);
             let rmaJSON = [];
-            Transaction.wrap(function () {
-                let isStoreReturn = false;
-                if (requestType === 'logistics-return-order-retailer') {
-                    isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === eswCoreHelper.getEswReturnOrderStatus();
-                } else {
-                    isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === Constants.PROCESSED;
-                }
-                // eslint-disable-next-line no-param-reassign
-                if (isStoreReturn) {
+            let isStoreReturn = false;
+            if (requestType === 'logistics-return-order-retailer') {
+                isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === eswCoreHelper.getEswReturnOrderStatus().value;
+            } else {
+                isStoreReturn = reqObj.ReturnOrder.ReturnOrderStatus === Constants.PROCESSED;
+            }
+            if (!empty(order) && isStoreReturn) {
+                Transaction.wrap(function () {
+                    // eslint-disable-next-line no-param-reassign
                     if (!empty(order.custom.eswRmaJson)) {
                         rmaJSON = JSON.parse(order.custom.eswRmaJson);
                     }
                     rmaJSON.push(reqObj);
                     order.custom.eswRmaJson = JSON.stringify(rmaJSON);
                     order.custom.eswIsReturned = true;
-                }
-            });
-            return {
-                ResponseCode: 200,
-                ResponseText: 'Order processed successfuly'
-            };
+                });
+                finalFunctionResponse.ResponseCode = '200';
+                finalFunctionResponse.ResponseText = 'Order Return successfuly';
+            }
         } catch (e) {
             logger.error('ESW Order Return Error: {0}', e.message);
             logger.error('Order return payload: {0}', JSON.stringify(reqBodyJson));
             eswCoreHelper.eswInfoLogger('Order return payload', JSON.stringify(reqBodyJson), e.message, e.stack);
             return {
-                ResponseCode: 400,
+                ResponseCode: '400',
                 ResponseText: 'Error: Internal Error'
             };
         }
-    },
-    /**
-    * Mark an order as return for V3 and add return response
-    * @param {Object} reqBodyJson - request object
-    * @return {Object} - JSON response
-    */
-    markOrderAsReturnV3: function (reqBodyJson) {
-        try {
-            let reqObj = reqBodyJson;
-            let order = OrderMgr.getOrder(reqObj.ReturnOrder.BrandOrderReference);
-            let rmaJSON = [];
-            Transaction.wrap(function () {
-                // eslint-disable-next-line no-param-reassign, eqeqeq
-                if (reqObj.ReturnOrder.ReturnOrderStatus == eswCoreHelper.getEswReturnOrderStatus()) {
-                    if (!empty(order.custom.eswRmaJson)) {
-                        rmaJSON = JSON.parse(order.custom.eswRmaJson);
-                    }
-                    rmaJSON.push(reqObj);
-                    order.custom.eswRmaJson = JSON.stringify(rmaJSON);
-                    order.custom.eswIsReturned = true;
-                }
-            });
-            return {
-                ResponseCode: 200,
-                ResponseText: 'Order processed successfuly'
-            };
-        } catch (e) {
-            logger.error('ESW Order Return Error: {0}', e.message);
-            logger.error('Order return payload: {0}', JSON.stringify(reqBodyJson));
-            eswCoreHelper.eswInfoLogger('Order return payload', JSON.stringify(reqBodyJson), e.message, e.stack);
-            return {
-                ResponseCode: 400,
-                ResponseText: 'Error: Internal Error'
-            };
-        }
+        return finalFunctionResponse;
     },
     /**
      * Mark an order appeasement
@@ -91,33 +59,37 @@ const eswOrderProcessHelper = {
      * @return {Object} - JSON response
      */
     markOrderAppeasement: function (reqBodyJson) {
+        let finalFunctionResponse = {
+            ResponseCode: Constants.ESW_NO_OPERATION_STATUS,
+            ResponseText: Constants.NO_APPEASEMRNT_PERFORMED_MSG
+        };
         try {
             let appeasementJsonPayload = [];
             let order = OrderMgr.getOrder(reqBodyJson.Request.BrandOrderReference);
-            Transaction.wrap(function () {
-                // update SFCC side order appeasement values
-                order.custom.isAppeasement = true;
-                if ('appeasementJsonPayload' in order.custom && !empty(order.custom.appeasementJsonPayload)) {
-                    appeasementJsonPayload = JSON.parse(order.custom.appeasementJsonPayload);
-                    appeasementJsonPayload.push(reqBodyJson);
-                    order.custom.appeasementJsonPayload = JSON.stringify(appeasementJsonPayload);
-                } else {
-                    appeasementJsonPayload.push(reqBodyJson);
-                    order.custom.appeasementJsonPayload = JSON.stringify(appeasementJsonPayload);
-                }
-            });
+            if (!empty(order)) {
+                Transaction.wrap(function () {
+                    // update SFCC side order appeasement values
+                    order.custom.isAppeasement = true;
+                    if ('appeasementJsonPayload' in order.custom && !empty(order.custom.appeasementJsonPayload)) {
+                        appeasementJsonPayload = JSON.parse(order.custom.appeasementJsonPayload);
+                        appeasementJsonPayload.push(reqBodyJson);
+                        order.custom.appeasementJsonPayload = JSON.stringify(appeasementJsonPayload);
+                    } else {
+                        appeasementJsonPayload.push(reqBodyJson);
+                        order.custom.appeasementJsonPayload = JSON.stringify(appeasementJsonPayload);
+                    }
+                });
+                finalFunctionResponse.ResponseCode = '200';
+                finalFunctionResponse.ResponseText = 'Order appeased successfuly';
+            }
         } catch (e) {
             eswCoreHelper.eswInfoLogger('ESW Order Appeasement Error', JSON.stringify(reqBodyJson), e.message, e.stack);
-            logger.error('ESW Order Appeasement Error: {0}', e.message);
             return {
                 ResponseCode: '400',
                 ResponseText: 'Error: Internal error'
             };
         }
-        return {
-            ResponseCode: '200',
-            ResponseText: 'Order appeased successfuly'
-        };
+        return finalFunctionResponse;
     },
     /**
      * Cancel an order
@@ -125,6 +97,11 @@ const eswOrderProcessHelper = {
      * @return {Object} - JSON response
      */
     cancelAnOrder: function (reqBodyJson) {
+        let finalFunctionResponse = {
+            OrderNumber: reqBodyJson.Request.BrandOrderReference,
+            ResponseCode: Constants.ESW_NO_OPERATION_STATUS,
+            ResponseText: Constants.NO_ORDER_CANCEL_PERFORMED_MSG
+        };
         try {
             let order;
             // cancel order check
@@ -149,12 +126,9 @@ const eswOrderProcessHelper = {
                         order.custom.cancelOrderJsonPayload = JSON.stringify(cancelOrderJsonPayload);
                     }
                 });
+                finalFunctionResponse.ResponseCode = '200';
+                finalFunctionResponse.ResponseText = 'Order processed successfuly';
             }
-            return {
-                OrderNumber: reqBodyJson.Request.BrandOrderReference,
-                ResponseCode: '200',
-                ResponseText: 'Order processed successfuly'
-            };
         } catch (e) {
             eswCoreHelper.eswInfoLogger('ESW Order Cancel Error', JSON.stringify(reqBodyJson), e.message, e.stack);
             logger.error('ESW Order Cancel Error: {0}', e.message);
@@ -164,6 +138,7 @@ const eswOrderProcessHelper = {
                 ResponseText: 'Error: Internal error'
             };
         }
+        return finalFunctionResponse;
     },
     /**
      * process payment status of order
@@ -171,12 +146,16 @@ const eswOrderProcessHelper = {
      * @return {Object} - JSON response
      */
     processKonbiniPayment: function (reqBodyJson) {
+        let finalFunctionResponse = {
+            ResponseCode: Constants.ESW_NO_OPERATION_STATUS,
+            ResponseText: Constants.NO_OTC_PAYMENT_PERFORMED_MSG
+        };
         try {
             let eswOverTheCounterPayloadJson = [];
             let order = OrderMgr.getOrder(reqBodyJson.BrandOrderReference);
 
-            Transaction.wrap(function () {
-                if (reqBodyJson.HoldStatus === Constants.NOHOLD) {
+            if (!empty(order) && reqBodyJson.HoldStatus === Constants.NOHOLD) {
+                Transaction.wrap(function () {
                     order.setExportStatus(Order.EXPORT_STATUS_READY);
                     order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
                     order.setConfirmationStatus(Order.CONFIRMATION_STATUS_CONFIRMED);
@@ -187,8 +166,10 @@ const eswOrderProcessHelper = {
 
                     eswOverTheCounterPayloadJson.push(reqBodyJson);
                     order.custom.eswOverTheCounterPayloadJson = JSON.stringify(eswOverTheCounterPayloadJson);
-                }
-            });
+                });
+                finalFunctionResponse.ResponseCode = '200';
+                finalFunctionResponse.ResponseText = 'Successfully processed Konbini payment';
+            }
         } catch (e) {
             logger.error('ESW Order Konbini payment failed Error: {0}', e.message);
             eswCoreHelper.eswInfoLogger('ESW Order Konbini payment failed Error', JSON.stringify(reqBodyJson), e.message, e.stack);
@@ -197,11 +178,7 @@ const eswOrderProcessHelper = {
                 ResponseText: 'Error: Internal error'
             };
         }
-
-        return {
-            ResponseCode: '200',
-            ResponseText: 'Successfully processed Konbini payment'
-        };
+        return finalFunctionResponse;
     },
     /**
      * Handles ESW post-order webhook payload.

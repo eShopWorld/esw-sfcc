@@ -24,7 +24,7 @@
             <isorderdetails order="${pdict.Order}"/>
         </div>
 
-		<isif condition="${eswHelper.isCheckoutRegisterationEnabled()}">
+		<isif condition="${eswHelper.isCheckoutRegisterationEnabled() && !pdict.CurrentCustomer.authenticated}">
 			<div class="login-box login-create-account clearfix ">
 				<div class="login-box-content clearfix register-btn-mrgn">
 					<a href="${URLUtils.url('EShopWorldSG-RegisterCustomer')}" class="largebutton-link">

@@ -10,30 +10,11 @@ const csrfProtection = require('*/cartridge/scripts/middleware/csrf');
 * Returns the converted price
 */
 server.get('PriceConversion', function (req, res, next) {
-    // API Includes
-    let formatMoney = require('dw/util/StringUtils').formatMoney;
-
-    // Script Includes
-    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
     let responseJSON;
     try {
-        let param = request.httpParameterMap;
-        let price = Number(param.price.value);
-        let shopperCountry = param.country.stringValue;
-        let shopperCurrency = param.currency.stringValue || pricingHelper.getShopperCurrency(shopperCountry);
-
-        let localizeObj = {
-            localizeCountryObj: {
-                countryCode: shopperCountry,
-                currencyCode: shopperCurrency
-            },
-            applyCountryAdjustments: param.applyAdjust.stringValue || 'true',
-            applyRoundingModel: param.applyRounding.stringValue || 'true'
-        };
-
-        let convertedPrice = pricingHelper.getConvertedPrice(price, localizeObj);
+        let eswCoreApiHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper');
         responseJSON = {
-            price: formatMoney(new dw.value.Money(convertedPrice, localizeObj.localizeCountryObj.currencyCode)),
+            price: eswCoreApiHelper.getHeadlessPriceConversion(),
             ResponseCode: '200',
             ResponseText: 'Price converted successfully'
         };
@@ -46,6 +27,109 @@ server.get('PriceConversion', function (req, res, next) {
     }
     res.json(responseJSON);
     next();
+});
+
+/*
+ * Function to handle register customer request coming from ESW order confirmation
+ */
+server.get('RegisterCustomer', function (req, res, next) {
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    let CustomerMgr = require('dw/customer/CustomerMgr');
+    let Transaction = require('dw/system/Transaction');
+    let OrderMgr = require('dw/order/OrderMgr');
+    let orderNumber,
+        existerCustomer;
+    let responseJSON = {};
+    try {
+        orderNumber = request.httpParameters.get('retailerCartId')[0];
+        let registrationObj = {},
+            password;
+        let order = OrderMgr.getOrder(orderNumber);
+        if (order) {
+            existerCustomer = CustomerMgr.getCustomerByLogin(order.getCustomerEmail());
+            if (existerCustomer && existerCustomer.registered) {
+                responseJSON.ResponseCode = '200';
+                responseJSON.ResponseText = 'Customer already registered with Email';
+                res.json(responseJSON);
+                return next();
+            } else {
+                password = eswHelper.generateRandomPassword();
+                registrationObj = {
+                    firstName: order.billingAddress.firstName,
+                    lastName: order.billingAddress.lastName,
+                    phone: order.billingAddress.phone,
+                    email: order.customerEmail,
+                    password: password
+                };
+                this.on('route:BeforeComplete', function (req, res) { // eslint-disable-line no-shadow
+                    let addressHelpers = require('*/cartridge/scripts/helpers/addressHelpers');
+
+                    let login = registrationObj.email;
+                    let newCustomer;
+                    let authenticatedCustomer;
+                    let newCustomerProfile;
+
+                    // attempt to create a new user and log that user in.
+                    Transaction.wrap(function () {
+                        let error = {};
+                        newCustomer = CustomerMgr.createCustomer(order.customerEmail, password);
+
+                        let authenticateCustomerResult = CustomerMgr.authenticateCustomer(order.customerEmail, password);
+                        if (authenticateCustomerResult.status !== 'AUTH_OK') {
+                            error = { authError: true, status: authenticateCustomerResult.status };
+                            throw error;
+                        }
+
+                        authenticatedCustomer = CustomerMgr.loginCustomer(authenticateCustomerResult, false);
+
+                        if (!authenticatedCustomer) {
+                            error = { authError: true, status: authenticateCustomerResult.status };
+                            throw error;
+                        } else {
+                            // assign values to the profile
+                            newCustomerProfile = newCustomer.getProfile();
+
+                            newCustomerProfile.firstName = registrationObj.firstName;
+                            newCustomerProfile.lastName = registrationObj.lastName;
+                            newCustomerProfile.phoneHome = registrationObj.phone;
+                            newCustomerProfile.email = login;
+
+                            order.setCustomer(newCustomer);
+
+                            // update marketing optin values on customer profile
+                            eswHelper.setPostRegistrationOptins(newCustomerProfile, order);
+
+                            // save all used shipping addresses to address book of the logged in customer
+                            let allAddresses = addressHelpers.gatherShippingAddresses(order);
+                            allAddresses.forEach(function (address) {
+                                addressHelpers.saveAddress(address, { raw: newCustomer }, addressHelpers.generateAddressName(address));
+                            });
+                            res.setViewData({ newCustomer: newCustomer });
+                            res.setViewData({ order: order });
+                        }
+                    });
+
+                    eswHelper.sendRegisterCustomerEmail(authenticatedCustomer, password);
+
+                    responseJSON.ResponseCode = '200';
+                    responseJSON.ResponseText = 'Account created Successfully';
+                    responseJSON.customerNo = authenticatedCustomer.profile.customerNo;
+                    res.json(responseJSON);
+                });
+            }
+        } else {
+            responseJSON.ResponseCode = '400';
+            responseJSON.ResponseText = 'Something went wrong please try later.';
+            res.json(responseJSON);
+            return next();
+        }
+    } catch (error) {
+        responseJSON.ResponseCode = '400';
+        responseJSON.ResponseText = 'Something went wrong please try later.';
+        res.json(responseJSON);
+        eswHelper.eswInfoLogger('Error While Creating customers account', error);
+        return next();
+    }
 });
 
 /**

@@ -1,3 +1,5 @@
+/*This script is being used in Headless and Spark cartridges, any changes to this script should be regression tested in both cartridges*/
+
 /* eslint-disable no-param-reassign */
 'use strict';
 
@@ -41,18 +43,21 @@ function eswPliPriceConversions(basket, pliAttributeMap, localizeObj, conversion
     });
 }
 /**
-    * Handles/ send override shipping method
-    * @param {Object} basket - Basket object SFCC API
-    * @param {Object} basketResponse - Basket object from OCAPI Response
-    */
+* Handles/ send override shipping method
+* @param {Object} basket - Basket object SFCC API
+* @param {Object} basketResponse - Basket object from OCAPI Response
+*/
 function sendOverrideShippingMethods(basket, basketResponse) {
-    let param = request.httpParameters;
+    if (eswHelper.isOnlyDigitalProductsInCart(basket)) {
+        // Do not send shipping methods if there are only digital products in the cart 
+        // as there will be no shipping cost for digital products
+        return;
+    }
     let countryCode = null;
+    let localeCountryCode = getHeadlessLocale(request);
     try {
-        if (!empty(param['country-code']) && param['country-code'][0]) {
-            countryCode = param['country-code'][0];
-        } else if (param.get('locale') && param.get('locale')[0] && param.get('locale')[0].includes('-')) {
-            countryCode = param.get('locale')[0].split('-')[1];
+        if (localeCountryCode) {
+            countryCode = localeCountryCode;
         } else if (basket.custom.eswShopperCurrency) {
             countryCode = basket.custom.eswShopperCurrency;
         }
@@ -97,11 +102,19 @@ function eswBasketPriceConversions(basket) {
             return;
         }
         let param = request.httpParameters;
-
-        if (!empty(param['country-code']) && !empty(basket)) {
-            let shopperCountry = param['country-code'][0];
+        let localeCountryCode = getHeadlessLocale(request);
+        if (localeCountryCode && !empty(basket)) {
+            let isFixedPriceCountry;
+            let shopperCountry = localeCountryCode;
             let shopperCurrency = !empty(param['currency-code']) ? param['currency-code'][0] : pricingHelper.getShopperCurrency(shopperCountry);
-            let isFixedPriceCountry = pricingHelper.isFixedPriceCountry(shopperCountry);
+            if (request.isSCAPI()) {
+                let countryParam = empty(request.httpParameters.get('locale')) && !empty(basket) ? basket.custom.eswShopperCurrency : request.httpParameters;
+                var selectedCountryDetail = eswHelper.getCountryDetailByParam(countryParam);
+                shopperCountry = selectedCountryDetail.countryCode;
+                isFixedPriceCountry = selectedCountryDetail.isFixedPriceMode;
+            } else {
+                isFixedPriceCountry = pricingHelper.isFixedPriceCountry(shopperCountry);
+            }
             if (!empty(shopperCurrency)) {
                 let localizeObj = {
                     localizeCountryObj: {
@@ -127,16 +140,18 @@ function eswBasketPriceConversions(basket) {
                         }
                     });
                 }
+                basket.custom.eswShopperCurrency = shopperCountry;
                 basket.custom.eswSubTotal = eswHelper.getSubtotalObject(basket, true, false, false, localizeObj, conversionPrefs).value;
                 let orderDiscount = eswHelper.getOrderDiscountHL(basket, localizeObj, conversionPrefs);
                 basket.custom.eswOrderDiscount = !empty(orderDiscount) && orderDiscount !== 0 ? orderDiscount.value : orderDiscount;
                 basket.custom.eswOrderTotal = eswHelperHL.getFinalOrderTotalsObject(basket, localizeObj, conversionPrefs).value;
-                eswHelperHL.adjustThresholdDiscounts(basket, localizeObj, conversionPrefs);
+                if (!request.isSCAPI()) {
+                    eswHelperHL.adjustThresholdDiscounts(basket, localizeObj, conversionPrefs);
+                }
                 // added check to set attribute once shipping is set in case country switched
                 if (basket.shippingTotalPrice.value > 0) {
                     basket.custom.eswEstimatedShippingTotal = eswHelperHL.getEswCartShippingCost(basket.shippingTotalPrice, localizeObj, conversionPrefs).value;
                 }
-                basket.custom.eswShopperCurrency = shopperCurrency;
             }
         }
     } catch (error) {
@@ -270,10 +285,285 @@ function combineProductItems(productItems) {
     }
     return productItems;
 }
+/** *Extracts the country code from the locale string.
+ * Extracts the country code from the locale string. 
+ * @param {object} request - request.
+ * @returns {string|null} - The extracted country code or null if not found.
+ **/
+function getHeadlessLocale(request) {
+    const logger = require('dw/system/Logger');
+    const Constants = require('*/cartridge/scripts/util/Constants');
+    let locale = null;
+    // First, try to get from query parameters
+    let httpParams = request.httpParameterMap;
+    // Check for headless architecture (country-code parameter)
+    if (!empty(httpParams.get('country-code'))) {
+        locale = httpParams.get('country-code').value;
+    }
+    // Check for PWA architecture (locale parameter)
+    if (empty(locale) && !empty(httpParams.get(Constants.LOCALE_QUERY_PARAM || 'locale'))) {
+        let fullLocale = httpParams.get(Constants.LOCALE_QUERY_PARAM || 'locale').value;
+        // Extract country code from locale format (e.g., 'en_US' -> 'US', 'en-IE' -> 'IE')
+        locale = eswHelper.getLocaleCountry(fullLocale);
+    }
+    // If still not found and request is not GET, check request body
+    if (empty(locale) && request.httpMethod !== 'GET') {
+        try {
+            let requestBody = request.httpParameterMap.requestBodyAsString;
+            if (!empty(requestBody)) {
+                let bodyObj = JSON.parse(requestBody);
+                // Check for country-code in body
+                if (bodyObj['country-code']) {
+                    locale = bodyObj['country-code'];
+                }
+                // Check for locale in body
+                else if (bodyObj.locale) {
+                    locale = eswHelper.getLocaleCountry(bodyObj.locale);
+                }
+            }
+        } catch (parseError) {
+            logger.warn('getHeadlessLocale: Failed to parse request body - {0}', parseError.message);
+        }
+    }
+    logger.info('Headless Locale is: {0}', locale);
+    return locale;
+}
+function getPWAHeadlessAccessToken(reqObj) {
+        let accessToken = '';
+        let regex = /^authorizationParted(\d+)$/;
+        let regexPeaToken = /^accessTokenParted(\d+)$/;
+        let headlessToken = false;
+        let accessTokenParts = [];
+        if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
+            let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
+            // eslint-disable-next-line no-restricted-syntax
+            for (let metaObj in metadataItems) {
+                if ((metadataItems[metaObj] && metadataItems[metaObj].name.match(regexPeaToken)) || (metadataItems[metaObj] && metadataItems[metaObj].name.match(regex))) {
+                    if (metadataItems[metaObj] && metadataItems[metaObj].name.match(regexPeaToken)) {
+                        let partNum = +metadataItems[metaObj].name.replace('accessTokenParted', '');
+                        accessTokenParts[partNum - 1] = metadataItems[metaObj].value;
+                    } else if (metadataItems[metaObj] && metadataItems[metaObj].name.match(regex)) {
+                        let partNum = +metadataItems[metaObj].name.replace('authorizationParted', '');
+                        accessTokenParts[partNum - 1] = metadataItems[metaObj].value;
+                        headlessToken = true;
+                    }
+                }
+            }
+        }
+        accessToken = accessTokenParts.join('');
+
+        if (accessToken.length > 0 && headlessToken) {
+            return { authorization: accessToken };
+        }
+        return accessToken;
+    }
+
+/**
+ * Returns the converted price for headless both architectures.
+ */
+function getHeadlessPriceConversion() {
+    let formatMoney = require('dw/util/StringUtils').formatMoney;
+    let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+    let param = request.httpParameterMap;
+    let price = Number(param.price.value);
+    let shopperCountry = param.country.stringValue;
+    let selectedCountryDetail = eswHelper.getCountryDetailByParam(shopperCountry);
+    let shopperCurrency = param.currency.stringValue || pricingHelper.getShopperCurrency(shopperCountry);
+    if (!empty(shopperCurrency) && !selectedCountryDetail.isFixedPriceModel) {
+        let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
+        selectedCountryLocalizeObj.isJob = 'false';
+        let convertedPrice = eswHelper.getMoneyObject(price, false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj);
+        return formatMoney(convertedPrice);
+    } else {
+        return formatMoney(new dw.value.Money(price, selectedCountryDetail.defaultCurrencyCode));
+    }
+}
+
+/**
+ * Rebuilds a basket using a custom SCAPI endpoint for headless and PWA architectures.
+ */
+function rebuildBasket() {
+    let logger = require('dw/system/Logger'),
+        OrderMgr = require('dw/order/OrderMgr'),
+        BasketMgr = require('dw/order/BasketMgr'),
+        Transaction = require('dw/system/Transaction');
+
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
+    eswPwaHelper = require('*/cartridge/scripts/helper/eswPwaCoreHelper');
+    // for SG cartridge need eswHelper
+    try {
+        // eslint-disable-next-line no-import-assign
+        eswHelper = require('int_eshopworld_controllers/cartridge/scripts/helper/eswHelper').getEswHelper();
+    } catch (error) { /* empty */ }
+    let responseJSON;
+    try {
+        let eswClientLastOrderId = request.httpParameters.get('c_eswClientLastOrderId')[0];
+        let orderItems = { products: [] };
+        let basketItems = { products: [] };
+        let coupons = [];
+        let order = null;
+        // eslint-disable-next-line eqeqeq
+        if (!empty(eswClientLastOrderId) && eswClientLastOrderId != 'null') {
+            order = OrderMgr.getOrder(eswClientLastOrderId);
+            if (order && !empty(order) && (order.status.value === dw.order.Order.ORDER_STATUS_FAILED
+            || order.status.value === dw.order.Order.ORDER_STATUS_CREATED
+            || order.status.value === dw.order.Order.ORDER_STATUS_NEW)) {
+                eswHelper.rebuildCartUponBackFromESW(order.getOrderNo());
+                if (order.status.value === dw.order.Order.ORDER_STATUS_CREATED) {
+                    Transaction.wrap(function () {
+                        OrderMgr.failOrder(order, true);
+                    });
+                }
+                let allLineItems = order.getAllLineItems().iterator();
+                while (allLineItems.hasNext()) {
+                    let currentLineItem = allLineItems.next();
+                    if (currentLineItem instanceof dw.order.ProductLineItem) {
+                        orderItems.products.push({
+                            productId: currentLineItem.getProductID(),
+                            price: currentLineItem.getPriceValue(),
+                            quantity: currentLineItem.getQuantityValue()
+                        });
+                    }
+                }
+                // Re-iterate since previous iterator is consumed
+                allLineItems = order.getAllLineItems().iterator();
+                while (allLineItems.hasNext()) {
+                    let currentLineItem = allLineItems.next();
+                    if (currentLineItem instanceof dw.order.ProductLineItem) {
+                        basketItems.products.push({
+                            productId: currentLineItem.getProductID(),
+                            lineItemId: currentLineItem.getUUID()
+                        });
+                    }
+                }
+                coupons = eswPwaHelper.getRetailerPromoCodes(order);
+            } else {
+                if (request.isSCAPI()) {
+                    let customerBasket = BasketMgr.getCurrentOrNewBasket();
+                    let currentBasketId = customerBasket.getUUID();
+                    return {
+                        orderLineItems: orderItems,
+                        basketId: currentBasketId,
+                        couponCodes: coupons,
+                        removeLineItems: !empty(order) ? (
+                            order.status.value === dw.order.Order.ORDER_STATUS_NEW
+                            || order.status.value === dw.order.Order.ORDER_STATUS_OPEN
+                        ) : false,
+                        basketItems: basketItems
+                    }
+                }
+                response.setStatus(404);
+                return {
+                    Error: 'The order is either unavailable or was not successfully placed. Please verify the details and try again.'
+                };
+            }
+        }
+        let customerBasket = BasketMgr.getCurrentOrNewBasket();
+        let currentBasketId = customerBasket.getUUID();
+
+        responseJSON = {
+            orderLineItems: orderItems,
+            basketId: currentBasketId,
+            couponCodes: coupons,
+            removeLineItems: !empty(order) ? (
+                order.status.value === dw.order.Order.ORDER_STATUS_NEW
+                || order.status.value === dw.order.Order.ORDER_STATUS_OPEN
+            ) : false,
+            basketItems: basketItems
+        };
+    } catch (e) {
+        logger.error('ESW abandonmentCart Error: {0}', e.message);
+        responseJSON = {
+            ResponseCode: '400',
+            ResponseText: 'Error: Internal error',
+            errorMessage: e.message
+        };
+    }
+    return responseJSON;
+}
+
+function isPwaKitMappingEnabled(){
+    let Site = require('dw/system/Site').getCurrent();
+    return Site.getCustomPreferenceValue('eswIsPwaKitMappingEnabled') || false;
+}
+
+/**
+ * Maps standard OCAPI attributes to ESW custom attributes based on PWA Kit mode
+ * @param {string} baseAttribute - The base attribute name (e.g., 'price', 'priceMax')
+ * @returns {string} The target attribute name to use
+ */
+function getEswAttributeMapping(baseAttribute) {
+    var isPwaKitEnabled = isPwaKitMappingEnabled();
+    
+    let attributesMapping = {
+        price: {
+            pwa: 'price',
+            headless: 'c_eswPrice'
+        },
+        priceMax: {
+            pwa: 'priceMax',
+            headless: 'c_eswPrice_max'
+        },
+        pricePerUnit: {
+            pwa: 'pricePerUnit',
+            headless: 'c_eswPrice_per_unit'
+        },
+        pricePerUnitMax: {
+            pwa: 'pricePerUnitMax',
+            headless: 'c_eswPrice_per_unit_max'
+        },
+        prices: {
+            pwa: 'prices',
+            headless: 'c_eswPrices'
+        },
+        priceRanges: {
+            pwa: 'priceRanges',
+            headless: 'priceRanges'
+        },
+        currency: {
+            pwa: 'currency',
+            headless: 'c_shopperCurrency'
+        },
+        shopperCurrency: {
+            pwa: 'currency',
+            headless: 'c_shopperCurrency'
+        },
+        restrictedProduct: {
+            pwa: 'c_eswRestrictedProduct',
+            headless: 'c_eswRestrictedProduct'
+        },
+        returnProhibited: {
+            pwa: 'c_eswReturnProhibited',
+            headless: 'c_eswReturnProhibited'
+        },
+        restrictedProductMsg: {
+            pwa: 'c_eswRestrictedProductMsg',
+            headless: 'c_eswRestrictedProductMsg'
+        },
+        returnProhibitedMsg: {
+            pwa: 'c_eswReturnProhibitedMsg',
+            headless: 'c_eswReturnProhibitedMsg'
+        }
+    };
+    
+    // If attribute mapping exists, return pwa or headless version based on flag
+    if (attributesMapping[baseAttribute]) {
+        return isPwaKitEnabled ? attributesMapping[baseAttribute].pwa : attributesMapping[baseAttribute].headless;
+    }
+    
+    // Return original attribute if no custom mapping exists
+    return baseAttribute;
+}
 
 module.exports = {
     eswBasketPriceConversions: eswBasketPriceConversions,
     sendOverrideShippingMethods: sendOverrideShippingMethods,
     compareBasketAndOcProducts: compareBasketAndOcProducts,
-    combineProductItems: combineProductItems
+    combineProductItems: combineProductItems,
+    getHeadlessLocale: getHeadlessLocale,
+    getHeadlessPriceConversion: getHeadlessPriceConversion,
+    getPWAHeadlessAccessToken: getPWAHeadlessAccessToken,
+    rebuildBasket: rebuildBasket,
+    isPwaKitMappingEnabled: isPwaKitMappingEnabled,
+    getEswAttributeMapping: getEswAttributeMapping
 };

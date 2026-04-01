@@ -20,10 +20,11 @@ const getEswCalculationHelper = {
      * @param {*} noRounding - Apply no rounding if `no rounding` is false
      * @param {*} selectedCountryInfoObjParam
      * @param {*} promotionPriceObj apply rounding on promotion if set to true
+     * @param {*} isThresholdPromotion skip fxrate on threshold promotion price conversion
      * @returns {Object | number} Formatted currency or object
      */
     // eslint-disable-next-line consistent-return
-    getMoneyObject: function (price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam, promotionPriceObj) {
+    getMoneyObject: function (price, noAdjustment, formatted, noRounding, selectedCountryInfoObjParam, promotionPriceObj, isThresholdPromotion) {
         let paVersion = eswHelper.getPaVersion();
         let billingPrice = (typeof price === 'object' && price.value && price.value !== 'undefined') ? Number(price.value) : Number(price);
         let selectedCountryInfo = !empty(selectedCountryInfoObjParam) ? selectedCountryInfoObjParam : null;
@@ -88,7 +89,7 @@ const getEswCalculationHelper = {
             }
 
             // applying FX rate if currency is not same as base currency
-            if ((isJob || (!isFixedPriceCountry && selectedFxRate.toShopperCurrencyIso !== baseCurrency) && selectedFxRate && !empty(selectedFxRate))) {
+            if ((isJob || (!isThresholdPromotion && !isFixedPriceCountry && selectedFxRate.toShopperCurrencyIso !== baseCurrency) && selectedFxRate && !empty(selectedFxRate))) {
                 billingPrice = Number(billingPrice * selectedFxRate.rate);
             }
             // applying the rounding model

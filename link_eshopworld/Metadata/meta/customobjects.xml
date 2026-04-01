@@ -186,6 +186,34 @@
                     </value-definition>
                 </value-definitions>
             </attribute-definition>
+            <attribute-definition attribute-id="isEswSmsMarketingOptinHidden">
+                <display-name xml:lang="x-default">ESW Exclude SMS Marketing Optin</display-name>
+                <description xml:lang="x-default">When checked, the SMS Marketing Opt-in option is excluded from the checkout process for this country.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="isEswEmailMarketingOptinHidden">
+                <display-name xml:lang="x-default">ESW Exclude Email Marketing Optin</display-name>
+                <description xml:lang="x-default">When checked, the Email Marketing Opt-in option is excluded from the checkout process for this country..</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="isEswPostMarketingOptinHidden">
+                <display-name xml:lang="x-default">ESW Exclude Post Marketing Optin</display-name>
+                <description xml:lang="x-default">When checked, the Post Marketing Opt-in option is excluded from the checkout process for this country.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="isEswPhoneMarketingOptinHidden">
+                <display-name xml:lang="x-default">ESW Exclude Phone Marketing Optin</display-name>
+                <description xml:lang="x-default">When checked, the Phone Marketing Opt-in option is excluded from the checkout process for this country.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </attribute-definitions>
         <group-definitions>
             <attribute-group group-id="esw_countries">
@@ -209,6 +237,13 @@
             <attribute-group group-id="eswPackage">
                 <display-name xml:lang="x-default">ESW Package Configuration</display-name>
                 <attribute attribute-id="eswSynchronizePkgModel"/>
+            </attribute-group>
+            <attribute-group group-id="eswMarketingOptin">
+                <display-name xml:lang="x-default">ESW Marketing Optins</display-name>
+                <attribute attribute-id="isEswSmsMarketingOptinHidden"/>
+                <attribute attribute-id="isEswEmailMarketingOptinHidden"/>
+                <attribute attribute-id="isEswPostMarketingOptinHidden"/>
+                <attribute attribute-id="isEswPhoneMarketingOptinHidden"/>
             </attribute-group>
         </group-definitions>
     </custom-type>
@@ -270,11 +305,20 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="eswServices">
+                <display-name xml:lang="x-default">ESW Services</display-name>
+                <description xml:lang="x-default">Store the last execution and in-use status of the service for internal use</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </attribute-definitions>
         <group-definitions>
             <attribute-group group-id="Integration_Monitoring_Report">
                 <display-name xml:lang="x-default">ESW Integration Monitoring Report</display-name>
                 <attribute attribute-id="configReport"/>
+                <attribute attribute-id="eswServices"/>
             </attribute-group>
         </group-definitions>
     </custom-type>

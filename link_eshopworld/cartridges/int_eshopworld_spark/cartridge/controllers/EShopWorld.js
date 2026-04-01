@@ -17,7 +17,6 @@ const Site = require('dw/system/Site');
 const Constants = require('*/cartridge/scripts/util/Constants');
 const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
 const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
-const eswCoreApiHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper');
 const eswOcapiServiceHelper = require('*/cartridge/scripts/services/EswOcapiService').getEswOcapiServices;
 const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
 
@@ -37,6 +36,8 @@ server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
     let responseJSON = {};
     let siteID = Site.getCurrent().getID();
     let currentBasketData = null;
+    let eswCoreApiHelper = require('*/cartridge/scripts/helper/eswCoreApiHelper');
+
     if (eswHelper.getBasicAuthEnabled() && !request.httpHeaders.authorization.equals('Basic ' + eswHelper.encodeBasicAuth())) {
         response.setStatus(401);
         logger.error('ESW Order Confirmation Error: Basic Authentication Token did not match');
@@ -52,7 +53,7 @@ server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
             let authKey,
                 accessToken;
             let basketID = eswHelper.getRetailerCartId(obj.retailerCartId);
-            accessToken = eswHelper.getPWAHeadlessAccessToken(obj);
+            accessToken = eswCoreApiHelper.getPWAHeadlessAccessToken(obj);
             if (!empty(accessToken)) {
                 if (typeof accessToken === 'string') {
                     authKey = 'Bearer ' + accessToken;

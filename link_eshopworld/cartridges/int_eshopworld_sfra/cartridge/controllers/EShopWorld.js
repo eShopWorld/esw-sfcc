@@ -130,13 +130,14 @@ server.get('GetEswFooter', function (req, res, next) {
  */
 server.get('GetEswLandingPage', function (req, res, next) {
     try {
+        let ESWLandingConfigs;
         if (empty(request.httpCookies['esw.Landing.Played']) || request.httpCookies['esw.Landing.Played'] === false || req.querystring.dropDownSelection === 'true') {
             let Cookie = require('dw/web/Cookie');
             let eswLandingCookie = new Cookie('esw.Landing.Played', true);
             eswLandingCookie.setPath('/');
             response.addHttpCookie(eswLandingCookie);
             setInitialCookies(req);
-            let ESWLandingConfigs = {
+            ESWLandingConfigs = {
                 allCountries: eswHelper.getAllCountries(),
                 languages: eswHelper.getAllowedLanguages(),
                 currencies: eswHelper.getAllowedCurrencies(),
@@ -146,11 +147,12 @@ server.get('GetEswLandingPage', function (req, res, next) {
                 enabledCurrencyInLandingPage: eswHelper.getEnableCurrencyLandingBar()
             };
             ESWLandingConfigs = eswHelper.extendObject(ESWLandingConfigs, getESWGeneralConfigs());
-
             res.render('/EswMfComponents/eswLandingPage', {
-                EswLandingObject: ESWLandingConfigs
+                    EswLandingObject: ESWLandingConfigs
             });
+            next();
         }
+        res.render('/EswMfComponents/emptyPage', {});
     } catch (error) {
         eswHelper.eswInfoLogger('GetEswLandingPage Error', error, error.message, error.stack);
     }
@@ -330,7 +332,6 @@ server.get('PreOrderRequest', function (req, res, next) {
         }
     }
     next();
-    return null;
 });
 
 
@@ -504,8 +505,7 @@ server.get('RegisterCustomer', function (req, res, next) {
                                 addressHelpers.saveAddress(address, { raw: newCustomer }, addressHelpers.generateAddressName(address));
                             });
                             // update marketing optin values on customer profile
-                            newCustomerProfile.custom.eswMarketingOptIn = order.custom.eswEmailMarketingOptIn;
-                            newCustomerProfile.custom.eswSMSMarketingOptIn = order.custom.eswSMSMarketingOptIn;
+                            eswHelper.setPostRegistrationOptins(newCustomerProfile, order);
 
                             res.setViewData({ newCustomer: newCustomer });
                             res.setViewData({ order: order });
@@ -566,6 +566,18 @@ server.get('OrderConfirm', csrfProtection.generateToken, function (req, res, nex
         });
         return next();
     }
+
+    let isAuthorized = eswHelper.isCustomerAuthorizedToAccessOrder(order);
+
+    if (!isAuthorized) {
+        if (req.currentCustomer.profile) {
+            res.redirect(URLUtils.url('Account-Show'));
+        } else {
+            res.redirect(URLUtils.url('Login-Show'));
+        }
+        return next();
+    }
+
     session.privacy.confirmedOrderID = order.currentOrderNo;
 
     let orderModel = new OrderModel(order, { containerView: 'order' });

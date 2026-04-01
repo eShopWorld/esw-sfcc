@@ -107,49 +107,6 @@ function getSitePreferencesCustomObjects() {
 }
 
 /**
- * Retrieves the URL of a given service by its ID.
- *
- * @param {string} serviceID - The ID of the service to retrieve the URL for.
- * @returns {string|null} The URL of the service if found, or null if not found or an error occurs.
- */
-function getServiceUrl(serviceID) {
-    var service;
-    var url = null;
-
-    if (!serviceID) {
-        Logger.warn('Service ID parameter is required for getServiceUrl.');
-        return null;
-    }
-
-    try {
-        service = LocalServiceRegistry.createService(serviceID, {});
-
-        if (service) {
-            var configuration = service.getConfiguration();
-            if (configuration) {
-                var credential = configuration.getCredential();
-                if (credential) {
-                    var rawUrl = credential.getURL();
-                    if (rawUrl && typeof rawUrl === 'string' && rawUrl.trim() !== '') {
-                        url = rawUrl;
-                    } else {
-                        Logger.warn("URL is not configured or is empty for credential of service '{0}'.", serviceID);
-                    }
-                } else {
-                    Logger.warn("Could not retrieve credential for service '{0}'.", serviceID);
-                }
-            } else {
-                Logger.warn("Could not retrieve configuration for service '{0}'.", serviceID);
-            }
-        }
-    } catch (e) {
-        Logger.error("Error retrieving service '{0}' or its URL: {1}", serviceID, e.toString());
-        url = null;
-    }
-
-    return url;
-}
-/**
  * Retrieves the HTTP request method for a given service by its ID.
  *
  * @param {string} serviceID - The ID of the service to retrieve the request method for.
@@ -166,33 +123,99 @@ function getRequestMethod(serviceID) {
     }
     return null;
 }
+/**
+ * Removes requestMethod and responses fields from each service object in the array to save it properly in custom object.
+ * @param {Array} services - Array of service objects
+ * @returns {Array} - Cleaned array
+ */
+function deleteUnwantedServiceFields(services) {
+    if (!services || typeof services !== 'object') return services;
+    let cleanedServices = {};
+    Object.keys(services).forEach(function (serviceName) {
+        let service = services[serviceName];
+        if (service && typeof service === 'object') {
+            let cleaned = {};
+            Object.keys(service).forEach(function (key) {
+                if (key !== 'requestMethod' && key !== 'responses') {
+                    cleaned[key] = service[key];
+                }
+            });
+            cleanedServices[serviceName] = cleaned;
+        } else {
+            cleanedServices[serviceName] = service;
+        }
+    });
+    return cleanedServices;
+}
 
 /**
- * update monitoring configuration object
- * @param {Object} configReport - configReport object
- * @returns {Time | null} - last modified time or null if not found
+ * Updates the monitoring configuration object and saves to custom object.
+ * @param {string} configReport - JSON stringified config report object
+ * @param {string} serviceReport - JSON stringified array of service objects
+ * @returns {string|null} - last modified time or null if not found
  */
-function updateIntegrationMonitoring(configReport) {
+function updateIntegrationMonitoring(configReport, serviceReport) {
     const Transaction = require('dw/system/Transaction');
     let CustomObjectMgr = require('dw/object/CustomObjectMgr');
     let eswIntegrationMonitoring = CustomObjectMgr.getCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
+    // Clean the serviceReport before saving (remove requestMethod and responses)
+    let parsedServices = JSON.parse(serviceReport);
+    let cleanedServiceReport = JSON.stringify(deleteUnwantedServiceFields(parsedServices));
     Transaction.wrap(function () {
         if (eswIntegrationMonitoring) {
             CustomObjectMgr.remove(eswIntegrationMonitoring);
         }
         eswIntegrationMonitoring = CustomObjectMgr.createCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
         eswIntegrationMonitoring.getCustom().configReport = configReport;
+        eswIntegrationMonitoring.getCustom().eswServices = cleanedServiceReport;
     });
     return !empty(eswIntegrationMonitoring) ? eswHelper.formatTimeStamp(eswIntegrationMonitoring.lastModified) : null;
 }
-
 /**
- * Retrieves the logs JSON object containing site configuration and integration monitoring data.
- *
- * @returns {Object} A JSON object with site configuration and integration monitoring details.
+ * Updates inUse and lastExecuted time for a non-job service.
+ * @param {string} serviceName - The name of the service.
+ * @param {Array} filteredResponses - Array of responses for this service.
+ * @param {Object} serviceExecutionStatus - The status map for this request.
+ * @returns {Object} Object with inUse and lastExecuted fields
  */
-function getLogsJson() {
-    // Getting Shipping methods
+function updateNonJobServiceStatusAndTime(serviceName, filteredResponses, serviceExecutionStatus) {
+    let inUse = false;
+    let lastExecuted = null;
+    try {
+        let isNonJob = !eswHelper.isJobRelatedService(serviceName);
+        let isEnabled = eswHelper.isNonJobServiceEnabled(serviceName);
+        if (isNonJob && isEnabled && Array.isArray(filteredResponses) && filteredResponses.length > 0) {
+            let hasSuccessResponse = filteredResponses.some(function (resp) {
+                return resp.statusCode && resp.statusCode === 200;
+            });
+            if (hasSuccessResponse) {
+                inUse = true;
+                lastExecuted = eswHelper.getCurrentFormattedDate();
+            }
+        } else if (isNonJob && !isEnabled && Array.isArray(filteredResponses) && filteredResponses.length > 0) {
+            let hasSuccessResponse = filteredResponses.some(function (resp) {
+                return resp.statusCode && resp.statusCode === 200;
+            });
+            if (hasSuccessResponse || eswHelper.isMockServiceCallled(serviceName)) {
+                inUse = true;
+                lastExecuted = eswHelper.getCurrentFormattedDate();
+            }
+        }
+        // If not in use, keep previous lastExecuted if present
+        if (!inUse && serviceExecutionStatus[serviceName] && serviceExecutionStatus[serviceName].lastExecuted) {
+            lastExecuted = serviceExecutionStatus[serviceName].lastExecuted;
+        }
+    } catch (err) {
+        require('dw/system/Logger').warn('updateServiceLastExecuted error for {0}: {1}', serviceName, err && err.toString ? err.toString() : err);
+    }
+    serviceExecutionStatus[serviceName] = { inUse: inUse, lastExecuted: lastExecuted };
+    return { inUse: inUse, lastExecuted: lastExecuted };
+}
+/**
+ * Collects all shipping methods as an array of objects.
+ * @returns {Array} Array of shipping method objects.
+ */
+function getShippingMethodsArray() {
     let shippingMethodArr = [];
     let shipMethodsItr = dw.order.ShippingMgr.getAllShippingMethods().iterator();
     while (shipMethodsItr.hasNext()) {
@@ -204,80 +227,101 @@ function getLogsJson() {
             currency: shippingMethod.getCurrencyCode()
         });
     }
+    return shippingMethodArr;
+}
+/**
+ * Loads previous eswServices from the custom object for job-related preservation.
+ * @returns {Object} Returns an object containing previous eswServices state for job-related preservation.
+ */
+function getPreviousEswServices() {
+    let CustomObjectMgr = require('dw/object/CustomObjectMgr');
+    let eswIntegrationMonitoring = CustomObjectMgr.getCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
+    let previousEswServices = {};
+    if (eswIntegrationMonitoring && eswIntegrationMonitoring.getCustom().eswServices) {
+        try {
+            previousEswServices = JSON.parse(eswIntegrationMonitoring.getCustom().eswServices);
+        } catch (e) {
+            previousEswServices = {};
+        }
+    }
+    return previousEswServices;
+}
 
-    // Getting services configs
-    let eswServices = [
-        'EswOAuthService',
-        'EswPriceFeedService',
-        'ESWSFTP',
-        'EswPackageV4Service',
-        'EswCheckoutV3Service.SFRA',
-        'ESWCatalogService',
-        'EswGetAsnPackage',
-        'EswAzureInsightService',
-        'EswOcapiDataAuthService'
-    ];
 
-    let serviceConfigs = [];
-    let validServices = eswServices.filter(function (serviceID) {
-        let serviceUrl = getServiceUrl(serviceID);
-        return serviceUrl && serviceUrl.trim() !== '';
-    });
+/**
+ * Builds the serviceConfigs object for all ESW services, handling job/non-job logic internally.
+ * @returns {Object} Returns an object containing service configuration for all ESW services.
+ */
+function buildServiceConfigs() {
+    let eswServicesHelper = require('*/cartridge/scripts/helper/eswServices');
+    let Constants = require('*/cartridge/scripts/util/Constants');
+    let serviceNames = Object.keys(Constants.ESW_SERVICES_URLS);
+    let serviceResponses = eswHCTableHelper.getResponses(serviceNames);
+    let previousEswServices = getPreviousEswServices();
+    let serviceExecutionStatus = {};
+    let serviceConfigs = {};
 
-    let serviceResponses = eswHCTableHelper.getResponses(validServices);
-
-    eswServices.forEach(function (serviceID) {
-        let serviceUrl = getServiceUrl(serviceID);
-        serviceUrl = serviceUrl && serviceUrl.includes('{brandID}')
-            ? serviceUrl.replace(/{brandID}+/g, eswHelper.getClientID().split('.')[0])
-            : serviceUrl;
-
-        let requestMethod = serviceUrl ? getRequestMethod(serviceID) : null;
-
-        let filteredResponses = serviceUrl
-            ? serviceResponses.filter(function (response) {
-                return response.serviceName === serviceID;
-            })
+    serviceNames.forEach(serviceName => {
+        let url = eswServicesHelper.getEswServiceUrl(serviceName);
+        let requestMethod = url ? getRequestMethod(serviceName) : null;
+        let filteredResponses = url
+            ? serviceResponses.filter(response => response.serviceName === serviceName)
             : null;
-
-        serviceConfigs.push({
-            serviceId: serviceID,
-            serviceUrl: serviceUrl || null,
-            requestMethod: requestMethod,
+        let isJob = eswHelper.isJobRelatedService(serviceName);
+        let statusObj;
+        if (!isJob) {
+            statusObj = updateNonJobServiceStatusAndTime(serviceName, filteredResponses, serviceExecutionStatus);
+        } else {
+            statusObj = previousEswServices[serviceName] || { inUse: false, lastExecuted: null };
+            serviceExecutionStatus[serviceName] = statusObj;
+        }
+        serviceConfigs[serviceName] = {
+            serviceUrl: url || null,
+            inUse: statusObj.inUse,
+            isJobRelated: isJob,
+            lastExecuted: statusObj.lastExecuted,
+            requestMethod,
             responses: filteredResponses || null
-        });
+        };
     });
-
+    return serviceConfigs;
+}
+/**
+ * Retrieves the logs JSON object containing site configuration and integration monitoring data.
+ * @returns {Object} A JSON object with site configuration and integration monitoring details.
+ */
+function getLogsJson() {
     let config = {
-        siteInformation: null,
-        sitePreferences: null,
-        customObjects: null
+        siteInformation: {
+            site: Site.getCurrent().getID(),
+            eswCartridgeVersion: Resource.msg('esw.cartridges.version.label', 'esw', null) + Resource.msg('esw.cartridges.version.number', 'esw', null),
+            sfccArchitectVersion: Resource.msg('global.version.number', 'version', null),
+            sfccCompatibilityMode: system.getCompatibilityMode()
+        },
+        sitePreferences: getSitePreferencesCustomObjects(),
+        customObjects: {
+            EswCountries: eswHelper.getCountriesConfigurations(),
+            EswCurrencies: eswHelper.getAllowedCurrencies(),
+            EswPaData: eswHelper.getPricingAdvisorData(),
+            EswIntegrationMonitoringReport: eswHelper.getEswMonitoringReport()
+        },
+        services: buildServiceConfigs(),
+        globalConfigs: {
+            allowedLocales: Site.getCurrent().getAllowedLocales().toArray(),
+            allowedCurrencies: Site.getCurrent().getAllowedCurrencies().toArray(),
+            ShippingMethods: getShippingMethodsArray(),
+            OrderConfigs: {}
+        }
     };
-    config.siteInformation = {
-        site: Site.getCurrent().getID(),
-        eswCartridgeVersion: Resource.msg('esw.cartridges.version.label', 'esw', null) + Resource.msg('esw.cartridges.version.number', 'esw', null),
-        sfccArchitectVersion: Resource.msg('global.version.number', 'version', null),
-        sfccCompatibilityMode: system.getCompatibilityMode()
-    };
-    config.sitePreferences = getSitePreferencesCustomObjects();
-    config.customObjects = {
-        EswCountries: eswHelper.getCountriesConfigurations(),
-        EswCurrencies: eswHelper.getAllowedCurrencies(),
-        EswPaData: eswHelper.getPricingAdvisorData()
-    };
-    config.services = serviceConfigs;
-    config.globalConfigs = {
-        allowedLocales: Site.getCurrent().getAllowedLocales().toArray(),
-        allowedCurrencies: Site.getCurrent().getAllowedCurrencies().toArray(),
-        ShippingMethods: shippingMethodArr,
-        OrderConfigs: {}
-    };
-    config.lastModifed = updateIntegrationMonitoring(JSON.stringify(config));
+    config.lastModifed = updateIntegrationMonitoring(JSON.stringify(config), JSON.stringify(config.services));
     return config;
 }
+
 
 module.exports = {
     getLogsJson,
     getRequestMethod,
-    updateIntegrationMonitoring
+    updateIntegrationMonitoring,
+    updateNonJobServiceStatusAndTime,
+    deleteUnwantedServiceFields
 };

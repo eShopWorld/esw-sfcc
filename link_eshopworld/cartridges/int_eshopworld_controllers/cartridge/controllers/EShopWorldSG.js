@@ -454,8 +454,7 @@ function registerCustomer() {
                     Transaction.wrap(function () {
                         order.customer = profileValidation;
                         // update marketing optin values on customer profile
-                        profileValidation.profile.custom.eswMarketingOptIn = order.custom.eswEmailMarketingOptIn;
-                        profileValidation.profile.custom.eswSMSMarketingOptIn = order.custom.eswSMSMarketingOptIn;
+                        eswHelper.setPostRegistrationOptins(profileValidation.profile, order);
                     });
                     session.custom.TargetLocation = URLUtils.https('Account-Show', 'Registration', 'true').toString();
                     target = session.custom.TargetLocation;
@@ -653,7 +652,7 @@ function eswEmbeddedCheckoutNotify() {
             let authKey,
                 accessToken;
             let basketID = eswHelper.getRetailerCartId(obj.retailerCartId);
-            accessToken = eswHelper.getPWAHeadlessAccessToken(obj);
+            accessToken = eswCoreApiHelper.getPWAHeadlessAccessToken(obj);
             if (!empty(accessToken)) {
                 if (typeof accessToken === 'string') {
                     authKey = 'Bearer ' + accessToken;
@@ -817,6 +816,16 @@ function showConfirmation() {
     if (eswHelper.isCheckoutRegisterationEnabled()) {
         session.privacy.confirmedOrderID = order.orderNo;
         session.privacy.keepOrderIDForRegistration = true;
+    }
+    let isAuthorized = eswHelper.isCustomerAuthorizedToAccessOrder(order);
+
+    if (!isAuthorized) {
+        if (customer.authenticated) {
+            response.redirect(URLUtils.url('Account-Show').toString());
+        } else {
+            response.redirect(URLUtils.url('Login-Show').toString());
+        }
+        return;
     }
 
     app.getView({

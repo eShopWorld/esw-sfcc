@@ -113,6 +113,7 @@ function execute() {
         logger.error('ESW PriceFeed Error: {0} {1}', e.message, e.stack);
         return new Status(Status.ERROR);
     }
+    eswHelper.updateServiceLastExecuted('EswPriceFeedService');
     return new Status(Status.OK);
 }
 

@@ -13,6 +13,7 @@ const eswJwtHelper = require('*/cartridge/scripts/jwt/eswJwtHelpers');
 function execute() {
     try {
         eswJwtHelper.getJwksFromEsw();
+        eswHelper.updateServiceLastExecuted('EswGetJwksService');
         return new Status(Status.OK);
     } catch (e) {
         Logger.error('JWKS service call failed: {0}: {1}', e.message, e.stack);

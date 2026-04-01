@@ -1,34 +1,36 @@
 'use strict';
 
+/**
+ * Checks if `iframe` is supported in the browser.
+ *
+ * @returns {boolean} True if `iframe` is supported, false otherwise.
+ */
+function isIframeSupported() {
+    let iframe = document.createElement('iframe');
+    return typeof iframe !== 'undefined' && iframe !== null;
+}
+
+/**
+ * Checks if a given string is a valid URL.
+ *
+ * @param {string} url - The URL string to validate.
+ * @returns {boolean} True if the string is a valid URL, false otherwise.
+ */
+function isValidUrl(url) {
+    try {
+        // eslint-disable-next-line no-new
+        new URL(url); // Attempt to create a URL object
+        return true;  // If no error is thrown, the URL is valid
+    } catch (e) {
+        return false; // If an error is thrown, the URL is invalid
+    }
+}
+
 $(document).ready(function () {
     let iframeFailedLogUrl = $('[data-esw-iframe-failed-log-url]').attr('data-esw-iframe-failed-log-url');
     let iframeFallbackUrl = $('[data-esw-iframe-failed-fallback-url]').attr('data-esw-iframe-failed-fallback-url');
     let eswCheckoutUrl = $('[data-esw-checkout-url]').attr('data-esw-checkout-url');
     let iframeContainer = $('.esw-iframe-checkout');
-    /**
-     * Checks if `iframe` is supported in the browser.
-     *
-     * @returns {boolean} True if `iframe` is supported, false otherwise.
-     */
-    function isIframeSupported() {
-        let iframe = document.createElement('iframe');
-        return typeof iframe !== 'undefined' && iframe !== null;
-    }
-    /**
-     * Checks if a given string is a valid URL.
-     *
-     * @param {string} url - The URL string to validate.
-     * @returns {boolean} True if the string is a valid URL, false otherwise.
-     */
-    function isValidUrl(url) {
-        try {
-            // eslint-disable-next-line no-new
-            new URL(url); // Attempt to create a URL object
-            return true;  // If no error is thrown, the URL is valid
-        } catch (e) {
-            return false; // If an error is thrown, the URL is invalid
-        }
-    }
     /**
      * Actions if iframe is not supported or no checkout URL is found
      */
@@ -38,10 +40,10 @@ $(document).ready(function () {
             url: iframeFailedLogUrl,
             complete: function () {
                 if (iframeFallbackUrl
-                        && typeof iframeFallbackUrl !== 'undefined'
+                        && iframeFallbackUrl !== undefined
                         && iframeFallbackUrl.length > 0
                         && isValidUrl(iframeFallbackUrl)) {
-                    window.location.href = iframeFallbackUrl;
+                    globalThis.location.href = iframeFallbackUrl;
                 }
             }
         });
@@ -52,7 +54,7 @@ $(document).ready(function () {
      */
     function removeHeaderFooterWelcomeMatt() {
         // Check if the current URL path matches the target page
-        if (window.location.href.includes('/EShopWorld-EswEmbeddedCheckout') || window.location.href.includes('/EShopWorldSG-EswEmbeddedCheckout')) {
+        if (globalThis.location.href.includes('/EShopWorld-EswEmbeddedCheckout') || globalThis.location.href.includes('/EShopWorldSG-EswEmbeddedCheckout')) {
             // Select the element and remove it if it exists
             $('.selector-container.headerDropdown').remove();
             $('.selector-container.footerDropdown').remove();
@@ -65,7 +67,7 @@ $(document).ready(function () {
     function checkIframeLoaded() {
         if (iframeContainer) {
             let iframeLoaded = false;
-            if (!isIframeSupported && !isValidUrl(eswCheckoutUrl)) {
+            if (!isIframeSupported() && !isValidUrl(eswCheckoutUrl)) {
                 handleIframeError();
                 return;
             }
@@ -90,9 +92,9 @@ $(document).ready(function () {
                                     url: iframeFailedLogUrl,
                                     complete: function () {
                                         if (eswCheckoutUrl &&
-                            typeof eswCheckoutUrl !== 'undefined' &&
+                            eswCheckoutUrl !== undefined &&
                             eswCheckoutUrl.length > 0) {
-                                            window.location.href = eswCheckoutUrl;
+                                            globalThis.location.href = eswCheckoutUrl;
                                         }
                                     }
                                 });

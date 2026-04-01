@@ -30,17 +30,25 @@ server.append('Track', function (req, res, next) {
 });
 
 server.append('Details', function (req, res, next) {
-    try {
-        let viewData = res.getViewData();
-        if (!empty(viewData.order)) {
-            let order = OrderMgr.getOrder(viewData.order.orderNumber);
-            viewData.order.isPaymentConfirmed = order.confirmationStatus.value === Order.CONFIRMATION_STATUS_NOTCONFIRMED;
-            viewData.order.paymentInstruments = order.paymentInstruments;
-            viewData.order.currencySymbol = !empty(viewData.order.priceTotal) ? viewData.order.priceTotal.replace(/[0-9.]/g, '') : null;
+    let viewData = res.getViewData();
+    if (!empty(viewData.order)) {
+        let order = OrderMgr.getOrder(viewData.order.orderNumber);
+        viewData.order.isPaymentConfirmed = order.confirmationStatus.value === Order.CONFIRMATION_STATUS_NOTCONFIRMED;
+        viewData.order.paymentInstruments = order.paymentInstruments;
+        viewData.order.currencySymbol = !empty(viewData.order.priceTotal) ? viewData.order.priceTotal.replace(/[0-9.]/g, '') : null;
+                // Expose eswIsDigitalProduct for each productLineItem
+        if (order && order.productLineItems) {
+            let pliIter = order.productLineItems.iterator();
+            let allDigital = true;
+            while (pliIter.hasNext()) {
+                let pli = pliIter.next();
+                if (!pli.custom.eswIsDigitalProduct) {
+                    allDigital = false;
+                    break;
+                }
+            }
+            viewData.order.isAllDigital = allDigital;
         }
-        res.setViewData(viewData);
-    } catch (error) {
-        eswHelper.eswInfoLogger('ESW Details Order Error', error, error.message, error.stack);
     }
     next();
 });

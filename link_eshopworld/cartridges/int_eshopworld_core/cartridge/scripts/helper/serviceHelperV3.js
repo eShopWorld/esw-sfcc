@@ -1,6 +1,3 @@
-/* eslint-disable eqeqeq */
-/* eslint-disable no-unused-vars */
-/* eslint-disable quote-props */
 /**
  * Helper script to get all ESW site preferences
  **/
@@ -9,7 +6,6 @@ const collections = require('*/cartridge/scripts/util/collections');
 
 const BasketMgr = require('dw/order/BasketMgr');
 const StringUtils = require('dw/util/StringUtils');
-const Site = require('dw/system/Site').getCurrent();
 const URLUtils = require('dw/web/URLUtils');
 const Currency = require('dw/util/Currency');
 const Logger = require('dw/system/Logger');
@@ -104,16 +100,35 @@ function convertPromotionMessage(promotionMessageString, selectedCountryDetail, 
  * @param {Object} priceAdjustment - The price adjustment object.
  * @param {Object} item - The product line item object (must have productID).
  * @param {Object} promotionsCalloutsMessages - The callouts messages object.
+ * @param {Object} localizeObj - localizeObj
  * @returns {string} - The resolved promotion message.
  */
-function getProductPromotionMessage(priceAdjustment, item, promotionsCalloutsMessages) {
-    var promotionMessage = priceAdjustment.lineItemText;
+function getProductPromotionMessage(priceAdjustment, item, promotionsCalloutsMessages, localizeObj) {
+    let promotionMessage = priceAdjustment.lineItemText;
     if (promotionsCalloutsMessages && promotionsCalloutsMessages[item.UUID]) {
         let promotionCalloutObj = promotionsCalloutsMessages[item.UUID].find(function(promo) {
             return promo.promotionID === priceAdjustment.promotionID;
         });
         if (!empty(promotionCalloutObj)) {
             promotionMessage = promotionCalloutObj.calloutText;
+        }
+    } else if (priceAdjustment) {
+        let promotion = priceAdjustment.getPromotion();
+        let shopperCountry = localizeObj && 'countryCode' in localizeObj ? localizeObj.countryCode : null;
+        if (promotion) {
+            if (empty(shopperCountry)) {
+                let param = request.httpParameters;
+                shopperCountry = !empty(param['country-code']) && !empty(param['country-code'][0]) ? param['country-code'][0] : null;
+            }
+            let calloutMsg = promotion.getCalloutMsg();
+            if (!empty(shopperCountry)) {
+                let selectedCountryDetail = eswHelper.getCountryDetailByParam(shopperCountry);
+                let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
+                return !empty(calloutMsg) && 'markup' in calloutMsg ? convertPromotionMessage(calloutMsg.markup, selectedCountryDetail, selectedCountryLocalizeObj) : '';
+            } else {
+                // @ts-expect-error Expected 3 arguments, but got 1
+                return !empty(calloutMsg) && 'markup' in calloutMsg ? convertPromotionMessage(calloutMsg.markup) : '';
+            }
         }
     }
     return promotionMessage;
@@ -136,8 +151,6 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs, prom
     let finalPrice;
     let itemDiscounts = [],
         currencyCode,
-        liOrderDiscount,
-        discountType,
         discountedAmount,
         productUnitPriceInfo,
         itemDiscount = {};
@@ -147,11 +160,20 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs, prom
         } else {
             finalPrice = eswHelper.getMoneyObject(item.basePrice.value, false, false).value;
         }
-        currencyCode = eswHelper.setCurrencyISO(localizeObj);
+        if (request.isSCAPI()) {
+            currencyCode = localizeObj.localizeCountryObj.currencyCode;
+            let selectedCountryDetail = eswHelper.getSelectedCountryDetail(localizeObj.localizeCountryObj.countryCode);
+            let isFixedPriceCountry = selectedCountryDetail ? selectedCountryDetail.isFixedPriceModel : false;
+            if (!isFixedPriceCountry) {
+                currencyCode = eswHelper.setCurrencyISO(localizeObj);
+            }
+        } else {
+            currencyCode = eswHelper.setCurrencyISO(localizeObj);
+        }
         // Apply product level promotions
         // eslint-disable-next-line no-loop-func
         collections.forEach(item.priceAdjustments, function (priceAdjustment) {
-            let promotionMessage = getProductPromotionMessage(priceAdjustment, item, promotionsCalloutsMessages.productDiscounts);
+            let promotionMessage = getProductPromotionMessage(priceAdjustment, item, (promotionsCalloutsMessages && 'productDiscounts' in promotionsCalloutsMessages ? promotionsCalloutsMessages.productDiscounts : ''), localizeObj);
             if (priceAdjustment.appliedDiscount.type === 'FIXED_PRICE') {
                 if (!empty(localizeObj)) {
                     let selectedCountryDetail = eswHelper.getCountryDetailByParam(request.httpParameters);
@@ -182,7 +204,7 @@ function getProductUnitPriceInfo(item, order, localizeObj, conversionPrefs, prom
                 if (!empty(localizeObj)) {
                     let selectedCountryDetail = eswHelper.getCountryDetailByParam(request.httpParameters);
                     let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
-                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, false, selectedCountryLocalizeObj).value / item.quantity.value).toFixed(currencyExponent);
+                    discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, true, selectedCountryLocalizeObj).value / item.quantity.value).toFixed(currencyExponent);
                 } else {
                     discountedAmount = (eswHelper.getMoneyObject((priceAdjustment.priceValue * -1), false, false, true).value / item.quantity.value).toFixed(currencyExponent);
                 }
@@ -295,11 +317,10 @@ function getCartDiscountPriceInfo(cart, beforeDiscountParam, shopperCurrency, is
                 currencyExponent = eswCountryRoundingRules[0].roundingModels[0].currencyExponent;
             }
         }
-        let cartSubTotal = eswHelper.getSubtotalObject(cart, true),
-            beforeDiscount = beforeDiscountParam,
+        let beforeDiscount = beforeDiscountParam,
             obj = {},
             cartDiscounts = [],
-            currencyCode = eswHelper.setCurrencyISO();
+            currencyCode = eswHelper.setCurrencyISO(),
             allPriceAdjustmentIter = cart.priceAdjustments.iterator(),
             cartDiscount = {};
         if (!empty(shopperCurrency)) {
@@ -366,8 +387,7 @@ function getLineItemsV3(order, countryCode, currencyCode, promotionsCalloutsMess
     let currentBasket = order || BasketMgr.currentBasket,
         lineItems = [],
         loopCtr = 1;
-    let totalQuantity = 0,
-        finalCartSubtotal = 0,
+    let finalCartSubtotal = 0,
         localizeObj,
         conversionPrefs;
     if (empty(currencyCode)) {
@@ -384,23 +404,10 @@ function getLineItemsV3(order, countryCode, currencyCode, promotionsCalloutsMess
         };
 
         conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
-
-        let totalDiscount = eswHelper.getOrderDiscountHL(order, localizeObj, conversionPrefs).value,
-            remainingDiscount = totalDiscount; // eslint-disable-line no-unused-vars
-    } else {
-        let totalDiscount = eswHelper.getOrderDiscount(currentBasket).value;
     }
-
-    collections.forEach(currentBasket.allProductLineItems, function (item) {
-        if (!item.bonusProductLineItem) {
-            totalQuantity += item.quantity.value;
-        }
-    });
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (let lineItemNumber in currentBasket.allProductLineItems) {
-        let item = currentBasket.allProductLineItems[lineItemNumber],
-            liOrderDiscount,
-            discountType;
+        let item = currentBasket.allProductLineItems[lineItemNumber];
 
         if (empty(order)) {
             // eslint-disable-next-line no-loop-func
@@ -435,13 +442,14 @@ function getLineItemsV3(order, countryCode, currencyCode, promotionsCalloutsMess
                 'size': !empty(size) ? size : '',
                 'isNonStandardCatalogItem': false,
                 'metadataItems': getProductLineMetadataItems(item),
+                'isDigitalProduct': eswHelper.isEswDigitalProduct(item.product),
                 'isReturnProhibited': eswHelper.isReturnProhibited(item.product, countryCode)
             },
             'cartGrouping': 'Group 1',
             'metadataItems': null
         };
         if (eswHelper.isEnabledMultiOrigin()) {
-            cartItem.FulfilmentCountryIso = !empty(item.custom.eswFulfilmentCountryIso) ? item.custom.eswFulfilmentCountryIso : '';
+            cartItem.FulfilmentCountryIso = !empty(item.product.custom.eswFulfilmentCountryIso) ? item.product.custom.eswFulfilmentCountryIso : '';
         }
         lineItems.push(cartItem);
         finalCartSubtotal += Number(cartItem.product.productUnitPriceInfo.price.amount * item.quantity.value);
@@ -468,6 +476,12 @@ function getShopperCheckoutExperience(shopperLocale) {
         'registration': metaDataObj.registration,
         'sessionTimeout': eswHelper.getEswSessionTimeout()
     };
+    if (eswHelper.getEswOptinsEnabled()) {
+        checkoutExp.marketingOptIns = eswHelper.getMarketingOptIns();
+    }
+    if (!customer.authenticated) {
+        session.custom.userSessionID = session.sessionID;
+    }
     return checkoutExp;
 }
 /**

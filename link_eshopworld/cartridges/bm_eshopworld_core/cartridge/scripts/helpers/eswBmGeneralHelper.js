@@ -1,4 +1,3 @@
-
 'use strict';
 
 const Site = require('dw/system/Site');
@@ -6,13 +5,26 @@ const eswCoreBmHelper = require('*/cartridge/scripts/helper/eswBmHelper');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Resource = require('dw/web/Resource');
 const eswImHelepr = require('*/cartridge/scripts/helper/eswIntegrationMonitorHelper');
+const Constants = require('*/cartridge/scripts/util/Constants');
 /**
  * update monitoring configuration object
  * @param {Object} configReport - configReport object
- * @returns {Time | null} - last modified time or null if not found
+ * @param {Object} serviceReport - serviceReport object
+ * @returns {string | null} - last modified time or null if not found
  */
-function updateIntegrationMonitoring(configReport) {
-    return eswImHelepr.updateIntegrationMonitoring(configReport);
+function updateIntegrationMonitoring(configReport, serviceReport) {
+    const Transaction = require('dw/system/Transaction');
+    let CustomObjectMgr = require('dw/object/CustomObjectMgr');
+    let eswIntegrationMonitoring = CustomObjectMgr.getCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
+    Transaction.wrap(function () {
+        if (eswIntegrationMonitoring) {
+            CustomObjectMgr.remove(eswIntegrationMonitoring);
+        }
+        eswIntegrationMonitoring = CustomObjectMgr.createCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
+        eswIntegrationMonitoring.getCustom().configReport = JSON.stringify(configReport);
+        eswIntegrationMonitoring.getCustom().eswServices = JSON.stringify({ serviceReport: serviceReport });
+    });
+    return !empty(eswIntegrationMonitoring) ? eswHelper.formatTimeStamp(eswIntegrationMonitoring.lastModified) : null;
 }
 /**
  * Return the countries configs
@@ -89,7 +101,6 @@ function loadGroups(preferences, groupURL, appendedParameter, groupId) {
  * @returns {Array} sitePrefs - New Array with fields specific to API/SFTP
  */
 function removeElements(sitePrefFieldsAttributes, relatedMethodFields) {
-    let Constants = require('*/cartridge/scripts/util/Constants');
     let uploadMethod = eswHelper.getCatalogUploadMethod();
 
     // Always include the toggle field
@@ -237,6 +248,15 @@ function refactorCustomObjectResponse(customObject) {
 }
 
 /**
+ * Function to return all ESW service url names
+ * @returns {Array} - array of service url names
+ *
+ */
+function getEswServiceUrlNames() {
+    let eswServiceNames = Constants.ESW_SERVICES_URLS;
+    return Object.keys(eswServiceNames);
+}
+/**
  * Function to create Config Report
  * @param {string} csrf - csrf
  * @returns {Array} sitePrefs - New Array with fields specific to API/SFTP
@@ -245,10 +265,11 @@ function loadReport(csrf) {
     let logger = require('dw/system/Logger');
     let URLUtils = require('dw/web/URLUtils');
     let configReport = [];
+    let serviceReport = [];
     let lastModified;
     let checkoutServiceName = eswHelper.getCheckoutServiceName();
     let system = require('dw/system/System');
-
+    let eswServices = require('*/cartridge/scripts/helper/eswServices');
     try {
         let retailerSitePrefFields = loadGroups(
             Site.getCurrent().getPreferences(),
@@ -358,6 +379,18 @@ function loadReport(csrf) {
                 }
             }
         );
+
+        let serviceNames = getEswServiceUrlNames();
+        serviceNames.forEach((serviceName) => {
+            const url = eswServices.getEswServiceUrl(serviceName);
+            serviceReport.push({
+                name: serviceName,
+                serviceUrl: url,
+                inUse: false,
+                lastExecuted: null
+            });
+        });
+
         if (configReport && Array.isArray(configReport)) {
             // Check if configReport has at least three elements
             if (configReport.length > 1) {
@@ -365,7 +398,7 @@ function loadReport(csrf) {
                 nestedObject[checkoutServiceName] = getServiceUrl('eswCheckoutService');
             }
         }
-        lastModified = updateIntegrationMonitoring(JSON.stringify(configReport));
+        lastModified = updateIntegrationMonitoring(configReport, serviceReport);
     } catch (error) {
         logger.error('Error while updating config object {0} ', error);
         let eswIntegrationMonitoringObject = eswHelper.getCustomObjectDetails('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
@@ -374,7 +407,8 @@ function loadReport(csrf) {
             lastModified = !empty(eswIntegrationMonitoringObject) ? eswHelper.formatTimeStamp(eswIntegrationMonitoringObject.lastModified) : null;
         }
     }
-    configReport.push(lastModified);
+    configReport.push({ serviceReport: serviceReport });
+    configReport.push({ lastModified: lastModified });
     return configReport;
 }
 
@@ -465,7 +499,7 @@ function storeMixedPkgConf(reqForm) {
     if (getLengthOfMixedPkgConf(mixedPkgConf) > 0) {
         while (eswCountrtiesCoItr2.hasNext()) {
             let currentCountryToUpdateCo = eswCountrtiesCoItr2.next();
-                    // eslint-disable-next-line no-loop-func
+            // eslint-disable-next-line no-loop-func
             let countryConfigs = mixedPkgConf.filter(function (mixedConfig) {
                 return currentCountryToUpdateCo.custom.countryCode === mixedConfig.country;
             });
@@ -497,4 +531,5 @@ exports.loadReport = loadReport;
 exports.updateIntegrationMonitoring = updateIntegrationMonitoring;
 exports.convertMixedPkgInputToArr = convertMixedPkgInputToArr;
 exports.storeMixedPkgConf = storeMixedPkgConf;
+exports.getEswServiceUrlNames = getEswServiceUrlNames;
 exports.getIntegrationResportJson = getIntegrationResportJson;

@@ -5,7 +5,8 @@ const FileWriter = require('dw/io/FileWriter');
 const CSVStreamWriter = require('dw/io/CSVStreamWriter');
 const eswCatalogHelper = require('*/cartridge/scripts/helper/eswCatalogHelper');
 const eswCatalogPref = 'eswCatalogFeed';
-let eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+const Constants = require('*/cartridge/scripts/util/Constants');
 
 const Logger = require('dw/system/Logger');
 const Site = require('dw/system/Site').getCurrent();
@@ -69,6 +70,10 @@ const CatalogUtils = {
             'variantProductCode'
         ];
 
+        // Ensure 'category' is present in the headerArray
+        if (headerArray.indexOf('category') === -1) {
+            headerArray.push('category');
+        }
         // Add custom headers
         if (!empty(fieldMapping)) {
             Object.keys(fieldMapping).forEach(function (key) {
@@ -117,9 +122,9 @@ const CatalogUtils = {
             !empty(productPrice) ? productPrice.value : '',
             !empty(productPrice) ? productPrice.currencyCode : '',
             '',
-            masterProductID
+            masterProductID,
+            ('eswIsDigitalProduct' in product.custom && product.custom.eswIsDigitalProduct) ? Constants.DIGITAL_PRODUCT_CATEGORY : ''
         ];
-
         // Add custom records
         if (!empty(fieldMapping)) {
             Object.keys(fieldMapping).forEach(function (key) {
@@ -127,7 +132,6 @@ const CatalogUtils = {
                 recordArray.push(valFromMappedField);
             });
         }
-
         csvWriter.writeNext(recordArray);
     }
 };
@@ -141,7 +145,6 @@ function execute() {
     let saleableProducts;
     let fWriter;
     let csvWriter;
-    let Constants = require('*/cartridge/scripts/util/Constants');
     let uploadMethod = eswCoreHelper.getCatalogUploadMethod();
     let isEswCatalogFeatureEnabled = eswCoreHelper.isEswCatalogFeatureEnabled();
     try {
@@ -245,6 +248,8 @@ function execute() {
         Logger.error('ESW Catalog Sync Job error: ' + e);
         return new Status(Status.ERROR);
     }
+    let serviceName = eswCoreHelper.getCatalogServiceName(uploadMethod);
+    eswCoreHelper.updateServiceLastExecuted(serviceName);
     return new Status(Status.OK);
 }
 

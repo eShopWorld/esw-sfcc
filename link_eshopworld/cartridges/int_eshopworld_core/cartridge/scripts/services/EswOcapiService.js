@@ -1,22 +1,24 @@
 'use strict';
+
 /**
  * Helper script to get all ESW services
- **/
+ * */
 const LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Constants = require('*/cartridge/scripts/util/Constants');
-
+const eswServices = require('*/cartridge/scripts/helper/eswServices');
 const eShopWorldOcapiServices = {
     ocapiBasketService: function () {
         let basketPatchService = LocalServiceRegistry.createService('EswOcapiBasketService', {
             createRequest: function (service, args) {
-                let serviceUrl = service.URL;
-                var bearerToken = !args.authToken || empty(args.authToken) ? request.httpHeaders.authorization : args.authToken;
+                service.URL = eswServices.getEswServiceUrl('EswOcapiBasketService');
+                let bearerToken = !args.authToken || empty(args.authToken) ? request.httpHeaders.authorization : args.authToken;
+                // Add slash before basketId if not present
                 if (service.URL.indexOf('{basket_id}') === -1) {
-                    if (args.basketId) {
-                        serviceUrl += args.basketId;
+                    if (service.URL.charAt(service.URL.length - 1) !== '/') {
+                        service.URL += '/';
                     }
-                    service.URL = serviceUrl;
+                    service.URL += args.basketId;
                     if (args.countryCode) {
                         service.URL += Constants.COUNTRY_CODE + args.countryCode;
                     }
@@ -42,6 +44,7 @@ const eShopWorldOcapiServices = {
     ocapiOrderService: function () {
         let basketPatchService = LocalServiceRegistry.createService('EswOcapiOrderService', {
             createRequest: function (service, args) {
+                service.URL = eswServices.getEswServiceUrl('EswOcapiOrderService');
                 let bearerToken = !args.authToken || empty(args.authToken) ? request.httpHeaders.authorization : args.authToken;
                 service.addHeader('Authorization', bearerToken);
                 let requestBody = { basket_id: args.basketId };

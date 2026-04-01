@@ -73,10 +73,12 @@
                     <div class="coupons-and-promos">
                         <isinclude template="cart/cartCouponDisplay" />
                     </div>
-                    <isif condition="${(!eswHelper.getEShopWorldModuleEnabled() || !eswHelper.isESWSupportedCountry()) || (eswHelper.isSelectedCountryOverrideShippingEnabled() && !empty(eswOverrideShipping) && eswOverrideShipping.length > 1)}">
-	                    <div class="row">
-	                        <isinclude template="cart/cartShippingMethodSelection" />
-	                    </div>
+                    <isif condition="${!pdict.isOnlyDigitalProductsInCart}">
+                        <isif condition="${(!eswHelper.getEShopWorldModuleEnabled() || !eswHelper.isESWSupportedCountry()) || (eswHelper.isSelectedCountryOverrideShippingEnabled() && !empty(eswOverrideShipping) && eswOverrideShipping.length > 1)}">
+                            <div class="row">
+                                <isinclude template="cart/cartShippingMethodSelection" />
+                            </div>
+                        </isif>
                     </isif>
                     <isinclude template="cart/cartTotals" />
                     <div class="row">

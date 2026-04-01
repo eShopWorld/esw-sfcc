@@ -1,7 +1,7 @@
 'use strict';
 
-var collections = require('*/cartridge/scripts/util/collections');
-var Resource = require('dw/web/Resource');
+const collections = require('*/cartridge/scripts/util/collections');
+const Resource = require('dw/web/Resource');
 
 /**
  * get the promotions applied to the product line item
@@ -10,24 +10,27 @@ var Resource = require('dw/web/Resource');
  *                               product line item.
  */
 function getAppliedPromotions(lineItem) {
-    var priceAdjustments;
+    let priceAdjustments;
 
     if (lineItem.priceAdjustments.getLength() > 0) {
-        priceAdjustments = collections.map(lineItem.priceAdjustments, function (priceAdjustment) {
-            if (priceAdjustment.promotion) {
+        priceAdjustments = collections.map(
+            lineItem.priceAdjustments,
+            function (priceAdjustment) {
+                if (priceAdjustment.promotion) {
+                    return {
+                        callOutMsg: priceAdjustment.promotion.calloutMsg
+                            ? priceAdjustment.promotion.calloutMsg.markup : '',
+                        name: priceAdjustment.promotion.name,
+                        details: priceAdjustment.promotion.details
+                            ? priceAdjustment.promotion.details.markup : '',
+                        promotionID: priceAdjustment.promotion.ID
+                    };
+                }
                 return {
-                    callOutMsg: priceAdjustment.promotion.calloutMsg
-                        ? priceAdjustment.promotion.calloutMsg.markup : '',
-                    name: priceAdjustment.promotion.name,
-                    details: priceAdjustment.promotion.details
-                        ? priceAdjustment.promotion.details.markup : '',
-                    promotionID: priceAdjustment.promotion.ID
+                    callOutMsg: Resource.msg('label.genericDiscount', 'common', null)
                 };
             }
-            return {
-                callOutMsg: Resource.msg('label.genericDiscount', 'common', null)
-            };
-        });
+        );
     }
 
     return priceAdjustments;

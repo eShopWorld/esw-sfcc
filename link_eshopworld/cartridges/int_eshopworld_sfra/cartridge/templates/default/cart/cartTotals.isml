@@ -1,4 +1,4 @@
-<isif condition="${!eswHelper.isEswNativeShippingHidden() || eswHelper.isSelectedCountryOverrideShippingEnabled()}">
+<isif condition="${!pdict.isOnlyDigitalProductsInCart && (!eswHelper.isEswNativeShippingHidden() || eswHelper.isSelectedCountryOverrideShippingEnabled())}">
     <div class="row">
         <div class="col-8">
             <isif condition="${eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()}">
@@ -57,7 +57,7 @@
 </div>
 
 <iscomment>Shipping total disclaimer</iscomment>
-<isif condition="${eswHelper.isESWSupportedCountry() && eswHelper.isEswNativeShippingHidden() && !eswHelper.isSelectedCountryOverrideShippingEnabled()}">
+<isif condition="${!pdict.isOnlyDigitalProductsInCart && eswHelper.isESWSupportedCountry() && eswHelper.isEswNativeShippingHidden() && !eswHelper.isSelectedCountryOverrideShippingEnabled()}">
     <div class="row">
         <div class="col-12">
             <div class="alert alert-info">${Resource.msg('hide.shipping.disclaimer.msg', 'esw', null)}</div>
