@@ -14,6 +14,7 @@ const URLUtils = require('dw/web/URLUtils');
 const ContentMgr = require('dw/content/ContentMgr');
 
 const eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
 const Constants = require('*/cartridge/scripts/util/Constants');
 
 const getEswHelper = {
@@ -41,6 +42,12 @@ const getEswHelper = {
     isEnabledMultiOrigin: function () {
         return this.getEShopWorldModuleEnabled() && Site.getCustomPreferenceValue('eswMultiOriginEnabled');
     },
+    isEswSelfHostedOcEnabled: function () {
+        return this.getEShopWorldModuleEnabled() && Site.getCustomPreferenceValue('isEswSelfHostedOcEnabled');
+    },
+    getEswSelfhostedOcPageUrlPref: function () {
+        return Site.getCustomPreferenceValue('eswSelfhostedOcPageUrl');
+    },
     /**
      * Checks if the ESW Embedded Checkout feature is enabled.
      *
@@ -50,12 +57,26 @@ const getEswHelper = {
         let result = false;
         try {
             const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
-            result = !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath());
+            result = Site.getCustomPreferenceValue('eswIsIframeCheckoutEnabled') && !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath());
         } catch (e) {
             // if cartridge is not inculded then gracefully return false from the function
             result = false;
         }
         return this.getEShopWorldModuleEnabled() && result;
+    },
+    isEswEnabledSparkPricingConversion: function () {
+        try{
+            const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
+            let countryCode = this.getAvailableCountry();
+            let selectedCountryDetail = this.getSelectedCountryDetail(countryCode);
+            let isFixedPriceCountry = selectedCountryDetail ? selectedCountryDetail.isFixedPriceModel : false;
+            return !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath())
+                    && this.getEShopWorldModuleEnabled() 
+                    && Site.getCustomPreferenceValue('eswIsSparkDynamicPricingEnabled') 
+                    && !isFixedPriceCountry;
+        }catch(e){
+            return false;
+        }
     },
     getEswHeadlessSiteUrl: function () {
         return Site.getCustomPreferenceValue('eswHeadlessSiteUrl');
@@ -69,7 +90,7 @@ const getEswHelper = {
         let embScriptPath = null;
         try {
             const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
-            if (this.isEswEnabledEmbeddedCheckout()) {
+            if (this.isEswEnabledEmbeddedCheckout() || this.isEswEnabledSparkPricingConversion()) {
                 embScriptPath = embCheckoutHelper.getEswEmbCheckoutScriptPath();
             }
         } catch (e) {
@@ -99,6 +120,9 @@ const getEswHelper = {
                 } else if (serviceUrl.indexOf('api/v3') !== -1) {
                     paVersion = Constants.PA_V3;
                 }
+            } else {
+                let version = Site.getCustomPreferenceValue('eswPricingAdvisorVersion');
+                paVersion = (version && version.value === 'v4') ? Constants.PA_V4 : Constants.PA_V3;
             }
         } catch (e) {
             paVersion = Constants.PA_V3;
@@ -111,7 +135,7 @@ const getEswHelper = {
      */
     getCatalogUploadMethod: function () {
         let LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-        let uploadMethod = Constants.UNKNOWN;
+        let uploadMethod = this.isEswCatalogFeatureEnabled() ? Constants.API : Constants.SFTP;
 
         try {
             if (this.isEswCatalogFeatureEnabled()) {
@@ -367,7 +391,7 @@ const getEswHelper = {
         return Site.getCustomPreferenceValue('eswLocalizedPromotions');
     },
     isFrontendConversionEnabled: function () {
-        return Site.getCustomPreferenceValue('eswEnableFrontendPricesConversion');
+        return Site.getCustomPreferenceValue('eswEnableFrontendPricesConversion') && !this.isEswEnabledSparkPricingConversion();
     },
     isSkipFlaggedLocalPriceEnabled: function () {
         return Site.getCustomPreferenceValue('eswSkipFlaggedLocalPrice');
@@ -597,6 +621,23 @@ const getEswHelper = {
             roundingRules: roundingFinal
         };
     },
+    getPwaUrl: function () {
+        return Site.getCustomPreferenceValue('eswPwaUrl');
+    },
+    /**
+     * Get PWA shopper url
+     * @param {string} countryCode - country code
+     * @returns {string} - PWA shopper url
+     */
+    getPwaShopperUrl: function (countryCode) {
+        let baseUrl = this.getPwaUrl();
+        if (!empty(countryCode)) {
+            // eslint-disable-next-line no-param-reassign
+            countryCode = countryCode.toLowerCase();
+            baseUrl += '/' + countryCode;
+        }
+        return baseUrl;
+    },
     /*
      * Function to set initial selected country from cookie or geolocation or preferences or URL
      */
@@ -667,6 +708,93 @@ const getEswHelper = {
             promotionPriceObj = false;
         }
         return eswCalculationHelper.getMoneyObject(price, noAdjustment, formatted, promotionPriceObj === false ? noRounding : true, selectedCountryInfoObjParam, promotionPriceObj);
+    },
+    /**
+     * Get PWA shopper url
+     * @param {obj} currentBasket - Basket
+     * @param {obj} selectedCountryDetail - selected country detail
+     * @param {obj} docBasket - basket object
+     * @returns {number} grandTotal - grand order total
+     */
+    getGrandTotal: function (currentBasket, selectedCountryDetail) {
+        let pricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').eswPricingHelper;
+        const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+        let localizeObj = {
+            localizeCountryObj: {
+                countryCode: selectedCountryDetail.countryCode,
+                currencyCode: selectedCountryDetail.defaultCurrencyCode
+            },
+            applyCountryAdjustments: 'true',
+            applyRoundingModel: 'true'
+        };
+        let conversionPrefs = pricingHelper.getConversionPreference(localizeObj);
+        let grandTotal = eswHelperHL.getFinalOrderTotalsObject(currentBasket, localizeObj, conversionPrefs).value;
+        grandTotal = !empty(grandTotal) ? grandTotal : null;
+        return grandTotal;
+    },
+    /**
+     * Get content asset
+     * @param {*} contentAssetId - content asset id
+     * @returns {string} - content body
+     */
+    getContentAsset: function (contentAssetId) {
+        let contentBody = null;
+        let Resource = require('dw/web/Resource');
+        try {
+            let content = ContentMgr.getContent(contentAssetId);
+            if (content) {
+                contentBody = content.custom ? content.custom.body.markup : '';
+            }
+        } catch (e) {
+            contentBody = null;
+        }
+        if (empty(contentBody)) {
+            if (contentAssetId === 'esw-display-return-prohibited-message') {
+                contentBody = Resource.msg('warning.product.not.returnable', 'esw', null);
+            }
+        }
+        return contentBody;
+    },
+    /**
+     * Change product prices from basket line item, this function should be used whenever need to change product price
+     * @param {*} basketLineItems - basket line items from basket
+     * @param {*} selectedCountryLocalizeObj - selectedCountryLocalizeObj
+     * @returns {Object} - modified line items
+     */
+    modifyLineItems: function (basketLineItems, selectedCountryLocalizeObj) {
+        const eswHelperHL = require('*/cartridge/scripts/helper/eswHelperHL');
+        let docModifiedLineItems = new ArrayList([]);
+        let isOrderableBasket = true;
+        for (let i = 0; i < basketLineItems.length; i++) {
+            let productItem = basketLineItems[i];
+            if (!selectedCountryLocalizeObj.isFixedPriceModel && !empty(productItem.price)) {
+                productItem.price = this.getMoneyObject(productItem.price.toString(), false, false, false, selectedCountryLocalizeObj).value;
+                productItem.basePrice = this.getMoneyObject(productItem.basePrice.toString(), false, false, false, selectedCountryLocalizeObj).value;
+                productItem.priceAfterItemDiscount = this.getMoneyObject(productItem.priceAfterItemDiscount.toString(), false, false, false, selectedCountryLocalizeObj).value;
+                productItem.priceAfterOrderDiscount = this.getMoneyObject(productItem.priceAfterOrderDiscount.toString(), false, false, false, selectedCountryLocalizeObj).value;
+                for (let j = 0; j < productItem.priceAdjustments.length; j++) {
+                    if (request.isSCAPI()) {
+                        productItem.priceAdjustments[j].price = this.getMoneyObject(productItem.priceAdjustments[0].price.toString().replace(/-/g, ""), false, false, true, selectedCountryLocalizeObj).value;
+                        if (productItem.priceAfterItemDiscount !== (productItem.price - productItem.priceAdjustments[j].price)) {
+                            productItem.priceAfterItemDiscount = productItem.price - productItem.priceAdjustments[j].price;
+                            productItem.priceAdjustments[j].price = -productItem.priceAdjustments[j].price;
+                        }
+                    } else {
+                        productItem.priceAdjustments[j].price = this.getMoneyObject(productItem.priceAdjustments[0].price.toString(), false, false, false, selectedCountryLocalizeObj).value;
+                    }
+                }
+            }
+            // restricted product
+            productItem.c_eswRestrictedProduct = eswHelperHL.isProductRestricted(productItem.productId, selectedCountryLocalizeObj.countryCode);
+            if (isOrderableBasket === true && productItem.c_eswRestrictedProduct === true) {
+                isOrderableBasket = false;
+            }
+            // Return restricted product
+            productItem.c_eswReturnProhibited = !productItem.c_eswRestrictedProduct ? eswHelperHL.isReturnProhibited(productItem.productId, selectedCountryLocalizeObj.countryCode) : false;
+            productItem.c_eswReturnProhibitedMsg = this.getContentAsset('esw-display-return-prohibited-message');
+            docModifiedLineItems.add(productItem);
+        }
+        return { docModifiedLineItems: docModifiedLineItems, isOrderableBasket: isOrderableBasket };
     },
     /*
      * applies rounding method as per the rounding model.
@@ -844,12 +972,16 @@ const getEswHelper = {
      */
     getOrderDiscount: function (cart, localizeCountryObj) {
         let orderLevelProratedDiscount = 0;
+        let siteId = Site.getID();
         try {
             if (!empty(localizeCountryObj) && 'localizeCountryObj' in localizeCountryObj) {
                 localizeCountryObj = localizeCountryObj.localizeCountryObj;
             }
             let Money = require('dw/value/Money');
             let that = this;
+            if (siteId === Constants.SITE_GENESIS_SITE_ID) {
+                that.removeThresholdPromo(cart);
+            }
             orderLevelProratedDiscount = that.getOrderProratedDiscount(cart, true);
             let shopperCurrency;
             if (empty(request.httpCookies['esw.currency'])) {
@@ -870,12 +1002,27 @@ const getEswHelper = {
     * @returns {Object} order discount
     */
     getOrderDiscountHL: function (order, localizeObj, conversionPrefs) {
-        let eswHelper = this,
-            discount;
-        localizeObj.selectedFxRate = conversionPrefs.selectedFxRate[0];
-        localizeObj.selectedCountryAdjustments = conversionPrefs.selectedCountryAdjustments[0];
-        discount = eswHelper.getOrderDiscount(order, localizeObj);
-        return !empty(discount) && discount !== null ? discount : 0;
+        try {
+            let eswHelper = this,
+                discount;
+            localizeObj.selectedFxRate = conversionPrefs.selectedFxRate[0];
+            localizeObj.selectedCountryAdjustments = conversionPrefs.selectedCountryAdjustments[0];
+            discount = eswHelper.getOrderDiscount(order, localizeObj);
+            let convertedDiscount = eswHelper.getMoneyObject(discount, false, false, false,{
+                selectedCountry: localizeObj.localizeCountryObj.countryCode,
+                currencyCode: localizeObj.localizeCountryObj.currencyCode,
+                selectedFxRate: conversionPrefs.selectedFxRate[0],
+                selectedCountryAdjustments: conversionPrefs.selectedCountryAdjustments[0],
+                selectedRoundingRule: !empty(conversionPrefs.selectedRoundingRule) ? conversionPrefs.selectedRoundingRule[0] : null
+            }
+            , null);
+            return !empty(convertedDiscount) && convertedDiscount !== null ? convertedDiscount : 0;
+        } catch (error) {
+            return (typeof convertedDiscount !== 'undefined' && !empty(convertedDiscount) && convertedDiscount !== null)
+                ? convertedDiscount
+                : 0;
+        }
+
     },
     /**
      * This function is used to get Order Prorated Discount
@@ -885,17 +1032,23 @@ const getEswHelper = {
      */
     getOrderProratedDiscount: function (cart, applyRounding) {
         let orderLevelProratedDiscount = 0;
-        let discountValue;
+        let discountValue = 0;
+        let discount;
         let allPriceAdjustmentIter = cart.priceAdjustments.iterator();
         while (allPriceAdjustmentIter.hasNext()) {
             let eachPriceAdjustment = allPriceAdjustmentIter.next();
             if (eachPriceAdjustment.priceValue) {
                 if (!empty(applyRounding) && applyRounding) {
-                    discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true, null, true).value;
+                    discount = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true, null, true);
                 } else {
-                    discountValue = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true).value;
+                    discount = this.getMoneyObject((eachPriceAdjustment.priceValue), false, false, true);
                 }
-                if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
+
+                if ('custom' in eachPriceAdjustment && eachPriceAdjustment.custom.thresholdDiscountType === 'order' && eachPriceAdjustment.promotionID === 'orderthresholdPromo') {
+                    // Used the original price instead of the converted price for threshold promotions
+                    orderLevelProratedDiscount += eachPriceAdjustment.price.value;
+                } else if ((eachPriceAdjustment.promotion && eachPriceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER) || eachPriceAdjustment.custom.thresholdDiscountType === 'order') {
+                    discountValue = !empty(discount) ? discount.value : 0;
                     orderLevelProratedDiscount += discountValue;
                 }
             }
@@ -936,15 +1089,25 @@ const getEswHelper = {
             newCookie.setMaxAge(maxAgeSeconds);
         }
         response.addHttpCookie(newCookie);
+        // add cookie is header for SCAPI support as response.addHttpCookie does not work in SCAPI
+        if (request.isSCAPI()) {
+            response.setHttpHeader('c_' + name.replace('esw.', 'eswdot'), value);
+        }
         return newCookie;
     },
-    /*
-     * Function to update value of cookies
+    /**
+     * Function to update cookie value
+     * @param {*} changeCookie 
+     * @param {*} value 
      */
     updateCookieValue: function (changeCookie, value) {
         changeCookie.setValue(value);
         changeCookie.setPath('/');
         response.addHttpCookie(changeCookie);
+        // add cookie is header for SCAPI support as response.addHttpCookie does not work in SCAPI
+        if (request.isSCAPI()) {
+            response.setHttpHeader('c_' + changeCookie.name.replace('esw.', 'eswdot'), value);
+        }
     },
     /*
      * Function to check whether selected country is ESW Allowed Country
@@ -1478,7 +1641,7 @@ const getEswHelper = {
                     fxRate = JSON.parse(session.privacy.fxRate).rate;
                 }
             } else {
-            // Fix for headless architect
+                // Fix for headless architect
                 countryCode = request.httpParameters.get('country-code');
                 if (!empty(countryCode)) {
                     let cDetail = this.getSelectedCountryDetail(countryCode[0]);
@@ -1495,7 +1658,7 @@ const getEswHelper = {
                     shippingLineItemIter = currentBasket.object.defaultShipment.getShippingLineItems().iterator();
                 }
                 shippingLineItem = !empty(shippingLineItemIter) ? shippingLineItemIter.next() : null;
-            /* Check if threshold Promo Already exists */
+                /* Check if threshold Promo Already exists */
                 if (shippingLineItem) {
                     collections.forEach(shippingLineItem.shippingPriceAdjustments, function (lineItemAdjustment) {
                         if (lineItemAdjustment.promotionID === 'thresholdPromo') {
@@ -1513,14 +1676,16 @@ const getEswHelper = {
             while (allLineItemIter.hasNext()) {
                 let priceAdjustment = allLineItemIter.next();
                 if (!(priceAdjustment instanceof dw.order.PriceAdjustment)) {
-                /* eslint-disable no-continue */
+                    /* eslint-disable no-continue */
                     continue;
                 }
                 if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_ORDER && this.isThresholdEnabled(priceAdjustment.promotion)) {
+                    // skip FXrates for threshold order level discounts only
+                    fxRate = 1;
                     discountType = this.getDiscountType(priceAdjustment.promotion);
                     Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
                     if (Discount === '0.1') {
-                    /* eslint-disable no-continue */
+                        /* eslint-disable no-continue */
                         continue;
                     }
                     /* eslint-disable eqeqeq */
@@ -1537,7 +1702,7 @@ const getEswHelper = {
                         discountType = this.getDiscountType(priceAdjustment.promotion);
                         Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
                         if (Discount === '0.1') {
-                        /* eslint-disable no-continue */
+                            /* eslint-disable no-continue */
                             continue;
                         }
                         let shippingPrice = !empty(currentBasket.defaultShipment) ? currentBasket.defaultShipment.adjustedShippingTotalPrice : currentBasket.object.defaultShipment.adjustedShippingTotalPrice;
@@ -1585,7 +1750,7 @@ const getEswHelper = {
                 request.httpCookies['esw.LanguageIsoCode'] = request.getHttpHeaders().get('x-glopal-language');
                 locale = request.httpCookies['esw.LanguageIsoCode'];
             }
-            this.selectCountry(selectedCountry, currencyCode, locale);
+            this.selectCountry(selectedCountry, currencyCode, locale, null);
         }
     },
     /**
@@ -1628,7 +1793,7 @@ const getEswHelper = {
     isOrderPlaced: function (orderID) {
         let OrderMgr = require('dw/order/OrderMgr');
         let order = OrderMgr.getOrder(orderID);
-        return order.status.value === 3 || order.status.value === 4;
+        return !empty(order) && (order.status.value === 3 || order.status.value === 4);
     },
     /**
      * Function to rebuild basket from back to ESW checkout
@@ -1667,7 +1832,9 @@ const getEswHelper = {
                             }
                         });
                     }
-                    delete session.privacy.confirmedOrderID;
+                    if (empty(session.privacy.keepOrderIDForRegistration)) {
+                        delete session.privacy.confirmedOrderID;
+                    }
                     return true;
                 }
                 if (!currentBasket) {
@@ -1935,28 +2102,29 @@ const getEswHelper = {
      * @returns {Object} returns processes response Object
      */
     handleWebHooks: function (reqBody, requestType) {
+        const eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
         let obj = reqBody,
-            responseJSON = {},
-            eswOrderProcessHelper = require('*/cartridge/scripts/helper/eswOrderProcessHelper');
+            responseJSON = {};
         if (!this.isValidEswAuthorization()) {
             response.setStatus(401);
             logger.error('ESW Process Webhooks Check Error: Basic Authentication Token did not match OR requestType not Available in request Headers');
         } else {
-            this.eswInfoLogger('ProcessWebhook Log', JSON.stringify(reqBody));
+            this.eswInfoLogger('ProcessWebhook Log [' + requestType + ']', JSON.stringify(reqBody));
             try {
                 if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
                 } else if (obj && !empty(obj) && (requestType === 'eshopworld.platform.events.logistics.returnorderevent' || requestType === 'logistics-return-order-retailer')) {
                     responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj, requestType);
-                } else if (obj && !empty(obj) && requestType === 'logistics-return-order-retailer') {
-                    responseJSON = eswOrderProcessHelper.markOrderAsReturnV3(obj);
                 } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
                     responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
                 } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.oms.orderholdstatusupdatedevent') {
                     responseJSON = eswOrderProcessHelper.processKonbiniPayment(obj);
+                } else if (obj && !empty(obj) && requestType === Constants.ESW_ORDER_PAYMENT_STATUS_EVENT_NAME) {
+                    responseJSON = eswOrderProcessHelper.handlePostOrderOrderHook(obj);
                 }
             } catch (error) {
                 logger.error('Error while processing order web Hook {0} {1}', error.message, error.stack);
+                this.eswInfoLogger('WebHooks processing encountered an error', '', error.message, error.stack);
             }
         }
         return responseJSON;
@@ -2114,7 +2282,6 @@ const getEswHelper = {
      * Sets OAuth Token
      */
     setOAuthToken: function () {
-        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
         let oAuthObj = eswCoreService.getOAuthService();
         let formData = {
             grant_type: 'client_credentials',
@@ -2125,6 +2292,7 @@ const getEswHelper = {
         let oAuthResult = oAuthObj.call(formData);
         if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
             logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+            this.eswInfoLogger('STS Authentification error', oAuthResult.error, oAuthResult.errorMessage, oAuthResult.msg);
         }
         let eswAuthTokenChunks = this.splitStringIntoChunks(JSON.parse(oAuthResult.object).access_token, Constants.STR_QUOTA_LIMIT);
         // Store chunks in session.privacy with dynamic variable names
@@ -2287,9 +2455,31 @@ const getEswHelper = {
         let totalIncludingOrderDiscount = lineItemContainer.getAdjustedMerchandizeTotalPrice(true);
         let orderDiscount = isESWSupportedCountry ? this.getOrderDiscount(lineItemContainer) : totalExcludingOrderDiscount.subtract(totalIncludingOrderDiscount);
 
+        let isEswThresholdDiscount = false;
+        let priceAdjustmentsItr = lineItemContainer.getPriceAdjustments().iterator();
+        while(priceAdjustmentsItr.hasNext()) {
+            // check at priceAdjustment level for threshold
+            let priceAdjustments = priceAdjustmentsItr.next();
+            if(priceAdjustments.promotionID.indexOf('thresholdPromo') > -1 && isEswThresholdDiscount === false){
+                isEswThresholdDiscount = true;
+                break;
+            }
+            // check at promotion level for threshold
+            let promo = priceAdjustments.getPromotion();
+            if(!empty(promo) && isEswThresholdDiscount === false){
+                if('isEswThresholdPromotion' in promo.getCustom()){
+                    isEswThresholdDiscount = (promo.getCustom().isEswThresholdPromotion === true);
+                    if(isEswThresholdDiscount){
+                        break;
+                    }
+                }
+            }
+        }
+
         return {
             value: orderDiscount.value,
-            formatted: formatMoney(orderDiscount)
+            formatted: formatMoney(orderDiscount),
+            isEswThresholdDiscount: isEswThresholdDiscount
         };
     },
     /**
@@ -2381,6 +2571,13 @@ const getEswHelper = {
         };
     },
     /**
+     * Gets the ESW Sync Post Order Updates site preference value.
+     * @returns {boolean} The value of eswSyncPostOrderUpdates site preference.
+     */
+    isEswPostOrderSyncEnabled: function () {
+        return Site.getCustomPreferenceValue('eswSyncPostOrderUpdates');
+    },
+    /**
      * This params can be built using this.getSfCountryUrlParam function
      * @param {Map} pageParamsMap - params Map from as in page controller
      * @returns {Object} - country info object
@@ -2429,13 +2626,32 @@ const getEswHelper = {
      */
     getLocaleCountry: function (locale) {
         let countryCode = locale;
-        if (locale.indexOf('-') !== -1) {
+        if (locale && locale.indexOf('-') !== -1) {
             let localeArr = locale.split('-');
             if (localeArr.length > 1) {
                 countryCode = localeArr[1];
             }
         }
         return countryCode;
+    },
+    /**
+     * Get customer custom object
+     * @param {*} customerEmail - customer email
+     * @returns {string}- order number
+     */
+    getCustomerCustomObject: function (customerEmail) {
+        let CustomObjectMgr = require('dw/object/CustomObjectMgr'),
+            Transaction = require('dw/system/Transaction'),
+            orderNumber;
+        Transaction.wrap(function () {
+            let co = CustomObjectMgr.getCustomObject('ESW_ORDER_DATA', customerEmail);
+
+            if (co) {
+                orderNumber = co.getCustom().orderNumber;
+                CustomObjectMgr.remove(co);
+            }
+        });
+        return orderNumber;
     },
     /**
      * Return contry detail by local in httpParam or country id (IE, CA) string
@@ -2544,7 +2760,9 @@ const getEswHelper = {
    */
     getDeliveryDiscountsCurrencyCode: function (localizeObj, session) {
         try {
-            if (localizeObj && localizeObj.localizeCountryObj) {
+            if (this.isEswEnabledSparkPricingConversion()) {
+                return this.getBaseCurrency();
+            } else if (localizeObj && localizeObj.localizeCountryObj) {
                 return localizeObj.localizeCountryObj.currencyCode;
             } else if (session && session.privacy && !empty(session.privacy.fxRate)) {
                 return JSON.parse(session.privacy.fxRate).toShopperCurrencyIso;
@@ -2568,7 +2786,7 @@ const getEswHelper = {
         let isPWA = this.isEswPwa(request.httpParameters);
 
         if (!localizeObj && !conversionPrefs) {
-            return this.getMoneyObject(cart.defaultShipment.shippingTotalPrice.value, true, false, false).value;
+            return this.getMoneyObject(cart.defaultShipment.shippingTotalPrice.value, true, false, true).value;
         }
         if (isPWA) {
             let selectedCountryDetail = this.getCountryDetailByParam(localizeObj.localizeCountryObj.countryCode);
@@ -2599,7 +2817,7 @@ const getEswHelper = {
     getDiscountPriceBasedOnArchitecture: function (value, localizeObj, conversionPrefs, isDiscount) {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         const isPWA = eswHelper.isEswPwa(request.httpParameters);
-        if (isPWA && localizeObj.localizeCountryObj) {
+        if ((isPWA && localizeObj.localizeCountryObj) || request.isSCAPI()) {
             shopperCountry = localizeObj.localizeCountryObj.countryCode;
             let selectedCountryDetail = eswHelper.getCountryDetailByParam(shopperCountry);
             let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
@@ -2658,10 +2876,27 @@ const getEswHelper = {
      */
     createShippingDiscount: function (shippingPriceAdjustment, shippingDiscountAmount, beforeDiscount, currencyCode, localizeObj, conversionPrefs) {
         let isHeadlessArchitecture = localizeObj && conversionPrefs;
-
+        let eswServiceHelperV3 = require('*/cartridge/scripts/helper/serviceHelperV3');
+        let promotion = shippingPriceAdjustment.getPromotion();
+        let description;
+        let shopperCountry = localizeObj && 'countryCode' in localizeObj ? localizeObj.countryCode : null;
+        if (promotion) {
+            if (empty(shopperCountry)) {
+                let param = request.httpParameters;
+                shopperCountry = !empty(param['country-code']) && !empty(param['country-code'][0]) ? param['country-code'][0] : null;
+            }
+            let calloutMsg = promotion.getCalloutMsg();
+            if (!empty(shopperCountry)) {
+                let selectedCountryDetail = this.getCountryDetailByParam(shopperCountry);
+                let selectedCountryLocalizeObj = this.getCountryLocalizeObj(selectedCountryDetail);
+                description = !empty(calloutMsg) && 'markup' in calloutMsg ? eswServiceHelperV3.convertPromotionMessage(calloutMsg.markup, selectedCountryDetail, selectedCountryLocalizeObj) : '';
+            } else {
+                description = !empty(calloutMsg) && 'markup' in calloutMsg ? eswServiceHelperV3.convertPromotionMessage(calloutMsg.markup) : '';
+            }
+        }
         return {
             title: shippingPriceAdjustment.promotionID,
-            description: shippingPriceAdjustment.lineItemText,
+            description: description,
             discount: {
                 currency: currencyCode,
                 amount: isHeadlessArchitecture ? shippingDiscountAmount.toFixed(2) : shippingDiscountAmount.toFixed(3)
@@ -2679,7 +2914,6 @@ const getEswHelper = {
     fetchJwksFromEsw: function () {
         try {
             let log = dw.system.Logger.getLogger('EShopWorldInfo', 'EswInfoLog');
-            let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
             let fetchJwksFromEswService = eswCoreService.getJwksFromEswService();
             let fetchJwksFromEswServiceResult = fetchJwksFromEswService.call();
             if (fetchJwksFromEswServiceResult.status === 'ERROR' || empty(fetchJwksFromEswServiceResult.object)) {
@@ -2726,10 +2960,67 @@ const getEswHelper = {
         return [(address.address1 || ''), (address.city || ''), (address.postalCode || '')].join(' - ');
     },
     /**
-     * Process the retailerCartId from ocPayloadJson
-     * @param {Object} retailerCartId - The payload JSON object
-     * @returns {Object} - Processed retailerCartId parts
+     * function to return if Azure Insight logging is enabled
+     * @returns {bool} TRUE if Azure Insight logging is enabled, FALSE otherwise
      */
+    isEswAzureInsightLogsEnabled: function () {
+        return Site.getCustomPreferenceValue('eswEnableAzureInsightLogs');
+    },
+    /**
+     * function to return the Azure Instrumentation Key (iKey)
+     * @returns {string|null} The iKey as a string if configured, null otherwise
+     */
+    getEswAzureInsightiKey: function () {
+        return this.isEswAzureInsightLogsEnabled()
+            ? Site.getCustomPreferenceValue('eswAzureInsightiKey')
+            : null;
+    },
+    /**
+ * Return the countries configs
+ * @returns {Array} - array of countries
+ */
+    getCountriesConfigurations: function () {
+        try {
+            let allCountriesCO = this.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
+                countriesArr = [];
+            if (allCountriesCO.count > 0) {
+                while (allCountriesCO.hasNext()) {
+                    let countryDetail = allCountriesCO.next();
+                    let countryCode = countryDetail.getCustom().countryCode;
+                    if (!empty(countryCode)) {
+                        countriesArr.push({
+                            countryCode: countryCode,
+                            isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
+                            name: countryDetail.getCustom().name,
+                            defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
+                            eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
+                            baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
+                            isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
+                            isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
+                            ESW_HUB_Address: {
+                                hubAddress: countryDetail.getCustom().hubAddress,
+                                hubAddressState: countryDetail.getCustom().hubAddressState,
+                                hubAddressCity: countryDetail.getCustom().hubAddressCity,
+                                hubAddressPostalCode: countryDetail.getCustom().hubAddressPostalCode
+                            },
+                            eswPackage: {
+                                eswToSfcc: countryDetail.getCustom().eswToSfcc,
+                                sfccToEsw: countryDetail.getCustom().sfccToEsw
+                            }
+                        });
+                    }
+                }
+            }
+            return countriesArr;
+        } catch (error) {
+            logger.error('Error while fetching Countries Configurations {0} ', error);
+        }
+        return [];
+    },
+    /* Process the retailerCartId from ocPayloadJson
+    * @param {Object} retailerCartId - The payload JSON object
+    * @returns {Object} - Processed retailerCartId parts
+    */
     getRetailerCartId: function (retailerCartId) {
         const parts = retailerCartId.split('__');
         let uuid;
@@ -2743,12 +3034,12 @@ const getEswHelper = {
     },
     /**
      * Generate preOrder request for the embeded checkout
+     * @param {Array} promotionsCallouts - promotions callouts array: example ["pid":["promoCallout1","promoCallout2"]]
      * @returns {Object} - order request response object
      */
-    generatePreOrderUsingBasket: function () {
+    generatePreOrderUsingBasket: function (promotionsCallouts) {
         let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
-        let eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-            preorderServiceObj = eswCoreService.getPreorderServiceV2(),
+        let preorderServiceObj = eswCoreService.getPreorderServiceV2(),
             eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper'),
             redirectPreference = eswHelper.getRedirect();
         if (redirectPreference.value !== 'Cart' && session.privacy.guestCheckout == null) {
@@ -2761,7 +3052,7 @@ const getEswHelper = {
         }
         eswHelper.setOAuthToken();
 
-        let requestObj = eswServiceHelper.preparePreOrder();
+        let requestObj = eswServiceHelper.preparePreOrder(null,null,null,null,promotionsCallouts);
         let BasketMgr = require('dw/order/BasketMgr');
         let currentBasket = BasketMgr.getCurrentBasket();
         let eswRetailerCartId = currentBasket.UUID + '__' + Date.now();
@@ -2770,10 +3061,27 @@ const getEswHelper = {
             requestObj.shopperCheckoutExperience.metadataItems = [];
         }
         requestObj.shopperCheckoutExperience.metadataItems.push({ name: 'dwsid', value: request.httpCookies.dwsid.value });
-
+        // Add metadata items for self-hosted OC if enabled
+        if (this.isEswSelfHostedOcEnabled()) {
+            const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
+            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestObj.retailerCartId);
+            if (!empty(selfHostedOcMetadata)) {
+                requestObj.retailerCheckoutExperience.metadataItems.push({
+                    Name: selfHostedOcMetadata.metadataName,
+                    Value: selfHostedOcMetadata.metadataValue
+                });
+            }
+        }
         eswHelper.validatePreOrder(requestObj, true);
         session.privacy.confirmedOrderID = currentBasket.UUID;
         let result = preorderServiceObj.call(JSON.stringify(requestObj));
+        try {
+            // Works only if call is for E2E testing
+            const e2eHelpers = require('*/cartridge/scripts/helpers/e2eHelpers');
+            return e2eHelpers.returnPreorderWithPayload(result, requestObj);
+        } catch (e) {
+            //do nothing
+        }
         return result;
     },
     getDwsid: function (reqObj) {
@@ -2789,32 +3097,6 @@ const getEswHelper = {
         }
         return dwsid;
     },
-    getPWAHeadlessAccessToken: function (reqObj) {
-        let accessToken = '';
-        if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
-            let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
-            // eslint-disable-next-line no-restricted-syntax
-            for (let metaObj in metadataItems) {
-                if ((metadataItems[metaObj] && metadataItems[metaObj].name === 'accessTokenPart1') || (metadataItems[metaObj] && metadataItems[metaObj].name === 'authorization')) {
-                    accessToken = metadataItems[metaObj].value;
-                    if (metadataItems[metaObj] && metadataItems[metaObj].name === 'authorization') {
-                        accessToken = { authorization: accessToken };
-                    }
-                }
-            }
-        }
-        ['cartItems', 'lineItems'].forEach(function (key) {
-            if (!empty(reqObj[key]) && !empty(reqObj[key][0].metadataItems)) {
-                let metadataItems = reqObj[key][0].metadataItems;
-                for (let i = 0; i < metadataItems.length; i++) {
-                    if (metadataItems[i] && metadataItems[i].name === 'accessTokenPart2') {
-                        accessToken += metadataItems[i].value;
-                    }
-                }
-            }
-        });
-        return accessToken;
-    },
     /**
      * This function sets the override pricebook
      * configured in custom site preference.
@@ -2823,7 +3105,7 @@ const getEswHelper = {
      * sets the basketCurrency for pricebook override
      */
     setEmbededCheckoutOverridePriceBooks: function (basket) {
-        var param = request.httpParameters,
+        let param = request.httpParameters,
             arrPricebooks = [],
             PriceBookMgr = require('dw/catalog/PriceBookMgr');
         if (!empty(param['country-code'])) {
@@ -2888,12 +3170,12 @@ const getEswHelper = {
             }
         }
     },
-     /* Add currency symbol or formatted money object to a price range string
-     * @param {string} priceRange - A string representing a price range (e.g., "65.00 - 180.01")
-     * @param {dw.order.OrderAddress} selectedCountryDetail - Object that contains selectedCountryDetail
-     * @param {Object} selectedCountryLocalizeObj - Object that contains selectedCountryLocalizeObj
-     * @returns {string} - A string with currency symbols or formatted money objects
-     */
+    /* Add currency symbol or formatted money object to a price range string
+    * @param {string} priceRange - A string representing a price range (e.g., "65.00 - 180.01")
+    * @param {dw.order.OrderAddress} selectedCountryDetail - Object that contains selectedCountryDetail
+    * @param {Object} selectedCountryLocalizeObj - Object that contains selectedCountryLocalizeObj
+    * @returns {string} - A string with currency symbols or formatted money objects
+    */
     updatePriceFilterWithCurrency: function (priceRange, selectedCountryDetail, selectedCountryLocalizeObj) {
         try {
             let currency,
@@ -3004,10 +3286,228 @@ const getEswHelper = {
         });
         return headersArr;
     },
+    getSelectedCountryMarketingDetails: function () {
+        let marketingDetails = {};
+        let countryCode = '';
+        if (request.httpCookies && request.httpCookies['esw.location']) {
+            countryCode = request.httpCookies['esw.location'].value;
+        } else if (!empty(request.locale)) {
+            countryCode = request.locale && request.locale.indexOf('_') !== -1 ? request.locale.split('_')[1] : request.locale;
+        }
+        let selectedCountryCO = this.getCustomObjectDetails('ESW_COUNTRIES', countryCode);
+        if (selectedCountryCO) {
+            marketingDetails.isEswSmsMarketingOptinHidden = selectedCountryCO.getCustom().isEswSmsMarketingOptinHidden;
+            marketingDetails.isEswEmailMarketingOptinHidden = selectedCountryCO.getCustom().isEswEmailMarketingOptinHidden;
+            marketingDetails.isEswPostMarketingOptinHidden = selectedCountryCO.getCustom().isEswPostMarketingOptinHidden;
+            marketingDetails.isEswPhoneMarketingOptinHidden = selectedCountryCO.getCustom().isEswPhoneMarketingOptinHidden;
+        }
+        return marketingDetails;
+    },
     /**
-      * Get default currency for selected country and set currency
-      * @return {string} - defaultCurrencyCode - payment Information
-      */
+     * returns eswOverrideOptinTextFields value
+     *
+     * @returns {boolean} eswOverrideOptinTextFields
+     */
+    getEswOverrideOptinTextFields: function () {
+        return Site.getCustomPreferenceValue('eswOverrideOptinTextFields');
+    },
+     /**
+     * returns isEswOptinsEnabled value
+     * @returns {boolean} esw
+     */
+    getEswOptinsEnabled: function () {
+        return Site.getCustomPreferenceValue('isEswOptinsEnabled');
+    },
+    /**
+     * returns isEswEmailMarketingOptinEnabled value
+     *
+     * @returns {boolean} isEswEmailMarketingOptinEnabled
+     */
+    getEswEmailMarketingOptinEnabled: function () {
+        return Site.getCustomPreferenceValue('isEswEmailMarketingOptinEnabled');
+    },
+    /**
+     * returns isEswSmsMarketingOptinEnabled value
+     *
+     * @returns {boolean} isEswSmsMarketingOptinEnabled
+     */
+    getEswSmsMarketingOptinEnabled: function () {
+        return Site.getCustomPreferenceValue('isEswSmsMarketingOptinEnabled');
+    },
+    /**
+     * returns isEswPostMarketingOptinEnabled value
+     *
+     * @returns {boolean} isEswPostMarketingOptinEnabled
+     */
+    getEswPostMarketingOptinEnabled: function () {
+        return Site.getCustomPreferenceValue('isEswPostMarketingOptinEnabled');
+    },
+    /**
+     * returns isEswPhoneMarketingOptinEnabled value
+     *
+     * @returns {boolean} isEswPhoneMarketingOptinEnabled
+     */
+    getEswPhoneMarketingOptinEnabled: function () {
+        return Site.getCustomPreferenceValue('isEswPhoneMarketingOptinEnabled');
+    },
+    /**
+     * Get marketing options.
+     *
+     * @returns {Array} An array of objects containing marketing options and values.
+     */
+    getMarketingOptIns: function () {
+        let marketingOptIns = [];
+        try {
+            const Resource = require('dw/web/Resource');
+            let optInTypes = [];
+            let countryMarketingOptinsObj = this.getSelectedCountryMarketingDetails();
+            if (!empty(countryMarketingOptinsObj)) {
+                // Add SMS option if enabled
+                if (this.getEswSmsMarketingOptinEnabled() && !countryMarketingOptinsObj.isEswSmsMarketingOptinHidden) {
+                    optInTypes.push('Sms');
+                }
+                // Add Post option if enabled
+                if (this.getEswPostMarketingOptinEnabled() && !countryMarketingOptinsObj.isEswPostMarketingOptinHidden) {
+                    optInTypes.push('Post');
+                }
+                // Add Email option if enabled
+                if (this.getEswEmailMarketingOptinEnabled() && !countryMarketingOptinsObj.isEswEmailMarketingOptinHidden) {
+                    optInTypes.push('Email');
+                }
+
+                // Add Phone option if enabled
+                if (this.getEswPhoneMarketingOptinEnabled() && !countryMarketingOptinsObj.isEswPhoneMarketingOptinHidden) {
+                    optInTypes.push('Phone');
+                }
+            }
+            let isSelected;
+            let isEswOverrideOptinTextFieldsEnabled = this.getEswOverrideOptinTextFields();
+            optInTypes.forEach(function (type) {
+                switch (type) {
+                    case 'Email':
+                        isSelected = customer && customer.profile && 'custom' in customer.profile && 'eswMarketingOptIn' in customer.profile.custom ? customer.profile.custom.eswMarketingOptIn : false;
+                        break;
+                    case 'Sms':
+                        isSelected = customer && customer.profile && 'custom' in customer.profile && 'eswSMSMarketingOptIn' in customer.profile.custom ? customer.profile.custom.eswSMSMarketingOptIn : false;
+                        break;
+                    case 'Post':
+                        isSelected = customer && customer.profile && 'custom' in customer.profile && 'eswPostMarketingOptIn' in customer.profile.custom ? customer.profile.custom.eswPostMarketingOptIn : false;
+                        break;
+                    case 'Phone':
+                        isSelected = customer && customer.profile && 'custom' in customer.profile && 'eswPhoneMarketingOptIn' in customer.profile.custom ? customer.profile.custom.eswPhoneMarketingOptIn : false;
+                        break;
+                    default:
+                    // Do nothing
+                }
+                const optIn = {
+                    type: type,
+                    isSelected: isSelected
+                };
+                if (!empty(isEswOverrideOptinTextFieldsEnabled) && isEswOverrideOptinTextFieldsEnabled === true) {
+                    optIn.legalHintText = Resource.msg('esw.marketing.signUp', 'esw', null);
+                }
+                marketingOptIns.push(optIn);
+            });
+        } catch (error) {
+            if (error instanceof Error) {
+                logger.error('Error while adding marketing optin {0} {1}', error.message, error.stack);
+            } else {
+                logger.error('Unknown error while adding marketing optin: {0}', String(error));
+            }
+        }
+        return marketingOptIns;
+    },
+    /**
+     * Sets the marketing opt-in preferences for a customer profile based on order values
+     * @param {dw.customer.Profile} profile - The customer profile to update
+     * @param {dw.order.Order} order - The order containing opt-in values
+     */
+    setPostRegistrationOptins: function (profile, order) {
+        try {
+            // update marketing optin values on customer profile
+            profile.custom.eswMarketingOptIn = order.custom.eswEmailMarketingOptIn;
+            profile.custom.eswSMSMarketingOptIn = order.custom.eswSMSMarketingOptIn;
+            profile.custom.eswPhoneMarketingOptIn = order.custom.eswPhoneMarketingOptIn;
+            profile.custom.eswPostMarketingOptIn = order.custom.eswPostMarketingOptIn;
+        } catch (error) {
+            logger.error('Unknown error while adding marketing optin to profile: {0}', String(error));
+        }
+    },
+    /**
+     * Grt OCAPI admin token
+     * @returns {Object} - OCAPI token or Error
+     */
+    getAdminOAuthToken: function () {
+        let ocapiDataServiceAuth = eswCoreService.getDataOcapiAuthToken();
+        let ocapiAuthServiceRes = ocapiDataServiceAuth.call();
+        if (ocapiAuthServiceRes && ocapiAuthServiceRes.isOk()) {
+            return {
+                success: true,
+                token: ocapiAuthServiceRes.getObject().access_token
+            };
+        } else {
+            let errorMsg = 'Failed to get Admin OAuth Token';
+            let details = '';
+            if (ocapiAuthServiceRes) {
+                details = `Status: ${ocapiAuthServiceRes.getStatus()},
+                    Error: ${ocapiAuthServiceRes.getError()},
+                    Message: ${ocapiAuthServiceRes.getErrorMessage()
+                    }`;
+                errorMsg += `. ${details}`;
+            } else {
+                details = 'Service result is null or undefined.';
+                errorMsg += `. ${details}`;
+            }
+            return {
+                success: false,
+                error: errorMsg
+            };
+        }
+    },
+    /**
+     * Checks if the given product is marked as an ESW digital product.
+     * @param {dw.catalog.Product} product - The product to check.
+     * @returns {boolean} True if the product is an ESW digital product, otherwise false.
+     */
+    isEswDigitalProduct: function (product) {
+        if (!product || !product.custom) {
+            return false;
+        }
+        return product && product.custom && product.custom.eswIsDigitalProduct === true;
+    },
+    /**
+     * Returns the correct deliveryOptions array for the order.
+     * If all line items are digital, returns [{ deliveryOption: 'Digital' }].
+     * Otherwise, returns order custom deliveryOptions if present, else shipping rates.
+     * @param {Array} lineItems - Array of line item objects (from lineItemsV3.lineItems)
+     * @param {Object} order - The order object (may be null)
+     * @param {string} shopperCurrency - The shopper's currency code
+     * @param {boolean} v2Flag - Flag to determine which version of the checkout API
+     * @returns {Array} - deliveryOptions array
+     */
+    getDeliveryOptions: function (lineItems, order, shopperCurrency, v2Flag) {
+        let eswServiceHelper = require('*/cartridge/scripts/helper/serviceHelper');
+        if (lineItems && lineItems.length > 0) {
+            let allDigital = true;
+            for (let i = 0; i < lineItems.length; i++) {
+                if (!lineItems[i].product || lineItems[i].product.isDigitalProduct !== true) {
+                    allDigital = false;
+                    break;
+                }
+            }
+            if (allDigital) {
+                return [{ deliveryOption: 'Digital' }];
+            }
+        }
+        if ((!empty(order) && 'eswDeliveryOptions' in order.custom && !empty(order.custom.eswDeliveryOptions))) {
+            return JSON.parse(order.custom.eswDeliveryOptions);
+        }
+        return eswServiceHelper.getShippingRates(v2Flag, shopperCurrency);
+    },
+    /*
+    * Get default currency for selected country and set currency
+    * @return {string} - defaultCurrencyCode - payment Information
+    */
     applyDefaultCurrencyForCountry: function () {
         let countryCode = this.getAvailableCountry(),
             selectedCountryCO = this.getCustomObjectDetails('ESW_COUNTRIES', countryCode),
@@ -3023,9 +3523,558 @@ const getEswHelper = {
         }
 
         return defaultCurrencyCode;
+    },
+    /**
+     * Get ESW Country Adjustments for localize country
+     * @param {string} shopperCountry - shopperCountry
+     * @returns {array} returns selected country adjustment
+     */
+    getESWCountryRoundingRules: function (shopperCountry) {
+        try {
+            let roundingModels = this.getPricingAdvisorData().roundingModels,
+                country = !empty(shopperCountry) ? shopperCountry : request.httpCookies['esw.location'];
+            let roundingModel = [];
+            if (!empty(country) && !empty(roundingModels)) {
+                roundingModel = roundingModels.filter(function (roundingModelObj) {
+                    return roundingModelObj.deliveryCountryIso === country;
+                });
+            }
+            return roundingModel;
+        } catch (error) {
+            logger.error('Error while getting rounding rules {0} {1}', error.message, error.stack);
+        }
+        return null;
+    },
+    /* eslint-disable no-undef */
+    /* eslint-disable no-mixed-operators */
+    getCheckoutSamplePayload: function () {
+        return {
+            contactDetails: [],
+            retailerPromoCodes: [],
+            lineItems: [
+                {
+                    quantity: 1,
+                    estimatedDeliveryDateFromRetailer: null,
+                    lineItemId: 1,
+                    product: {
+                        productCode: '69309284M-2',
+                        upc: null,
+                        title: 'Modern Striped Dress Shirt',
+                        description: 'Modern Striped Dress Shirt',
+                        productUnitPriceInfo: {
+                            price: {
+                                currency: 'EUR',
+                                amount: '173.520'
+                            },
+                            discounts: []
+                        },
+                        imageUrl: null,
+                        productUrl: null,
+                        color: 'Blue',
+                        size: '15L',
+                        isNonStandardCatalogItem: false,
+                        metadataItems: null,
+                        isReturnProhibited: false
+                    },
+                    cartGrouping: 'Group 1',
+                    metadataItems: null
+                }
+            ],
+            shopperCurrencyIso: 'EUR',
+            pricingSynchronizationId: 'PBVPBV_IE_abc87dc3-f921-407e-9dbf-ab2d3f5eed73',
+            deliveryCountryIso: 'IE',
+            retailerCheckoutExperience: {
+                BaseUrl: null,
+                ContinueShoppingUrl: null,
+                BackToCartUrl: null,
+                logoURL: null,
+                metadataItems: [
+                    {
+                        Name: 'OrderConfirmationBase64EncodedAuth_TestOnly',
+                        Value: '1 parameters'
+                    },
+                    {
+                        Name: 'InventoryCheckBase64EncodedAuth_TestOnly',
+                        Value: '1 parameters'
+                    },
+                    {
+                        Name: 'InventoryCheckUri_TestOnly',
+                        Value: URLUtils.https('EShopWorld-ValidateInventory').toString()
+                    },
+                    {
+                        Name: 'OrderConfirmationUri_TestOnly',
+                        Value: URLUtils.https('EShopWorld-Notify').toString()
+                    }
+                ]
+            },
+            shopperCheckoutExperience: {
+                useDeliveryContactDetailsForPaymentContactDetails: true,
+                emailMarketingOptIn: false,
+                smsMarketingOptIn: false,
+                registeredProfileId: null,
+                shopperCultureLanguageIso: 'en-US',
+                expressPaymentMethod: null,
+                metadataItems: null,
+                registration: {
+                    showRegistration: false
+                },
+                sessionTimeout: 30
+            },
+            deliveryOptions: [
+                {
+                    deliveryOption: 'EXP2',
+                    deliveryOptionOverridePriceInfo: {
+                        price: {
+                            currency: 'EUR',
+                            amount: '35.000'
+                        },
+                        discounts: []
+                    },
+                    metadataItems: null
+                }
+            ],
+            retailerCartId: '00006902'
+        };
+    },
+    getCatalogServicePayload: function () {
+        return {
+            productCode: '2xi9orvams8',
+            name: '8bgdmt42v5t',
+            description: 'qk6hdfti0s',
+            material: 'FABRIC 53% cotton, 21% polyester, 21% acrylic, 4% viscose, 1% polyester, lining 100% polyester',
+            countryOfOrigin: 'IT',
+            hsCode: '62043290',
+            hsCodeRegion: 'EU',
+            category: null,
+            gender: null,
+            ageGroup: null,
+            size: null,
+            weight: null,
+            weightUnit: null,
+            url: null,
+            imageUrl: null,
+            unitPrice: null,
+            dangerousGoods: null,
+            additionalProductCode: null,
+            variantProductCode: null
+        };
+    },
+    getRetailerBrandCode: function () {
+        return Site.getCustomPreferenceValue('eswRetailerBrandCode');
+    },
+    getPackageFeedPayload: function () {
+        return {
+            brandCode: this.getRetailerBrandCode(),
+            orderReference: 'ABC1234567890',
+            packageReference: 'AAA1234567890',
+            orderType: 'CHECKOUT',
+            weight: {
+                weight: 12.34,
+                weightUnit: 'KG'
+            },
+            shippingDocumentationRequested: false,
+            returnDocumentationRequested: false,
+            shippingStatus: 'Complete',
+            parentOrderReference: 'ABC1234567890',
+            carrierId: 123,
+            carrierReference: 'ABC1234567890',
+            distributionCentre: 'USDC1',
+            hubCode: 'AMS',
+            additionalImportInformation: 'Additional Import Information',
+            isBackOrder: false,
+            dangerousGoods: false,
+            consignee: {
+                firstName: 'First Name',
+                lastName: 'Last Name',
+                address1: 'Address 1',
+                address2: 'Address 2',
+                address3: 'Address 3',
+                city: 'City',
+                postalCode: 'Post Code',
+                poBox: 'PO Box 123',
+                region: 'US',
+                country: 'US',
+                gender: 'Female',
+                email: 'test@test.com',
+                telephone: '0123456789',
+                unit: 'Unit 456'
+            },
+            shippingInfo: {
+                amount: 123.45,
+                currency: 'USD'
+            },
+            dimensions: {
+                dimHeight: '12.34',
+                dimLength: '12.34',
+                dimWidth: '12.34',
+                dimWeight: '12.34',
+                dimMeasurementUnit: 'INCH'
+            },
+            goodsDescription: 'Goods Description',
+            serviceLevel: 'POST',
+            packageItems: [
+                {
+                    productCode: 'ABC1234567890',
+                    lineItemId: 1,
+                    quantity: 1,
+                    productDescription: 'Product Description',
+                    productCustomsDescription: 'US',
+                    countryOfOrigin: 'US',
+                    weight: {
+                        weight: 12.34,
+                        weightUnit: 'KG'
+                    },
+                    unitPrice: {
+                        amount: 123.45,
+                        currency: 'USD'
+                    },
+                    hsCode: 'ABC123456',
+                    fta: false,
+                    dangerousGoods: false,
+                    serialNumber: 'ABC123456',
+                    warrantyId: 'ABC123456'
+                }
+            ],
+            additionalCarrierData: {
+                additionalCarrierData1: 'Additional Carrier Data 1',
+                additionalCarrierData2: 'Additional Carrier Data 2',
+                additionalCarrierData3: 'Additional Carrier Data 3',
+                additionalCarrierData4: 'Additional Carrier Data 4',
+                additionalCarrierData5: 'Additional Carrier Data 5'
+            },
+            palletId: 'ABC123456',
+            metadata: {}
+        };
+    },
+    /**
+     *
+     * @param {string} type - Type of info; ESW Service info
+     * @param {string} errorMessage - error Message
+     * @param {string} stackTrace - Stack Trace of error
+     * @returns {Object} - request payload
+     */
+    getAZInsightRequestPayload: function (type, errorMessage, stackTrace) {
+        let requestPayload = null;
+        let key = this.getEswAzureInsightiKey();
+        try {
+            // Validate input parameters
+            if (!type || !key) {
+                throw new Error('Invalid input parameters: type and key are required.');
+            }
+
+            let Resource = require('dw/web/Resource');
+            let currentDate = new Date();
+            let isoString = currentDate.toISOString();
+
+            requestPayload = {
+                name: 'Microsoft.ApplicationInsights.Event',
+                time: isoString,
+                iKey: key,
+                tags: {},
+                data: {
+                    baseType: 'EventData',
+                    baseData: {
+                        ver: Resource.msg('esw.cartridges.version.number', 'esw', null),
+                        eswCartridgeVersion: Resource.msg('global.version.number', 'version', null),
+                        name: type,
+                        properties: {
+                            retailer: Site.getCustomPreferenceValue('eswRetailerBrandCode'),
+                            errorMessage: errorMessage,
+                            stack: stackTrace,
+                            errorCode: '',
+                            errorStatusCode: ''
+                        }
+                    }
+                }
+            };
+        } catch (error) {
+            logger.error('Error while setting up AZ insight {0} {1}', error.message, error.stack);
+            return null;
+        }
+        return requestPayload;
+    },
+    /**
+     * Checks the basket for restricted products and sets session/error message if found.
+     *
+     * Iterates through all product line items in the basket and checks if any product is restricted
+     * using the isProductRestricted method. If a restricted product is found, sets privacy variables
+     * (eswProductRestricted, restrictedProductID).
+     *
+     * @param {dw.order.Basket} basket - The current user's basket
+     * @returns {boolean} true if a restricted product is found, false otherwise
+     */
+    handleRestrictedProductsInBasket: function (basket) {
+        if (!basket) return false;
+        let productLineItems = basket.productLineItems.toArray();
+        for (let i = 0; i < productLineItems.length; i++) {
+            let cartProduct = productLineItems[i].product;
+            let eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+            if (cartProduct && eswHelper.isProductRestricted(cartProduct.custom)) {
+                session.privacy.eswProductRestricted = true;
+                session.privacy.restrictedProductID = cartProduct.ID;
+                return true;
+            }
+        }
+        return false;
+    },
+    /**
+     * Returns the correct ESW Catalog service name based on the current upload method.
+     * @param {string} uploadMethod - The upload method (e.g., Constants.API or Constants.SFTP)
+     * @returns {string|null} Service name for monitoring (from Constants.js) or null if unknown.
+     */
+    getCatalogServiceName: function (uploadMethod) {
+        if (uploadMethod === Constants.API) {
+            return 'ESWCatalogService';
+        } else if (uploadMethod === Constants.SFTP) {
+            return 'ESWSFTP';
+        }
+        return null;
+    },
+    /**
+     * Returns the current date formatted as 'dd MMMM yyyy HH:mm:ss'.
+     * @returns {string} Formatted current date string
+     */
+    getCurrentFormattedDate: function () {
+        let StringUtils = require('dw/util/StringUtils');
+        let now = new Date();
+        return StringUtils.formatCalendar(new dw.util.Calendar(now), 'dd MMMM yyyy HH:mm:ss');
+    },
+    /**
+     * Checks if a service is job-related (used for health check jobs, not for BM monitoring)
+     * @param {string} serviceName - The name of the service
+     * @returns {boolean} True if job-related, false otherwise
+     */
+    isJobRelatedService: function (serviceName) {
+        let jobServices = [
+            'EswGetJwksService',
+            'EswPackageV4Service',
+            'EswGetAsnPackage',
+            'EswPriceFeedService',
+            'ESWCatalogService',
+            'ESWSFTP'
+        ];
+        return jobServices.indexOf(serviceName) !== -1;
+    },
+    /**
+     * Checks if a service is ocapi mock call (used for health check jobs, not for BM monitoring)
+     * @param {string} serviceName - The name of the service
+     * @returns {boolean} True if job-related, false otherwise
+     */
+    isMockServiceCallled: function (serviceName) {
+        let jobServices = [
+            'ESWOrderCreation',
+            'EswOcapiBasketService',
+            'EswOcapiOrderService'
+        ];
+        return jobServices.indexOf(serviceName) !== -1;
+    },
+    /**
+     * Checks if a feature/service is enabled for a given service name
+     * @param {string} serviceName - The name of the service
+     * @returns {boolean} True if feature is enabled, false otherwise
+     */
+    isNonJobServiceEnabled: function (serviceName) {
+        switch (serviceName) {
+            case 'EswCheckoutV3Service.SFRA':
+            case 'EswCheckoutV2Service.SFRA':
+                return this.getCheckoutServiceName() === serviceName;
+            case 'EswOAuthService':
+                return this.getClientID() && this.getClientSecret();
+            case 'EswOcapiBasketService':
+            case 'EswOcapiOrderService':
+            case 'ESWOrderCreation':
+                return this.isEswEnabledEmbeddedCheckout();
+            default:
+                return false;
+        }
+    },
+    /**
+     * Update services last execution time
+     * @param {string} serviceName - serviceName
+     */
+    updateServiceLastExecuted: function (serviceName) {
+        try {
+            const eswServices = require('*/cartridge/scripts/helper/eswServices.js');
+            let CustomObjectMgr = require('dw/object/CustomObjectMgr');
+            let eswServicesObj,
+                eswServicesExecutionObj,
+                serviceUrl;
+            let eswIntegrationMonitoring = CustomObjectMgr.getCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
+            Transaction.wrap(function () {
+                if (eswIntegrationMonitoring) {
+                    eswServicesObj = eswIntegrationMonitoring.getCustom().eswServices;
+                } else {
+                    eswIntegrationMonitoring = CustomObjectMgr.createCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
+                }
+            });
+            try {
+                serviceUrl = eswServices.getLastExecutedServiceUrl(serviceName);
+            } catch (error) {
+                logger.error('Error while getting service url {0} {1}', error.message, error.stack);
+            }
+            if (!empty(eswServicesObj)) {
+                eswServicesExecutionObj = JSON.parse(eswServicesObj);
+                if (typeof eswServicesExecutionObj !== 'object' || Array.isArray(eswServicesExecutionObj)) {
+                    eswServicesExecutionObj = {};
+                }
+            } else {
+                eswServicesExecutionObj = {};
+            }
+
+            // Always overwrite the entry for serviceName (no duplication possible)
+            eswServicesExecutionObj[serviceName] = {
+                serviceUrl: serviceUrl,
+                inUse: true,
+                lastExecuted: this.getCurrentFormattedDate(),
+                isJobRelated: this.isJobRelatedService(serviceName)
+            };
+
+            Transaction.wrap(function () {
+                if (eswIntegrationMonitoring) {
+                    eswIntegrationMonitoring.getCustom().eswServices = JSON.stringify(eswServicesExecutionObj);
+                }
+            });
+        } catch (error) {
+            logger.error('Error while adding last execution service time {0} {1}', error.message, error.stack);
+        }
+    },
+    /**
+     * Get Integration monitoring report
+     * @returns {Object} monitoring report object
+     */
+    getEswMonitoringReport: function () {
+        let Resource = require('dw/web/Resource');
+        let response = {
+            configReport: '',
+            eswServices: ''
+        };
+        try {
+            let integrationMonitoringObjectId = Resource.msg('esw.integration.monitoring', 'esw', null);
+            let integrationMonitoringObject = this.getCustomObjectDetails(integrationMonitoringObjectId, integrationMonitoringObjectId);
+            if (!empty(integrationMonitoringObject)) {
+                let configReport = 'configReport' in integrationMonitoringObject.getCustom() ? JSON.parse(integrationMonitoringObject.getCustom().configReport) : null;
+                // Prevent nested EswIntegrationMonitoringReport
+                if (configReport && configReport.customObjects && configReport.customObjects.EswIntegrationMonitoringReport) {
+                    delete configReport.customObjects.EswIntegrationMonitoringReport;
+                }
+                response.configReport = configReport;
+                response.eswServices = 'eswServices' in integrationMonitoringObject.getCustom() ? JSON.parse(integrationMonitoringObject.getCustom().eswServices) : null;
+            }
+            return response;
+        } catch (error) {
+            logger.error('Error while getting integration monitoring report object {0} {1}', error.message, error.stack);
+        }
+        return response;
+    },
+    setCurrencyISO: function (localizeObj) {
+        let currencyIso;
+        if (this.isEswEnabledSparkPricingConversion()) {
+            currencyIso = this.getBaseCurrency();
+        } else if (!empty(localizeObj)) {
+            currencyIso = localizeObj.localizeCountryObj.currencyCode;
+        } else {
+            currencyIso = !empty(session.privacy.fxRate) ? JSON.parse(session.privacy.fxRate).toShopperCurrencyIso : session.getCurrency().currencyCode;
+        }
+        return currencyIso;
+    },
+    applySparkClassToDom: function (className) {
+        if(this.isEswEnabledSparkPricingConversion()){
+            const sparkHelper = require('*/cartridge/scripts/helper/eswSparkHelper');
+            return sparkHelper.applySparkClassToDom(className);
+        }
+        return '';
+    },
+    // Split the token into chunks
+    splitAccessToken: function(accessToken, chunkLength) {
+        let parts = [];
+        for (let i = 0; i < accessToken.length; i += chunkLength) {
+            parts.push(accessToken.slice(i, i + chunkLength));
+        }
+        return parts;
+    },
+    /**
+     * Extracts the country code from request parameters or body.
+     * Supports both headless (country-code) and PWA (locale) architectures.
+     * @param {dw.system.Request} request - The SFCC request object
+     * @returns {string|null} Country code (e.g., 'US', 'IE') or null if not found
+     */
+    getHeadlessLocale: function(request) {
+        let locale = null;
+        // First, try to get from query parameters
+        let httpParams = request.httpParameterMap;
+        // Check for headless architecture (country-code parameter)
+        if (!empty(httpParams.get('country-code'))) {
+            locale = httpParams.get('country-code').value;
+        }
+        // Check for PWA architecture (locale parameter)
+        if (empty(locale) && !empty(httpParams.get(Constants.LOCALE_QUERY_PARAM))) {
+            let fullLocale = httpParams.get(Constants.LOCALE_QUERY_PARAM).value;
+            // Extract country code from locale format (e.g., 'en_US' -> 'US', 'en-IE' -> 'IE')
+            locale = this.getLocaleCountry(fullLocale);
+        }
+        // If still not found and request is not GET, check request body
+        if (empty(locale) && request.httpMethod !== 'GET') {
+            try {
+                let requestBody = request.httpParameterMap.requestBodyAsString;
+                if (!empty(requestBody)) {
+                    let bodyObj = JSON.parse(requestBody);
+                    // Check for country-code in body
+                    if (bodyObj['country-code']) {
+                        locale = bodyObj['country-code'];
+                    }
+                    // Check for locale in body
+                    else if (bodyObj.locale) {
+                        locale = this.getLocaleCountry(bodyObj.locale);
+                    }
+                }
+            } catch (e) {
+                logger.error('getHeadlessLocale: Failed to parse request body - {0}', e.message);
+            }
+        }
+        return locale;
+    },
+    /**
+     * verify if session customer authorized to access order
+     * @param {object} order - order
+     * @returns {boolean} - authorized
+     */
+    isCustomerAuthorizedToAccessOrder: function(order) {
+        try {
+            let isAuthorized = false;
+            if (customer.authenticated && customer.profile &&
+                order.customer.profile &&
+                order.customer.profile.customerNo === customer.profile.customerNo) {
+                isAuthorized = true;
+            }
+            if (!isAuthorized && !order.customer.profile && 'userSessionID' in session.custom && session.custom.userSessionID  === session.sessionID) {
+                isAuthorized = true;
+            }
+            return isAuthorized;
+        } catch (error) {
+            logger.error('Error while fetch order authorization {0} {1}', error.message, error.stack);
+            return false;
+        }
+    },
+    /**
+     * Checks if the cart contains only digital products.
+     * @returns {boolean} True if all products in the cart are digital, false otherwise.
+     */
+    isOnlyDigitalProductsInCart: function (currentDwBasket) {
+        let BasketMgr = require('dw/order/BasketMgr');
+        let currentBasket = empty(currentDwBasket) ? BasketMgr.getCurrentBasket() : currentDwBasket;
+        if (!this.getEShopWorldModuleEnabled() || !currentBasket) return false;
+        let allDigital = true;
+        let productLineItems = currentBasket ? currentBasket.productLineItems.toArray() : [];
+        for (let i = 0; i < productLineItems.length; i++) {
+            let cartProduct = productLineItems[i].product;
+            if (cartProduct && cartProduct.custom.eswIsDigitalProduct !== true) {
+                allDigital = false;
+                break;
+            }
+        }
+        return allDigital;
     }
 };
-
 module.exports = {
     getEswHelper: getEswHelper
 };

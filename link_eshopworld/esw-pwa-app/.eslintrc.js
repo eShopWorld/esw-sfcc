@@ -8,8 +8,14 @@
 module.exports = {
     extends: [require.resolve('@salesforce/pwa-kit-dev/configs/eslint')],
     rules: {
-        // https://github.com/MelvinVermeer/eslint-plugin-no-relative-import-paths
-        'prettier/prettier': ['error', {endOfLine: 'auto'}],
+        'prettier/prettier': 'off',
+        indent: 'off',
+        'key-spacing': 'off',
+        'object-curly-spacing': 'off',
+        'array-bracket-spacing': 'off',
+        'space-in-parens': 'off',
+        'space-before-function-paren': 'off',
+        'space-infix-ops': 'off',
         semi: [0, 'never']
     },
     ignorePatterns: [

@@ -50,7 +50,8 @@ const Home = () => {
     // It replaces the legacy `getProps` and provide a react hook interface for SSR.
     // it returns the request and response objects on the server side,
     // and these objects are undefined on the client side.
-    const {res} = useServerContext()
+    const serverContext = useServerContext()
+    const res = serverContext?.res
     if (res) {
         res.set(
             'Cache-Control',

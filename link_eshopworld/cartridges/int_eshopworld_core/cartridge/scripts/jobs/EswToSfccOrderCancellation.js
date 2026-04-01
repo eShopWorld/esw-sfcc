@@ -43,6 +43,7 @@ function execute() {
         Status = require('dw/system/Status'),
         OrderMgr = require('dw/order/OrderMgr'),
         Order = require('dw/order/Order');
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 
     try {
         let cancelledOrderInfo = OrderMgr.searchOrders('(custom.isEswCancelledOrder != null) AND (custom.isEswCancelledOrder != false) AND status!={0}',
@@ -70,6 +71,7 @@ function execute() {
         }
     } catch (e) {
         logger.error('Unable to cancel the order: ' + e.message);
+        eswHelper.eswInfoLogger('EswToSfccOrderCancellation error', e, e.message, e.stack);
     }
     return new Status(Status.OK);
 }

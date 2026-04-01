@@ -1,5 +1,5 @@
 /* eslint-disable new-cap */
-/* eslint-disable re */
+
 'use strict';
 
 const jwtHelper = require('*/cartridge/scripts/jwt/jwtHelper');

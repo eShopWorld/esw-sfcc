@@ -1,4 +1,3 @@
-/* eslint-disable new-cap */
 // On MRT we are not getting accurate client location to use geoIP feature
 // This file is a workaround helper to get user's country
 // Other options are get country by ip but those are third party solutions

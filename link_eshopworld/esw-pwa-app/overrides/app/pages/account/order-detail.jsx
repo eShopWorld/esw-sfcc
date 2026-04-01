@@ -126,7 +126,7 @@ const AccountOrderDetail = () => {
     const paymentCard = order?.paymentInstruments[0]?.paymentCard
     const CardIcon = getCreditCardIcon(paymentCard?.cardType)
     const itemCount = order?.productItems.reduce((count, item) => item.quantity + count, 0) || 0
-
+    const isAllDigital = order?.productItems?.length > 0 && order.productItems.every((pli) => pli.c_eswIsDigitalProduct === true);
     const headingRef = useRef()
     useEffect(() => {
         // Focus the 'Order Details' header when the component mounts for accessibility
@@ -235,7 +235,8 @@ const AccountOrderDetail = () => {
                             </>
                         ) : (
                             <>
-                                <Stack spacing={1}>
+                                {!isAllDigital && (
+                                <Stack spacing={1} className='shipping_details'>
                                     <Heading as="h2" fontSize="sm" pt={1}>
                                         <FormattedMessage
                                             defaultMessage="Shipping Method"
@@ -283,6 +284,7 @@ const AccountOrderDetail = () => {
                                         </Text>
                                     </Box>
                                 </Stack>
+                                )}
                                 <Stack spacing={1}>
                                     <Heading as="h2" fontSize="sm" pt={1}>
                                         <FormattedMessage
@@ -309,7 +311,8 @@ const AccountOrderDetail = () => {
                                         </Box>
                                     </Stack>
                                 </Stack>
-                                <Stack spacing={1}>
+                                {!isAllDigital && (
+                                <Stack spacing={1} className='shipping_details'>
                                     <Heading as="h2" fontSize="sm" pt={1}>
                                         <FormattedMessage
                                             defaultMessage="Shipping Address"
@@ -327,6 +330,7 @@ const AccountOrderDetail = () => {
                                         </Text>
                                     </Box>
                                 </Stack>
+                                )}
                                 <Stack spacing={1}>
                                     <Heading as="h2" fontSize="sm" pt={1}>
                                         <FormattedMessage

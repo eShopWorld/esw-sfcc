@@ -30,6 +30,7 @@ function execute(args) {
         });
     } catch (e) {
         Logger.error('ESW Localize Pricing Job error: ' + e);
+        eswHelper.eswInfoLogger('Localized Pricing Job error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);

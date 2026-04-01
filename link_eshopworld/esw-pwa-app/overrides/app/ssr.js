@@ -67,19 +67,27 @@ const {handler} = runtime.createHandler(options, (app) => {
                         'storage.googleapis.com',
                         // Allow AB Tasty scripts
                         '*.abtasty.com',
-                        '*.eshopworld.com'
+                        '*.eshopworld.com',
+                        '*.api.commercecloud.salesforce.com',
+                        '*.abtastyscriptpath.com',
+                        'abtastyscriptpath.com'
                     ],
                     'connect-src': [
                         // Connect to Einstein APIs
                         'api.cquotient.com',
                         'app.abtasty.com',
+                        'abtastyscriptpath.com',
                         '*.abtasty.com',
+                        '*.eshopworld.com',
+                        '*.api.commercecloud.salesforce.com',
+                        '*.abtastyscriptpath.com',
                         '*.eshopworld.com'
                     ],
                     'frame-src': [
                         "'self'",  // Keep the default self-origin
                         'https://qa-assistant.abtasty.com',
-                        'https://*.eshopworld.com' 
+                        'https://*.eshopworld.com',
+                        '*.api.commercecloud.salesforce.com'
                     ]
                 }
             }
@@ -97,6 +105,7 @@ const {handler} = runtime.createHandler(options, (app) => {
     app.get('/favicon.ico', runtime.serveStaticFile('static/ico/favicon.ico'))
 
     app.get('/worker.js(.map)?', runtime.serveServiceWorker)
+
     app.get('*', runtime.render)
 })
 // SSR requires that we export a single handler function called 'get', that

@@ -49,8 +49,7 @@ export const EswCheckoutBtn = (props) => {
                             basketId:
                                 basketIdParam && basketIdParam.length > 0
                                     ? basketIdParam
-                                    : basket.basketId,
-                            dwsid: document.cookie
+                                    : basket.basketId
                         },
                         body: {c_eswPreOrderRequest: accessToken}
                     })
@@ -75,6 +74,24 @@ export const EswCheckoutBtn = (props) => {
                     !order.c_eswPreOrderResponse.redirectUrl
                 ) {
                     throw new Error(API_ERROR_MESSAGE)
+                }
+                const eswSessionId = getCookie('esw.sessionid')
+
+                if (eswSessionId) {
+                    localStorage.setItem('userSessionId', eswSessionId)
+                }
+                if (order?.c_eswShopperAccessToken) {
+                    let eswgetTopLevelDomain = getEswConfigByKey('eswgetTopLevelDomain')
+                    let expirationDate = new Date()
+                    expirationDate.setTime(expirationDate.getTime() + 3600 * 1000)
+                    document.cookie =
+                        'esw-shopper-access-token=' +
+                        order.c_eswShopperAccessToken +
+                        ';path=/;domain=' +
+                        eswgetTopLevelDomain +
+                        ';expires=' +
+                        expirationDate.toUTCString() +
+                        ';SameSite=None;Secure'
                 }
                 localStorage.setItem('esw.clientLastOrderId', order.orderNo)
                 setTimeout(() => {

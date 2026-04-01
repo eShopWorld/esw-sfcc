@@ -300,4 +300,11 @@ jQuery(document).ready(function () {
             sendAjax(formAction, formData, 'The custom preferences were saved.', true);
         });
     }
+
+    let eswSendLogBtn = $("a.esw-send-log-btn");
+    if (eswSendLogBtn.length) {
+        eswSendLogBtn.click(function () {
+            sendAjax(eswSendLogBtn.attr('data-href'), null, 'System Configuration Report have been successfully transmitted to ESW.', false);
+        });
+    }
 });

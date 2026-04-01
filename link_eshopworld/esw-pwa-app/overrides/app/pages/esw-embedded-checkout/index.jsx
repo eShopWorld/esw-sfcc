@@ -23,7 +23,6 @@ const EswEmbeddedCheckout = () => {
         // Function to validate if a string is a valid URL
         const isValidUrl = (url) => {
             try {
-                // eslint-disable-next-line no-new
                 new URL(url)
                 return true
             } catch (e) {

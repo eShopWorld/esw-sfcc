@@ -24,10 +24,13 @@ const MyNewRoute = loadable(() => import('./pages/my-new-route'))
 // ESW Customization
 import EswExampleContentDetails from './pages/esw-example-content-details'
 import Cart from './pages/cart'
+import ProductDetail from './pages/product-detail'
 import EswEmbeddedCheckout from './pages/esw-embedded-checkout'
+import CheckoutConfirmation from './pages/checkout/confirmation'
+import ProductList from './pages/product-list'
 // End ESW Customization
 
-const routes = [
+export const routes = [
     {
         path: '/',
         component: Home,
@@ -42,6 +45,18 @@ const routes = [
         component: EswExampleContentDetails
     },
     {
+        path: '/product/:productId',
+        component: ProductDetail
+    },
+    {
+        path: '/search',
+        component: ProductList
+    },
+    {
+        path: '/category/:categoryId',
+        component: ProductList
+    },
+    {
         path: '/cart',
         component: Cart,
         exact: true
@@ -50,6 +65,10 @@ const routes = [
         path: '/esw-checkout',
         component: EswEmbeddedCheckout,
         exact: true
+    },
+    {
+        path: '/checkout/confirmation/:orderNo',
+        component: CheckoutConfirmation
     },
     ..._routes
 ]

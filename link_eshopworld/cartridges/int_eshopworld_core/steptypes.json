@@ -229,6 +229,17 @@
                 }
             },
             {
+                "@type-id": "custom.ESW_SendLogsToEsw",
+                "timeout-in-seconds": "180000",
+                "description": "This job is responsible for outbond shipment from retailer to ESW",
+                "module": "int_eshopworld_core/cartridge/scripts/jobs/SendLogsToEsw.js",
+                "function": "execute",
+                "parameters": {
+                    "parameters": []
+                }
+            },
+            {
+                
                 "@type-id": "custom.ESW_GetJWKSJob",
                 "timeout-in-seconds": "180000",
                 "description": "This job fetches JWKS from ESW",

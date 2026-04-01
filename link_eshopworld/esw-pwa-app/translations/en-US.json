@@ -186,6 +186,9 @@
   "cart_cta.link.checkout": {
     "defaultMessage": "Proceed to Checkout"
   },
+  "confirm_register.now": {
+    "defaultMessage": "Register Now"
+  },
   "cart_secondary_button_group.action.added_to_wishlist": {
     "defaultMessage": "Add to Wishlist"
   },

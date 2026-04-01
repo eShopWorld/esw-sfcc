@@ -8,10 +8,11 @@ import {
     getLocaleByCountry,
     getLocaleCountry,
     getShopperCountry,
-    isFirstVisit
+    isFirstVisit,
+    getEswConfigByKey
 } from '../../esw-helpers'
 import {API_ERROR_MESSAGE} from '@salesforce/retail-react-app/app/constants'
-import {useShopperBasketsMutation} from '@salesforce/commerce-sdk-react'
+import {useShopperBasketsMutation, useAccessToken} from '@salesforce/commerce-sdk-react'
 import {EswGeoIpModel} from '../geo-ip'
 import {useToast} from '@salesforce/retail-react-app/app/hooks/use-toast'
 import {useIntl} from 'react-intl'
@@ -34,11 +35,24 @@ export const EswInit = (props) => {
     const [eswGeoIpTitle, setEswGeoIpTitle] = useState(null)
     const [eswGeoIpBody, setEswGeoIpBody] = useState(null)
     const [eswGeoIpLocation, setEswGeoIpLocation] = useState(null)
+    const [bearerToken, setBearerToken] = useState(null)
+    const {getTokenWhenReady} = useAccessToken()
     const addItemToBasketMutation = useShopperBasketsMutation('addItemToBasket')
     const createBasketMutation = useShopperBasketsMutation('createBasket')
     const applyPromoCodeMutation = useShopperBasketsMutation('addCouponToBasket')
     const updateBasket = useShopperBasketsMutation('updateBasket')
     const removeItemBasketMutation = useShopperBasketsMutation('removeItemFromBasket')
+    
+    // Get and store the bearer token for ESW API calls
+    useEffect(() => {
+        if (typeof window !== 'undefined' && getTokenWhenReady) {
+            getTokenWhenReady().then(token => {
+                setBearerToken(token)
+            }).catch(error => {
+                console.error('Error getting token for ESW calls:', error)
+            })
+        }
+    }, [getTokenWhenReady])
     useEffect(() => {
         const eswClientLastOrderId = localStorage.getItem('esw.clientLastOrderId')
         // Update basket currency
@@ -60,7 +74,7 @@ export const EswInit = (props) => {
         // Rebuild cart if any
         if (eswClientLastOrderId && basketsData) {
             const rebuildCart = async () => {
-                if (eswClientLastOrderId && basketsData) {
+                if (eswClientLastOrderId && basketsData && !getEswConfigByKey('isEswEnabledEmbeddedCheckout')) {
                     let dataResponse
                     // If there are no baskets, create a new one
                     if (basketsData?.total === 0) {
@@ -70,7 +84,8 @@ export const EswInit = (props) => {
                         // Call getAbandonmentCartHelper after basket creation (if needed)
                         const response = await getAbandonmentCartHelper(
                             eswClientLastOrderId,
-                            locale
+                            locale,
+                            bearerToken
                         )
                         const data = await response.json()
 
@@ -132,7 +147,7 @@ export const EswInit = (props) => {
         // Getting Esw Configs
         eswAppInit(locale)
         // Getting geo ip alert info
-        getGeoIpAlertInfo(eswShopperCountry)
+        getGeoIpAlertInfo(eswShopperCountry, bearerToken)
             .then((response) => response.json())
             .then((data) => {
                 let ignoredGeoIp = localStorage.getItem('esw.GeoIpChangeIgnore')
@@ -157,7 +172,7 @@ export const EswInit = (props) => {
                     setEswGeoIpTitle(data.geoIpInfo.alertMsg.title)
                 }
             })
-    }, [])
+    }, [bearerToken])
 
     return (
         <>

@@ -27,6 +27,7 @@ function createESWOrder(order) {
         let oAuthResult = oAuthObj.call(formData);
         if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
             Logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+            eswHelper.eswInfoLogger('Error', '', 'ESW Export MarketPlaceOrder Error', oAuthResult.errorMessage);
             return new Status(Status.ERROR);
         }
         let maketPlaceOrderPayloadObject = marketPlaceOrderHelper.prepareMarketPlaceOrderOrder(order),
@@ -38,6 +39,7 @@ function createESWOrder(order) {
         let response = eswCoreService.getOrderSubmitAPIServiceV2().call(maketPlaceSvcParams);
         return response;
     } catch (e) {
+        eswHelper.eswInfoLogger('create ESW Order error', e, e.message, e.stack);
         Logger.error('ESW service call error: {0}', e.message);
         return new Status(Status.ERROR);
     }
@@ -49,6 +51,7 @@ function createESWOrder(order) {
  * @returns {dw.system.Status} - Status of job
  */
 function execute() {
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     try {
         OrderMgr.processOrders(function (order) {
             let result = createESWOrder(order);
@@ -61,6 +64,7 @@ function execute() {
         }, 'custom.nonCheckoutEcommerce = {0} AND custom.isnonCheckoutOrderExported != {1}', true, true);
     } catch (e) {
         Logger.error('eswExportMarketPlaceOrders' + JSON.stringify(e));
+        eswHelper.eswInfoLogger('eswExportMarketPlaceOrders Error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);

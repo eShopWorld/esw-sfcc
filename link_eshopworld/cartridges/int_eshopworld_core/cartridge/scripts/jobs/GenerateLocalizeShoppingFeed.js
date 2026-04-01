@@ -357,6 +357,7 @@ function execute(args) {
         });
     } catch (e) {
         Logger.error('ESW Localize Shopping Feed Job error: ' + e);
+        eswHelper.eswInfoLogger('GenerateLocalizeShoppingFeed Error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);

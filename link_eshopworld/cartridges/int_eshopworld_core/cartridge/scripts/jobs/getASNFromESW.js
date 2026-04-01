@@ -332,9 +332,11 @@ function execute(args) {
                 }
             });
         }
+        eswHelper.updateServiceLastExecuted('EswGetAsnPackage');
         return new Status(Status.OK);
     } catch (e) {
         Logger.error('GET Pkg ASN service call failed: {0}: {1}', e.message, e.stack);
+        eswHelper.eswInfoLogger('getASNFromESW Error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
 }

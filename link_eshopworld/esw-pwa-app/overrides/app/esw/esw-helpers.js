@@ -3,7 +3,7 @@
 'use strict'
 
 import {getCountry} from './esw-geo-location-helper'
-import {getAbandonmentCart, getBmConfigs, getGeoIpAlert} from './esw-services'
+import {getAbandonmentCart, getBmConfigs, getGeoIpAlert, getOrderNumber} from './esw-services'
 
 /**
  * Get configuration value from esw.config localStorage
@@ -11,7 +11,9 @@ import {getAbandonmentCart, getBmConfigs, getGeoIpAlert} from './esw-services'
  * @returns {string} - Correspondent key from esw.configs localStorage
  */
 export const getEswConfigByKey = (configKey) =>
-    JSON.parse(localStorage.getItem('esw.configs'))[configKey]
+    typeof window !== 'undefined'
+        ? JSON.parse(localStorage.getItem('esw.configs'))[configKey]
+        : undefined
 
 export const getAbTastyScriptPath = () => {
     try {
@@ -44,6 +46,11 @@ export const setAbTastyScriptInDom = (abTastyScriptPath) => {
 }
 
 const storeBmConfigs = (locale) => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+        return
+    }
+    
     getBmConfigs(locale)
         .then((response) => response.json())
         .then((data) => {
@@ -65,7 +72,10 @@ const storeBmConfigs = (locale) => {
             // Setting AB Tasty DOM
             setAbTastyScriptInDom(data.eswBmConfigs.abTastyScriptPath)
         })
-        .catch((error) => error)
+        .catch((error) => {
+            console.error('Error storing BM configs:', error)
+            return error
+        })
 }
 
 /**
@@ -80,42 +90,78 @@ export const getEswSiteAccessTokenByKey = (configKey) =>
  * @param {string} configKey - bm config key
  * @returns {Object} - currency config from local storage
  */
-export const getEswShopperCurrencyConfigByKey = (configKey) =>
-    JSON.parse(localStorage.getItem('esw.shopperPricingConfigs'))[configKey]
+export const getEswShopperCurrencyConfigByKey = (configKey) => {
+  try {
+    const configs = localStorage.getItem('esw.shopperPricingConfigs')
+    const parsedConfigs = configs ? JSON.parse(configs) : ''
+
+    return parsedConfigs ? parsedConfigs[configKey] : ''
+  } catch (error) {
+    return
+  }
+}
 /**
  * All ESW functions call on App init
+ * Only runs on client-side after React loads
  * @param {string} locale - site locale en-IE etc
  */
 export const eswAppInit = (locale) => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+        return
+    }
     storeBmConfigs(locale)
 }
 
 /**
  * Call geo ip alert controller
  * @param {string} shopperCountry - shopper country
+ * @param {string} bearerToken - optional bearer token for authentication
  * @returns {Promise} - fetch promise
  */
-export const getGeoIpAlertInfo = (shopperCountry) => {
-    return getGeoIpAlert(shopperCountry)
+export const getGeoIpAlertInfo = (shopperCountry, bearerToken = null) => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+        return Promise.resolve({json: () => Promise.resolve({geoIpInfo: {}})})
+    }
+    return getGeoIpAlert(shopperCountry, bearerToken)
 }
 
 /**
  * Call abandonment cart controller
  * @param {string} eswClientLastOrderId - last order id
  * @param {string} locale - shopper country
- * @returns {Promise} - fetch promise
+ * @param {string} bearerToken - optional bearer token for authentication
  * @returns {Promise} - fetch promise
  */
-export const getAbandonmentCartHelper = (eswClientLastOrderId, locale) => {
-    return getAbandonmentCart(eswClientLastOrderId, locale)
+export const getAbandonmentCartHelper = (eswClientLastOrderId, locale, bearerToken = null) => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+        return Promise.resolve({json: () => Promise.resolve({})})
+    }
+    return getAbandonmentCart(eswClientLastOrderId, locale, bearerToken)
 }
 
 /**
- * Gett cookie by name after react loaded
+ * Call get order number controller
+ * @param {string} orderNumber - orderNumber
+ * @returns {Promise} - fetch promise
+ */
+export const getOrderNumberHelper = (orderNumber) => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+        return Promise.resolve({json: () => Promise.resolve({})})
+    }
+    return getOrderNumber(orderNumber)
+}
+
+/**
+ * Get cookie by name after react loaded
  * @param {string} name - cookie name
  * @returns {string} - cookie value
  */
 export const getCookie = (name) => {
+    if (typeof document === 'undefined') return ''
     const escape = (s) => {
         return s.replace(/([.*+?\^$(){}|\[\]\/\\])/g, '\\$1')
     }

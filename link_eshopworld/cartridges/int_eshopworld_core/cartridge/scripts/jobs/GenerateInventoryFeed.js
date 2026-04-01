@@ -126,6 +126,7 @@ function execute(args) {
 
                 if (empty(remotePath)) {
                     Logger.error('UploadInventoryFeed: Parameter remotePath is empty.');
+                    eswHelper.eswInfoLogger('Error', '', 'UploadInventoryFeed Error', 'Parameter remotePath is empty');
                     return new Status(Status.ERROR);
                 }
 
@@ -135,6 +136,7 @@ function execute(args) {
 
                 if (!result.ok) {
                     Logger.error('UploadInventoryFeed: Error While sending file to SFTP.');
+                    eswHelper.eswInfoLogger('Error', '', 'UploadInventoryFeed Error', 'Error While sending file to SFTP');
                     return new Status(Status.ERROR);
                 }
             } else {
@@ -145,6 +147,7 @@ function execute(args) {
         });
     } catch (e) {
         Logger.error('ESW Inventory Feed Job error: ' + e);
+        eswHelper.eswInfoLogger('GenerateInventoryFeed Error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
     return new Status(Status.OK);

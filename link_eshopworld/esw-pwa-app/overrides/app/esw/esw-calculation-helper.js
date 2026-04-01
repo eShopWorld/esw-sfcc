@@ -1,5 +1,3 @@
-/* eslint-disable eqeqeq */
-
 import {getEswShopperCurrencyConfigByKey} from './esw-helpers'
 
 const applyRoundingMethod = (price, model, roundingModel, isFractionalPart) => {
@@ -57,14 +55,13 @@ const applyRoundingMethod = (price, model, roundingModel, isFractionalPart) => {
         }
     } else {
         // Logic for multiple rounding method.
-        // eslint-disable-next-line no-lonely-if
+         
         if (roundingModel.direction.toLowerCase() == 'up') {
             roundedPrice = Math.ceil(price / roundingTarget) * roundingTarget
         } else if (roundingModel.direction.toLowerCase() == 'down') {
             roundedPrice = Math.floor(price / roundingTarget) * roundingTarget
         } else if (roundingModel.direction.toLowerCase() == 'nearest') {
-            // eslint-disable-next-line no-unused-expressions, no-sequences
-            ;(roundedUp = Math.ceil(price / roundingTarget) * roundingTarget),
+            (roundedUp = Math.ceil(price / roundingTarget) * roundingTarget),
                 (roundedDown = Math.floor(price / roundingTarget) * roundingTarget),
                 (roundedPrice =
                     Math.abs(roundedUp - price) >= Math.abs(price - roundedDown)
@@ -124,10 +121,10 @@ export const convertPrice = () => {
         }
         priceElements.forEach(function (element) {
             let eleRoundingAttr = element.getAttribute('data-disable-rounding')
-            // eslint-disable-next-line no-unneeded-ternary
+             
             let disableRounding = eleRoundingAttr && eleRoundingAttr == 'false' ? true : false
             let eleAdjustmentAttr = element.getAttribute('data-disable-adjustment')
-            // eslint-disable-next-line no-unneeded-ternary
+             
             let disableAdjustment = eleAdjustmentAttr && eleAdjustmentAttr == 'false' ? true : false
             let eswPrice = parseFloat(element.textContent.replace(/[^0-9.-]+/g, ''))
             if (selectedCountryAdjustment && !disableAdjustment) {

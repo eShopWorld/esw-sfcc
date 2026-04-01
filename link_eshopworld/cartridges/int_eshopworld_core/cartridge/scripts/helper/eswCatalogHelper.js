@@ -4,6 +4,7 @@ const StringUtils = require('dw/util/StringUtils');
 const Transaction = require('dw/system/Transaction');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const Calendar = require('dw/util/Calendar');
+const Constants = require('*/cartridge/scripts/util/Constants');
 
 const CATALOG_HELPER = {
     /**
@@ -29,6 +30,25 @@ const CATALOG_HELPER = {
      * @param {boolean} isApiMethod - if api method or not
      * @returns {Object} - products
      */
+    /**
+     * Determines if a product should be included in the filtered list based on validation and last modified timestamp.
+     * @param {dw.catalog.Product} product - The product to check.
+     * @param {boolean} isApiMethod - True if called from API method, false otherwise.
+     * @param {number|null} feedlastExecutedTime - Last feed execution time in ms since epoch, or null if not set.
+     * @returns {boolean} True if product should be included, false otherwise.
+     */
+    shouldIncludeProduct: function (product, isApiMethod, feedlastExecutedTime) {
+        let productLastModifiedTime = new Date(product.lastModified).getTime();
+        let validation = this.isValidProduct(product);
+        let isValid = !validation.isError;
+        let isRecent = !feedlastExecutedTime || productLastModifiedTime > feedlastExecutedTime;
+
+        return (
+            !isApiMethod ||
+            (isValid && isRecent)
+        );
+    },
+
     getFilteredProducts: function (isApiMethod) {
         let ProductSearchModel = require('dw/catalog/ProductSearchModel');
         let prodModel = new ProductSearchModel();
@@ -39,32 +59,31 @@ const CATALOG_HELPER = {
         let productSearchHits = prodModel.productSearchHits;
         let filteredProducts = [];
         let feedlastExecutedTimeStamp = eswHelper.getEswCatalogFeedLastExec();
+        let feedlastExecutedTime = feedlastExecutedTimeStamp ? new Date(feedlastExecutedTimeStamp).getTime() : null;
+
         if (productSearchHits) {
             while (productSearchHits.hasNext()) {
                 let productSearchHit = productSearchHits.next();
                 if (productSearchHit.hitType === 'master') {
                     let masterProduct = productSearchHit.product;
-                    let productLastModifiedTimeStamp = new Calendar(new Date(masterProduct.lastModified));
-                    if (!isApiMethod || (!this.isValidProduct(masterProduct).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)))) {
+                    if (this.shouldIncludeProduct(masterProduct, isApiMethod, feedlastExecutedTime)) {
                         filteredProducts.push(masterProduct);
                     }
+
                     let variants = masterProduct.getVariants();
                     if (!empty(variants)) {
                         variants = variants.iterator();
                         while (variants.hasNext()) {
                             let variant = variants.next();
-                            if (variant.availabilityModel.isOrderable()) {
-                                productLastModifiedTimeStamp = new Calendar(new Date(variant.lastModified));
-                                if (!isApiMethod || (!this.isValidProduct(variant).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)))) {
-                                    filteredProducts.push(variant);
-                                }
+                            if (variant.availabilityModel.isOrderable() &&
+                                this.shouldIncludeProduct(variant, isApiMethod, feedlastExecutedTime)) {
+                                filteredProducts.push(variant);
                             }
                         }
                     }
                 } else if (productSearchHit.hitType === 'bundle' || productSearchHit.hitType === 'set' || (productSearchHit.hitType === 'product' && !productSearchHit.product.isVariant())) {
                     let productHit = productSearchHit.product;
-                    let productLastModifiedTimeStamp = new Calendar(new Date(productHit.lastModified));
-                    if (!isApiMethod || (!this.isValidProduct(productHit).isError && (empty(feedlastExecutedTimeStamp) || productLastModifiedTimeStamp.after(feedlastExecutedTimeStamp)))) {
+                    if (this.shouldIncludeProduct(productHit, isApiMethod, feedlastExecutedTime)) {
                         filteredProducts.push(productHit);
                     }
                 }
@@ -87,7 +106,7 @@ const CATALOG_HELPER = {
                     countryOfOrigin: ('eswCountryOfOrigin' in product.custom) ? product.custom.eswCountryOfOrigin : null,
                     hsCode: ('eswHsCode' in product.custom) ? product.custom.eswHsCode : null,
                     hsCodeRegion: ('eswHsCodeRegion' in product.custom) ? product.custom.eswHsCodeRegion : null,
-                    category: null, // ENUM allowed from API
+                    category: ('eswIsDigitalProduct' in product.custom && product.custom.eswIsDigitalProduct) ? Constants.DIGITAL_PRODUCT_CATEGORY : null, // ENUM allowed from API
                     gender: ('gender' in product.custom) ? product.custom.gender : null,
                     ageGroup: ('ageGroup' in product.custom) ? product.custom.ageGroup : null,
                     size: ('size' in product.custom) ? product.custom.size : null,
@@ -149,6 +168,7 @@ const CATALOG_HELPER = {
             return catalogServiceResponse;
         } catch (e) {
             Logger.error('Catalog service call error: {0}', e.message);
+            eswHelper.eswInfoLogger('Catalog service call error', e, e.message, e.stack);
             return new Status(Status.ERROR);
         }
     },

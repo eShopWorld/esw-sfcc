@@ -99,10 +99,17 @@ const ProductTile = (props) => {
     const {imageGroups, productId, representedProduct, variants} = product
 
     const intl = useIntl()
-
     // ESW customization
     const {currency, setCurrency} = useCurrency()
-    setCurrency(typeof product.currency !== 'undefined' ? product.currency : getEswShopperCurrencyConfigByKey('code'))
+
+    useEffect(() => {
+        const newCurrency =
+            typeof product.currency !== 'undefined'
+                ? product.currency
+                : getEswShopperCurrencyConfigByKey('code')
+
+        setCurrency(newCurrency)
+    }, [product.currency, setCurrency])
     // End ESW customization
 
     const isFavouriteLoading = useRef(false)

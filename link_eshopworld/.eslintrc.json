@@ -1,59 +1,57 @@
 {
-    "root": true,
-    "extends": "airbnb-base/legacy",
-    "ignorePatterns": ["temp.js", "**/esw-pwa-app/*.js"],
-    "globals": {
-        "dw": false,
-        "customer": false,
-        "session": false,
-        "request": false,
-        "response": false,
-        "empty": false,
-        "$": false
-    },
-    "rules": {
-        "import/no-unresolved": "off",
-        "no-continue": "off",
-        "no-else-return": "off",
-        "no-param-reassign": "off",
-        "indent": [
-            "error",
-            4,
-            {
-                "SwitchCase": 1,
-                "VariableDeclarator": 1
-            }
-        ],
-        "func-names": "off",
-        "require-jsdoc": "error",
-        "valid-jsdoc": [
-            "error",
-            {
-                "preferType": {
-                    "Boolean": "boolean",
-                    "Number": "number",
-                    "object": "Object",
-                    "String": "string"
-                },
-                "requireReturn": false
-            }
-        ],
-        "vars-on-top": "off",
-        "global-require": "off",
-        "no-shadow": [
-            "error",
-            {
-                "allow": [
-                    "err",
-                    "callback"
-                ]
-            }
-        ],
-        "linebreak-style": "off",
-        "max-len": "off",
-        "one-var": "off"
-    },
-    "parserOptions": {
-        "ecmaVersion": 6
-    }
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2021": true
+  },  "globals": {
+    "empty": "readonly",
+    "session": "readonly",
+    "request": "readonly",
+    "document": "readonly",
+    "$": "readonly",
+    "MutationObserver": "readonly",
+    "window": "readonly",
+    "response": "readonly",
+    "customer": "readonly",
+    "dw": "readonly",
+    "ProductMgr": "readonly",
+    "OrderMgr": "readonly",
+    "PaymentMgr": "readonly",
+    "CustomerMgr": "readonly",
+    "Category": "readonly",
+    "CatalogMgr": "readonly",
+    "ProductSearchModel": "readonly",
+    "Logger": "readonly",
+    "Site": "readonly",
+    "HookMgr": "readonly",
+    "Transaction": "readonly",
+    "Status": "readonly",
+    "Resource": "readonly",
+    "URLUtils": "readonly",
+    "FormField": "readonly",
+    "CustomObjectMgr": "readonly",
+    "Collection": "readonly",
+    "ArrayList": "readonly",
+    "StringUtils": "readonly",
+    "Money": "readonly",
+    "Quantity": "readonly",
+    "ISML": "readonly",
+    "PageMgr": "readonly",
+    "LocalServiceRegistry": "readonly",
+    "HTTP": "readonly",
+    "FTP": "readonly",
+    "WebDAV": "readonly",
+    "File": "readonly",
+    "FileReader": "readonly",
+    "FileWriter": "readonly",
+    "CSVStreamReader": "readonly",
+    "SecureEncoder": "readonly",
+    "PromotionMgr": "readonly",
+    "CouponMgr": "readonly"
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  }
 }

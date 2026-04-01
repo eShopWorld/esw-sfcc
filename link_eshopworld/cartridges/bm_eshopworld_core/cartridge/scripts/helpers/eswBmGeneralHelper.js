@@ -1,16 +1,18 @@
-
 'use strict';
 
 const Site = require('dw/system/Site');
 const eswCoreBmHelper = require('*/cartridge/scripts/helper/eswBmHelper');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-
+const Resource = require('dw/web/Resource');
+const eswImHelepr = require('*/cartridge/scripts/helper/eswIntegrationMonitorHelper');
+const Constants = require('*/cartridge/scripts/util/Constants');
 /**
  * update monitoring configuration object
  * @param {Object} configReport - configReport object
- * @returns {Time | null} - last modified time or null if not found
+ * @param {Object} serviceReport - serviceReport object
+ * @returns {string | null} - last modified time or null if not found
  */
-function updateIntegrationMonitoring(configReport) {
+function updateIntegrationMonitoring(configReport, serviceReport) {
     const Transaction = require('dw/system/Transaction');
     let CustomObjectMgr = require('dw/object/CustomObjectMgr');
     let eswIntegrationMonitoring = CustomObjectMgr.getCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
@@ -19,7 +21,8 @@ function updateIntegrationMonitoring(configReport) {
             CustomObjectMgr.remove(eswIntegrationMonitoring);
         }
         eswIntegrationMonitoring = CustomObjectMgr.createCustomObject('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
-        eswIntegrationMonitoring.getCustom().configReport = configReport;
+        eswIntegrationMonitoring.getCustom().configReport = JSON.stringify(configReport);
+        eswIntegrationMonitoring.getCustom().eswServices = JSON.stringify({ serviceReport: serviceReport });
     });
     return !empty(eswIntegrationMonitoring) ? eswHelper.formatTimeStamp(eswIntegrationMonitoring.lastModified) : null;
 }
@@ -28,43 +31,7 @@ function updateIntegrationMonitoring(configReport) {
  * @returns {Array} - array of countries
  */
 function getCountriesConfigurations() {
-    let logger = require('dw/system/Logger');
-    try {
-        let allCountriesCO = eswHelper.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
-            countriesArr = [];
-        if (allCountriesCO.count > 0) {
-            while (allCountriesCO.hasNext()) {
-                let countryDetail = allCountriesCO.next();
-                let countryCode = countryDetail.getCustom().countryCode;
-                if (!empty(countryCode)) {
-                    countriesArr.push({
-                        countryCode: countryCode,
-                        isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
-                        name: countryDetail.getCustom().name,
-                        defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
-                        eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
-                        baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
-                        isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
-                        isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
-                        ESW_HUB_Address: {
-                            hubAddress: countryDetail.getCustom().hubAddress,
-                            hubAddressState: countryDetail.getCustom().hubAddressState,
-                            hubAddressCity: countryDetail.getCustom().hubAddressCity,
-                            hubAddressPostalCode: countryDetail.getCustom().hubAddressPostalCode
-                        },
-                        eswPackage: {
-                            eswToSfcc: countryDetail.getCustom().eswToSfcc,
-                            sfccToEsw: countryDetail.getCustom().sfccToEsw
-                        }
-                    });
-                }
-            }
-        }
-        return countriesArr;
-    } catch (error) {
-        logger.error('Error while fetching Countries Configurations {0} ', error);
-    }
-    return null;
+    return eswHelper.getCountriesConfigurations();
 }
 /**
  * Return the currencies configs
@@ -134,7 +101,6 @@ function loadGroups(preferences, groupURL, appendedParameter, groupId) {
  * @returns {Array} sitePrefs - New Array with fields specific to API/SFTP
  */
 function removeElements(sitePrefFieldsAttributes, relatedMethodFields) {
-    let Constants = require('*/cartridge/scripts/util/Constants');
     let uploadMethod = eswHelper.getCatalogUploadMethod();
 
     // Always include the toggle field
@@ -265,6 +231,11 @@ function refactorCustomObjectResponse(customObject) {
                         value: listArray
                     });
                 }
+            } else if (obj.id === 'eswSelfhostedOcPageUrl') {
+                jsonPrefrencesArray.push({
+                    displayName: 'eswSelfhostedOcPageController',
+                    value: !empty(obj.currentValue) ? obj.currentValue : ''
+                });
             } else {
                 jsonPrefrencesArray.push({
                     displayName: obj.id,
@@ -275,6 +246,16 @@ function refactorCustomObjectResponse(customObject) {
     }
     return jsonPrefrencesArray;
 }
+
+/**
+ * Function to return all ESW service url names
+ * @returns {Array} - array of service url names
+ *
+ */
+function getEswServiceUrlNames() {
+    let eswServiceNames = Constants.ESW_SERVICES_URLS;
+    return Object.keys(eswServiceNames);
+}
 /**
  * Function to create Config Report
  * @param {string} csrf - csrf
@@ -283,12 +264,12 @@ function refactorCustomObjectResponse(customObject) {
 function loadReport(csrf) {
     let logger = require('dw/system/Logger');
     let URLUtils = require('dw/web/URLUtils');
-    let Resource = require('dw/web/Resource');
     let configReport = [];
+    let serviceReport = [];
     let lastModified;
     let checkoutServiceName = eswHelper.getCheckoutServiceName();
     let system = require('dw/system/System');
-
+    let eswServices = require('*/cartridge/scripts/helper/eswServices');
     try {
         let retailerSitePrefFields = loadGroups(
             Site.getCurrent().getPreferences(),
@@ -398,6 +379,18 @@ function loadReport(csrf) {
                 }
             }
         );
+
+        let serviceNames = getEswServiceUrlNames();
+        serviceNames.forEach((serviceName) => {
+            const url = eswServices.getEswServiceUrl(serviceName);
+            serviceReport.push({
+                name: serviceName,
+                serviceUrl: url,
+                inUse: false,
+                lastExecuted: null
+            });
+        });
+
         if (configReport && Array.isArray(configReport)) {
             // Check if configReport has at least three elements
             if (configReport.length > 1) {
@@ -405,16 +398,17 @@ function loadReport(csrf) {
                 nestedObject[checkoutServiceName] = getServiceUrl('eswCheckoutService');
             }
         }
-        lastModified = updateIntegrationMonitoring(JSON.stringify(configReport));
+        lastModified = updateIntegrationMonitoring(configReport, serviceReport);
     } catch (error) {
         logger.error('Error while updating config object {0} ', error);
         let eswIntegrationMonitoringObject = eswHelper.getCustomObjectDetails('ESW_INTEGRATION_MONITORING', 'ESW_INTEGRATION_MONITORING');
         if (!empty(eswIntegrationMonitoringObject)) {
-            configReport = !empty(eswIntegrationMonitoringObject.custom.configReport) ? JSON.parse(eswIntegrationMonitoringObject.custom.configReport) : configReport;
+            configReport = eswIntegrationMonitoringObject.custom && !empty(eswIntegrationMonitoringObject.custom.configReport) ? JSON.parse(eswIntegrationMonitoringObject.custom.configReport) : configReport;
             lastModified = !empty(eswIntegrationMonitoringObject) ? eswHelper.formatTimeStamp(eswIntegrationMonitoringObject.lastModified) : null;
         }
     }
-    configReport.push(lastModified);
+    configReport.push({ serviceReport: serviceReport });
+    configReport.push({ lastModified: lastModified });
     return configReport;
 }
 
@@ -505,7 +499,7 @@ function storeMixedPkgConf(reqForm) {
     if (getLengthOfMixedPkgConf(mixedPkgConf) > 0) {
         while (eswCountrtiesCoItr2.hasNext()) {
             let currentCountryToUpdateCo = eswCountrtiesCoItr2.next();
-                    // eslint-disable-next-line no-loop-func
+            // eslint-disable-next-line no-loop-func
             let countryConfigs = mixedPkgConf.filter(function (mixedConfig) {
                 return currentCountryToUpdateCo.custom.countryCode === mixedConfig.country;
             });
@@ -518,6 +512,15 @@ function storeMixedPkgConf(reqForm) {
         }
     }
 }
+/**
+ * Retrieves the integration report JSON.
+ *
+ * @returns {Object} An object containing the integration report and the last modified timestamp.
+ */
+function getIntegrationResportJson() {
+    let logs = eswImHelepr.getLogsJson();
+    return { imReport: logs, lastModifed: logs.lastModifed };
+}
 
 exports.loadGroups = loadGroups;
 exports.removeElements = removeElements;
@@ -528,3 +531,5 @@ exports.loadReport = loadReport;
 exports.updateIntegrationMonitoring = updateIntegrationMonitoring;
 exports.convertMixedPkgInputToArr = convertMixedPkgInputToArr;
 exports.storeMixedPkgConf = storeMixedPkgConf;
+exports.getEswServiceUrlNames = getEswServiceUrlNames;
+exports.getIntegrationResportJson = getIntegrationResportJson;

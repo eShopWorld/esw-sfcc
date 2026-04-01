@@ -5,10 +5,14 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import {start, registerServiceWorker} from '@salesforce/pwa-kit-react-sdk/ssr/browser/main'
+import {attachResponseInterceptor} from './esw/response-interceptor'
 
 const main = () => {
+    attachResponseInterceptor()
+
     // Esw: Customization
-    document.cookie = "esw.shopperTimezone=" + Intl.DateTimeFormat().resolvedOptions().timeZone + ";secure"
+    document.cookie =
+        'esw.shopperTimezone=' + Intl.DateTimeFormat().resolvedOptions().timeZone + ';path=/;secure'
     // End Esw: Customization
 
     // The path to your service worker should match what is set up in ssr.js

@@ -1,0 +1,5 @@
+<div class="esw-ir  active" id="healthStatusContent">
+    <isinclude template="report/partials/table/serviceTable" />
+    <isinclude template="report/partials/table/dataTable" />
+</div>
+

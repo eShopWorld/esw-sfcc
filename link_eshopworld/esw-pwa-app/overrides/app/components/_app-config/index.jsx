@@ -17,13 +17,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import {ChakraProvider} from '@salesforce/retail-react-app/app/components/shared/ui'
+import {StoreLocatorProvider} from '@salesforce/retail-react-app/app/contexts'
 
 // Removes focus for non-keyboard interactions for the whole application
 import 'focus-visible/dist/focus-visible'
 
 import theme from '@salesforce/retail-react-app/app/theme'
 import {MultiSiteProvider} from '@salesforce/retail-react-app/app/contexts'
-import {useAppOrigin} from '@salesforce/retail-react-app/app/hooks/use-app-origin'
 import {
     resolveSiteFromUrl,
     resolveLocaleFromUrl
@@ -34,8 +34,13 @@ import createLogger from '@salesforce/pwa-kit-runtime/utils/logger-factory'
 
 import {CommerceApiProvider} from '@salesforce/commerce-sdk-react'
 import {withReactQuery} from '@salesforce/pwa-kit-react-sdk/ssr/universal/components/with-react-query'
-import {useCorrelationId} from '@salesforce/pwa-kit-react-sdk/ssr/universal/hooks'
+import {useCorrelationId, useServerContext} from '@salesforce/pwa-kit-react-sdk/ssr/universal/hooks'
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
+
+const storeLocatorConfig = {
+    defaultCountryCode: 'US',
+    defaultPostalCode: ''
+}
 
 /**
  * Use the AppConfig component to inject extra arguments into the getProps
@@ -47,12 +52,16 @@ import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
  */
 const AppConfig = ({children, locals = {}}) => {
     const {correlationId} = useCorrelationId()
+    const serverContext = useServerContext()
     const headers = {
         'correlation-id': correlationId
     }
 
     const commerceApiConfig = locals.appConfig.commerceAPI
-    const appOrigin = useAppOrigin()
+    const appOrigin =
+        typeof window !== 'undefined'
+            ? window.location.origin
+            : serverContext?.res?.locals?.xForwardedOrigin || process.env.APP_ORIGIN || ''
     return (
         <CommerceApiProvider
             shortCode={commerceApiConfig.parameters.shortCode}
@@ -64,13 +73,18 @@ const AppConfig = ({children, locals = {}}) => {
             redirectURI={`${appOrigin}/callback`}
             proxy={`${appOrigin}${commerceApiConfig.proxyPath}`}
             headers={headers}
-            // Uncomment 'enablePWAKitPrivateClient' to use SLAS private client login flows.
-            // Make sure to also enable useSLASPrivateClient in ssr.js when enabling this setting.
-            // enablePWAKitPrivateClient={true}
+            // ESW Customization Start
+            defaultDnt={false}
+            // ESW Customization End
             logger={createLogger({packageName: 'commerce-sdk-react'})}
         >
             <MultiSiteProvider site={locals.site} locale={locals.locale} buildUrl={locals.buildUrl}>
-                <ChakraProvider theme={theme}>{children}</ChakraProvider>
+                <ChakraProvider theme={theme}>
+                    {/* Wrap children here */}
+                    <StoreLocatorProvider config={storeLocatorConfig}>
+                        {children}
+                    </StoreLocatorProvider>
+                </ChakraProvider>
             </MultiSiteProvider>
             <ReactQueryDevtools />
         </CommerceApiProvider>

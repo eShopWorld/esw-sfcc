@@ -1,0 +1,3 @@
+<div class="esw-ir" id="systemConfigContent">
+    <span class="item json-txt-lg">${pdict.configReport}</span>
+</div>

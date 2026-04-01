@@ -82,7 +82,7 @@ function getTestOutputFromFile() {
 /**
   * Return the origin and inventory information against products
   * @param {Object} productWithQuantities - productWithQuantities - { productId: productId, quantity: totalQtyRequested }
-  * @param {string} shopperCountryIso - shopperCountryIso e.g. "IE"
+  * @param {string} shopperCountryIso - Optional shopperCountryIso, e.g., "IE"
   * @return {Object} - productOriginDetails object
   */
 function getProductOriginDetails(productWithQuantities) {
@@ -116,9 +116,19 @@ function getProductOriginDetails(productWithQuantities) {
                 multiOriginResponse.push({ productId: productWithQuantities.productId, originIso: generateRandomAlphaString(), quantity: 1 });
             }
             break;
+        case 'MULTI_LOCATION_NOT_ENOUGH':
+            for (let i = 0; i < productWithQuantities.quantity - 1; i++) {
+                multiOriginResponse.push({ productId: productWithQuantities.productId, originIso: generateRandomAlphaString(), quantity: 1 });
+            }
+            break;
         case 'SINGLE_LOCATION':
             multiOriginResponse = [
-                    { productId: productWithQuantities.productId, originIso: generateRandomAlphaString(), quantity: productWithQuantities.quantity }
+                { productId: productWithQuantities.productId, originIso: generateRandomAlphaString(), quantity: productWithQuantities.quantity }
+            ];
+            break;
+        case 'SINGLE_LOCATION_NOT_ENOUGH':
+            multiOriginResponse = [
+                { productId: productWithQuantities.productId, originIso: generateRandomAlphaString(), quantity: productWithQuantities.quantity - 1 }
             ];
             break;
         default:
@@ -154,7 +164,7 @@ function getProductOriginDetails(productWithQuantities) {
  */
 function getInventoryAtsFromMultiOriginResponse(multiOriginResponseObj, productId) {
     let totalQuantity = 0;
-   // Filter the data to include only the objects with the specified product ID
+    // Filter the data to include only the objects with the specified product ID
     for (let i = 0; i < multiOriginResponseObj.length; i++) {
         if (multiOriginResponseObj[i].productId === productId) {
             totalQuantity += multiOriginResponseObj[i].quantity;
@@ -193,9 +203,11 @@ function getGroupedPlisUuidByPid(productId, currentBasketPlis) {
 /**
  * Group the cart product line items.
  * @param {Object[]} productItems - The array of product items.
+ * @param {string} pid - The product ID.
+ * @param {string} lineItemUuid - The UUID of the line item to append on storefront for jQuery related operations in case of update product.
  * @returns {Object[]} - The grouped product line items.
  */
-function groupCartPlis(productItems) {
+function groupCartPlis(productItems, pid, lineItemUuid) {
     const renderTemplateHelper = require('*/cartridge/scripts/renderTemplateHelper');
     let template = 'checkout/productCard/productCardProductRenderedTotalPrice';
     let pliInGroup = null;
@@ -223,7 +235,12 @@ function groupCartPlis(productItems) {
                 eswMoFormattedNonAdjustedPrice: pliInGroup.priceTotal.eswMoFormattedNonAdjustedPrice,
                 eswMoFormattedTotalPrice: pliInGroup.priceTotal.eswMoFormattedTotalPrice
             } } };
-            pliInGroup.priceTotal.eswRenderedPrice = renderTemplateHelper.getRenderedHtml(context, template);
+            pliInGroup.priceTotal.eswRenderedUnitPrice = renderTemplateHelper.getRenderedHtml(context, template);
+            pliInGroup.priceTotal.renderedPrice = renderTemplateHelper.getRenderedHtml(context, template);
+            // UUID needs to be manage for jQuery renderign, so we will keep uuid from http request
+            if (pid && pid === pliInGroup.id) {
+                pliInGroup.eswUUID = lineItemUuid;
+            }
         } else {
             productItems[i].eswItemSortingOrder = i;
             productItems[i].eswMoQty = productItems[i].quantity;
@@ -241,16 +258,22 @@ function groupCartPlis(productItems) {
                 eswMoFormattedTotalPrice: productItems[i].priceTotal.eswMoFormattedTotalPrice
             } } };
             productItems[i].priceTotal.eswRenderedPrice = renderTemplateHelper.getRenderedHtml(context, template);
-
             // Render unit price
-            productItems[i].eswRenderedUnitPrice = renderTemplateHelper.getRenderedHtml({ lineItem: {
+            context = { lineItem: {
                 priceTotal: {
                     nonAdjustedPrice: productItems[i].priceTotal.eswNonAdjustedPrice,
                     eswMoFormattedNonAdjustedPrice: productItems[i].priceTotal.eswMoFormattedNonAdjustedPrice,
                     eswMoFormattedTotalPrice: productItems[i].priceTotal.eswMoFormattedTotalPrice
                 }
             }
-            }, template);
+            };
+            productItems[i].eswRenderedUnitPrice = renderTemplateHelper.getRenderedHtml(context, template);
+            productItems[i].priceTotal.renderedPrice = renderTemplateHelper.getRenderedHtml(context, template);
+            // UUID needs to be manage for jQuery renderign, so we will keep uuid from http request
+            if (pid && pid === productItems[i].id) {
+                context.lineItem.UUID = lineItemUuid;
+                productItems[i].eswUUID = lineItemUuid;
+            }
             groupedPlis.push(productItems[i]);
         }
     }
@@ -275,11 +298,167 @@ function removeProductLineitemFromBasket(existingLineItemsOfProduct, currentBask
     }
 }
 
+/**
+ * Synchronize a single product's multi-origin inventory with SFCC inventory.
+ * @param {dw.catalog.Product} product - The product to synchronize.
+ * @param {number} targetQty - The target quantity to synchronize.
+ * @returns {Object} - Response object indicating success or failure.
+ */
+function syncSingleProductMoInventoryWithSfcc(product, targetQty) {
+    const ProductInventoryMgr = require('dw/catalog/ProductInventoryMgr');
+    const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
+    const eswMultiOriginHelper = require('*/cartridge/scripts/helper/eswMultiOriginHelper');
+    let apiRes = {
+        success: true,
+        inventoryRec: [],
+        inventoryRecRes: null
+    };
+    let ocapiAuthTokenResponse = null;
+    let inventoryList = ProductInventoryMgr.getInventoryList();
+    let inventoryRec = inventoryList ? inventoryList.getRecord(product.ID) : null;
+    let eswAtsValue = 0;
+    if (inventoryRec && (!inventoryRec.perpetual && targetQty >= inventoryRec.ATS.value)) {
+        let inventoryInfo = eswMultiOriginHelper.getProductOriginDetails({ productId: product.ID, quantity: targetQty });
+        eswAtsValue = eswMultiOriginHelper.getInventoryAtsFromMultiOriginResponse(inventoryInfo, product.ID);
+        ocapiAuthTokenResponse = eswCoreHelper.getAdminOAuthToken();
+        let syncMOInventoryWithSFCC = eswCoreService.syncMoInventoryWithSfcc();
+        let requestBody = {
+            allocation: {
+                amount: inventoryRec.onOrder.value + eswAtsValue
+            },
+            stock_level: eswAtsValue
+        };
+        apiRes.inventoryRecRes = syncMOInventoryWithSFCC.call({
+            requestBody: requestBody,
+            accessToken: ocapiAuthTokenResponse.token,
+            productId: product.ID,
+            inventory_ID: inventoryList.ID
+        });
+    } else if (inventoryRec && (!inventoryRec.perpetual && inventoryRec.ATS.value >= targetQty)) {
+        return {
+            eswAtsValue: inventoryRec.ATS.value
+        };
+    }
+    return {
+        eswAtsValue: eswAtsValue
+    };
+}
+
+/**
+ * Synchronize multi-origin inventory with SFCC inventory.
+ * @param {Object[]} productItems - Array of product items with productId and quantity.
+ * @returns {Object} - Response object indicating success or failure.
+ */
+function syncMoInventoryWithSfcc(productItems) {
+    const ProductInventoryMgr = require('dw/catalog/ProductInventoryMgr');
+
+    const eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
+    const eswMultiOriginHelper = require('*/cartridge/scripts/helper/eswMultiOriginHelper');
+    let response = {
+        success: true,
+        inventoryRec: []
+    };
+    try {
+        for (let i = 0; i < productItems.length; i++) {
+            let item = productItems[i];
+            let inventoryList = ProductInventoryMgr.getInventoryList();
+            let inventoryRec = inventoryList ? inventoryList.getRecord(item.productId) : null;
+            if (inventoryRec && (!inventoryRec.perpetual && Number(item.quantity) > inventoryRec.ATS.value)) {
+                let inventoryInfo = eswMultiOriginHelper.getProductOriginDetails({ productId: item.productId, quantity: Number(item.quantity) });
+                let eswAtsValue = eswMultiOriginHelper.getInventoryAtsFromMultiOriginResponse(inventoryInfo, item.productId);
+                if (Number(item.quantity) < eswAtsValue) {
+                    let ocapiAuthTokenResponse = eswCoreHelper.getAdminOAuthToken();
+                    let syncMOInventoryWithSFCC = eswCoreService.syncMoInventoryWithSfcc();
+                    let requestBody = {
+                        allocation: {
+                            amount: inventoryRec.onOrder.value + eswAtsValue
+                        },
+                        stock_level: eswAtsValue
+                    };
+                    syncMOInventoryWithSFCC.call({
+                        requestBody: requestBody,
+                        accessToken: ocapiAuthTokenResponse.token,
+                        productId: item.productId,
+                        inventory_ID: inventoryList.ID
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        response.success = false;
+    }
+    return response;
+}
+
+/**
+ * Updates the quantity of a product in the basket for multi-origin logic by removing old line items and adding new line items
+ *
+ * @param {dw.order.Basket} currentBasket - The current basket object.
+ * @param {string} productId - The ID of the product to update.
+ * @param {number} updateQuantity - The new quantity for the product.
+ * @returns {Object} The response object from adding the product to the cart.
+ */
+function executeProductUpdateQtyMoLogic(currentBasket, productId, updateQuantity) {
+    const cartHelper = require('*/cartridge/scripts/cart/cartHelpers');
+    const Transaction = require('dw/system/Transaction');
+    const basketCalculationHelpers = require('*/cartridge/scripts/helpers/basketCalculationHelpers');
+    const eswHelper = require('*/cartridge/scripts/helper/eswHelper').getEswHelper();
+    const Resource = require('dw/web/Resource');
+
+    let productLineItems = currentBasket.productLineItems;
+
+    // Use an iterator to traverse the productLineItems collection
+    let lintItemsToRemove = [];
+    let pliIterator = productLineItems.iterator();
+    let productName = null;
+    while (pliIterator.hasNext()) {
+        var item = pliIterator.next();
+        if (item.productID === productId) {
+            productName = item.productName;
+            lintItemsToRemove.push(item);
+        }
+    }
+
+    // Add the product back to the cart with the updated quantity
+    var inventoryInfo = getProductOriginDetails({ productId: productId, quantity: updateQuantity });
+    var moInventoryAts = getInventoryAtsFromMultiOriginResponse(inventoryInfo, productId);
+    var updateQtyResponse = { success: false, msg: null };
+    Transaction.wrap(function () {
+        if (!empty(inventoryInfo) && moInventoryAts >= updateQuantity) {
+            // Remove line items of the same product
+            removeProductLineitemFromBasket(lintItemsToRemove, currentBasket);
+            // basketCalculationHelpers.calculateTotals(currentBasket);
+            updateQtyResponse.msg = cartHelper.addProductToCart(currentBasket, productId, updateQuantity, [], [], false);
+            basketCalculationHelpers.calculateTotals(currentBasket);
+
+            cartHelper.ensureAllShipmentsHaveMethods(currentBasket);
+            basketCalculationHelpers.calculateTotals(currentBasket);
+            eswHelper.removeThresholdPromo(currentBasket);
+            updateQtyResponse.success = true;
+        } else {
+            updateQtyResponse.success = false;
+            updateQtyResponse.msg = Resource.msgf(
+                            'error.alert.selected.quantity.cannot.be.added.for',
+                            'product',
+                            null,
+                            moInventoryAts,
+                            productName
+                        );
+        }
+    });
+    return updateQtyResponse;
+}
+
 module.exports = {
     getProductOriginDetails: getProductOriginDetails,
     getInventoryAtsFromMultiOriginResponse: getInventoryAtsFromMultiOriginResponse,
     isProductAvailableInMultiOrigin: isProductAvailableInMultiOrigin,
     getGroupedPlisUuidByPid: getGroupedPlisUuidByPid,
     groupCartPlis: groupCartPlis,
-    removeProductLineitemFromBasket: removeProductLineitemFromBasket
+    removeProductLineitemFromBasket: removeProductLineitemFromBasket,
+    syncMoInventoryWithSfcc: syncMoInventoryWithSfcc,
+    syncSingleProductMoInventoryWithSfcc: syncSingleProductMoInventoryWithSfcc,
+    executeProductUpdateQtyMoLogic: executeProductUpdateQtyMoLogic
 };

@@ -32,7 +32,7 @@ const eswPricingHelper = {
                 }
             }
         } catch (e) {
-            eswHelper.eswInfoLogger('ESW Localize Pricing Job error: ' + e);
+            eswHelper.eswInfoLogger('ESW Localize Pricing Job error: ' + e, e, e.message, e.stack);
         }
         return selectedRoundingRule;
     },
@@ -118,6 +118,7 @@ const eswPricingHelper = {
     * @returns {Object} conversionPref JSON
     */
     getConversionPreference: function (localizeObj) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         try {
             if (localizeObj
                 && !empty(localizeObj)
@@ -134,6 +135,7 @@ const eswPricingHelper = {
             return conversionPref;
         } catch (e) {
             logger.error(e.message + e.stack);
+            eswHelper.eswInfoLogger('Error in getConversionPreference', e, e.message, e.stack);
         }
         return null;
     },
@@ -157,9 +159,9 @@ const eswPricingHelper = {
     * @returns {number} returns calculated localized price
     */
     getConvertedPrice: function (localizePrice, localizeObj, conversionPrefs) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         conversionPrefs = conversionPrefs || this.getConversionPreference(localizeObj);
-
-        if (!empty(conversionPrefs.selectedFxRate) && !this.isFixedPriceCountry(localizeObj.localizeCountryObj.countryCode)) {
+        if (!eswHelper.isEswEnabledSparkPricingConversion() && (!empty(conversionPrefs.selectedFxRate) && !this.isFixedPriceCountry(localizeObj.localizeCountryObj.countryCode))) {
             let applyRoundingModel = (typeof localizeObj.applyRoundingModel === 'string') ? localizeObj.applyRoundingModel.toLowerCase() === 'true' : localizeObj.applyRoundingModel;
             let applyCountryAdjustments = (typeof localizeObj.applyCountryAdjustments === 'string') ? localizeObj.applyCountryAdjustments.toLowerCase() === 'true' : localizeObj.applyCountryAdjustments;
             localizePrice = (applyCountryAdjustments) ? this.applyESWCountryAdjustments(localizePrice, conversionPrefs.selectedCountryAdjustments) : localizePrice;
@@ -187,16 +189,22 @@ const eswPricingHelper = {
         if (overridePricebooks.length > 0) {
            // eslint-disable-next-line array-callback-return
             overridePricebooks.map(function (pricebookId) {
-                arrPricebooks.push(PriceBookMgr.getPriceBook(pricebookId));
+                let priceBook = PriceBookMgr.getPriceBook(pricebookId);
+                if (!empty(priceBook)) {
+                    arrPricebooks.push(priceBook);
+                }
             });
             try {
-                PriceBookMgr.setApplicablePriceBooks(arrPricebooks);
-                let priceBookCurrency = eswHelper.getPriceBookCurrency(overridePricebooks[0]);
-                if (priceBookCurrency != null && (basket || isOCRequest)) {
-                    eswHelperHL.setBaseCurrencyPriceBook(priceBookCurrency, basket);
+                if (arrPricebooks.length > 0) {
+                    PriceBookMgr.setApplicablePriceBooks(arrPricebooks);
+                    let priceBookCurrency = eswHelper.getPriceBookCurrency(overridePricebooks[0]);
+                    if (priceBookCurrency != null && (basket || isOCRequest)) {
+                        eswHelperHL.setBaseCurrencyPriceBook(priceBookCurrency, basket);
+                    }
                 }
             } catch (e) {
                 logger.error(e.message + e.stack);
+                eswHelper.eswInfoLogger('Error in  setOverridePriceBooks', e, e.message, e.stack);
             }
             return true;
         }

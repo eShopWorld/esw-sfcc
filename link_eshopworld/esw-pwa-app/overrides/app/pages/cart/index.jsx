@@ -447,8 +447,18 @@ const Cart = () => {
                     setCartItemLoading(false)
                     setSelectedItem(undefined)
                 },
-                onSuccess: () => {
-                    setLocalQuantity({...localQuantity, [product.itemId]: undefined})
+                onSuccess: (response) => {
+                    /* Esw Modification */
+                    if (response && response?.c_MultiOriginProductAddUpdateError) {
+                        toast({
+                            title: response.c_MultiOriginProductAddUpdateError,
+                            status: 'error'
+                        })
+                        setLocalQuantity({...localQuantity, [product.itemId]: previousQuantity})
+                    } else {
+                        setLocalQuantity({...localQuantity, [product.itemId]: undefined})
+                    }
+                    /* Esw Modification */  
                 },
                 onError: () => {
                     // reset the quantity to the previous value

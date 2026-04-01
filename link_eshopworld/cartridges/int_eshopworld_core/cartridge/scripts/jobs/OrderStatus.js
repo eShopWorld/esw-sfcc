@@ -35,9 +35,9 @@ const ocUtils = {
      * @returns {Array<Object>} Results of each order cancellation in ESW CSP.
      */
     cancelESWOrder: function (order, args) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         try {
             let eswServices = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-                eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
                 oAuthObj = eswServices.getOAuthService(),
                 ocService = eswServices.getOrderAPIServiceV2();
 
@@ -51,6 +51,7 @@ const ocUtils = {
             let oAuthResult = oAuthObj.call(formData);
             if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
                 Logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+                eswHelper.eswInfoLogger('Error', '', 'ESW Service Error', oAuthResult.errorMessage);
                 return new Status(Status.ERROR);
             }
 
@@ -63,6 +64,7 @@ const ocUtils = {
             });
             return response;
         } catch (e) {
+            eswHelper.eswInfoLogger('cancelESWOrder', e, e.message, e.stack);
             Logger.error('ASN service call error: {0}', e.message);
             return new Status(Status.ERROR);
         }
@@ -76,6 +78,7 @@ const ocUtils = {
  * @return {boolean} - returns execute result
  */
 function execute(args) {
+    let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
     let orders = OrderMgr.searchOrders(
         'status = {0} AND (custom.eswShopperCurrencyCode != null) AND (custom.eswOrderCancellationReference = null) AND (custom.eswOrderCancellationRetryCount = null OR custom.eswOrderCancellationRetryCount < 3)',
         'creationDate desc',
@@ -108,6 +111,7 @@ function execute(args) {
                         order.custom.eswOrderCancelledByUser = args.actionByUserEmail;
                     });
                     Logger.error('Order Cancellation failed for order: {0}: {1}', order.orderNo, result.errorMessage);
+                    eswHelper.eswInfoLogger('Error', '', 'Order Cancellation failed for order', result.errorMessage);
                     return new Status(Status.ERROR);
                 }
                 Logger.error('Order Cancellation Duplication request for order: {0}: {1}', order.orderNo, result.errorMessage);
@@ -116,6 +120,7 @@ function execute(args) {
         return new Status(Status.OK);
     } catch (e) {
         Logger.error('Order API service call failed: {0}: {1}', e.message, e.stack);
+        eswHelper.eswInfoLogger('OrderStatus error', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
 }

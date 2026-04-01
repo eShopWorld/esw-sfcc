@@ -315,6 +315,30 @@
             </run-recurring>
         </triggers>
     </job>
+
+
+    <job job-id="eswSubmitLogsForReviewJob">
+        <description>Job to trigger the custom step ESW_SendLogsToEsw for submitting logs for review. This job runs at the Organization scope and has no configured schedule (manual execution only).</description>
+        <parameters/>
+        <split sequential="false">
+            <contexts template-ref="template_95">
+                <all-storefront-sites/>
+            </contexts>
+            <flow-template template-id="template_95">
+                <step step-id="custom.ESW_SendLogsToEsw" type="custom.ESW_SendLogsToEsw" enforce-restart="false">
+                    <description>This script sends logs to ESW via an automated, OCAPI-triggered job.</description>
+                    <parameters/>
+                </step>
+            </flow-template>
+        </split>
+        <rules/>
+        <triggers>
+            <run-once enabled="false">
+                <date>2025-04-10Z</date>
+                <time>15:15:00.000Z</time>
+            </run-once>
+        </triggers>
+    </job>
     <job job-id="eswGetJwksJob" priority="0">
         <description>Job to fetch JWKS from ESW</description>
         <flow>

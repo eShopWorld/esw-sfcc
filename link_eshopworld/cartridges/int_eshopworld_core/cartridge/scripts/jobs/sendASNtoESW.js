@@ -85,6 +85,9 @@ const asnUtils = {
         while (productLineItems.hasNext()) {
             let productLineItem = productLineItems.next();
 
+            if (productLineItem.product && productLineItem.custom.eswIsDigitalProduct) {
+                continue;
+            }
             let itemObj = {
                 productCode: productLineItem.productID,
                 lineItemId: lineItemCtnr++,
@@ -156,11 +159,12 @@ const asnUtils = {
      * @returns {Array<Object>} Results of each tracking number exported.
      */
     sendASNForPackage: function (order, shipment, lineItemCtnr) {
+        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
         try {
             let eswServices = require('*/cartridge/scripts/services/EswCoreService').getEswServices(),
-                eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper,
                 oAuthObj = eswServices.getOAuthService(),
                 asnService = eswServices.getPackageServiceV4();
+            let response = {};
 
             let formData = {
                 grant_type: 'client_credentials',
@@ -172,18 +176,21 @@ const asnUtils = {
             let oAuthResult = oAuthObj.call(formData);
             if (oAuthResult.status === 'ERROR' || empty(oAuthResult.object)) {
                 Logger.error('ESW Service Error: {0}', oAuthResult.errorMessage);
+                eswHelper.eswInfoLogger('Error', '', 'ESW Service Error', oAuthResult.errorMessage);
                 return new Status(Status.ERROR);
             }
 
             let shipmentParameter = !empty(shipment) ? shipment : order.defaultShipment;
             let requestBodyResult = this.prepareAdvancedShippingNotification(order, shipmentParameter, lineItemCtnr);
-
-            let response = asnService.call({
-                eswOAuthToken: JSON.parse(oAuthResult.object).access_token,
-                requestBody: JSON.stringify(requestBodyResult.requestObj)
-            });
+            if (!empty(requestBodyResult.requestObj.packageItems) && requestBodyResult.requestObj.packageItems.length > 0) {
+                response = asnService.call({
+                    eswOAuthToken: JSON.parse(oAuthResult.object).access_token,
+                    requestBody: JSON.stringify(requestBodyResult.requestObj)
+                });
+            }
             return { response, lineItemCtnr: requestBodyResult.lineItemCtnr };
         } catch (e) {
+            eswHelper.eswInfoLogger('sendASNForPackage Error', e, e.message, e.stack);
             Logger.error('ASN service call error: {0}', e.message);
             return new Status(Status.ERROR);
         }
@@ -238,7 +245,7 @@ function execute() {
                         let shipment = shipmentsItr.next();
                         result = asnUtils.sendASNForPackage(order, shipment, lineItemCtnr);
                         lineItemCtnr = result.lineItemCtnr;
-                        if (result.response && result.response.status === 'OK') {
+                        if (result && !empty(result) && result.response && result.response.status === 'OK') {
                             let responseObj = JSON.parse(result.response.object);
                             if (responseObj.outcome && !empty(responseObj.outcome) && responseObj.outcome.toLowerCase() === 'packagecreated') {
                                 Transaction.begin();
@@ -260,13 +267,13 @@ function execute() {
                             } else {
                                 Logger.error('ASN package not created for order: {0} - Shipment {1} - {2} - Bad Request.', order.orderNo, shipment.ID, responseObj.outcome);
                             }
-                        } else {
+                        } else if (result && !empty(result.response) && result.response.status === 'ERROR') {
                             Logger.error('ASN transmission failed for order: {0} - Shipment {1} - {2}.', order.orderNo, shipment.ID, result.response.errorMessage);
                         }
                     }
                 } else if (isAsnExportEnabledOnCountry) {
                     result = asnUtils.sendASNForPackage(order, null, lineItemCtnr);
-                    if (result && result.response.status === 'OK') {
+                    if (result && !empty(result) && result.response.status === 'OK') {
                         let responseObj = JSON.parse(result.response.object);
                         if (responseObj.outcome && !empty(responseObj.outcome) && responseObj.outcome.toLowerCase() === 'packagecreated') {
                             Transaction.begin();
@@ -276,8 +283,9 @@ function execute() {
                             Transaction.commit();
                             Logger.info('ASN successfully transmitted for order: {0}', order.orderNo);
                         }
-                    } else {
+                    } else if (result && !empty(result.response) && result.response.status === 'ERROR') {
                         Logger.error('ASN transmission failed for order: {0}: {1}', order.orderNo, result.response.errorMessage);
+                        eswHelper.eswInfoLogger('Error', 'ASN transmission failed for order', order.orderNo, result.response.errorMessage);
                     }
                 }
             } else if (!isAsnExportEnabledForCountry(order)) {
@@ -286,9 +294,11 @@ function execute() {
                 Logger.error('ASN can not be transmitted for order {0} as default shipment tracking number for this order.', order.orderNo);
             }
         }
+        eswHelper.updateServiceLastExecuted('EswPackageV4Service');
         return new Status(Status.OK);
     } catch (e) {
         Logger.error('ASN service call failed: {0}: {1}', e.message, e.stack);
+        eswHelper.eswInfoLogger('ASN service call failed:', e, e.message, e.stack);
         return new Status(Status.ERROR);
     }
 }

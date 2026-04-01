@@ -1,8 +1,0 @@
-{
-   "hooks": [
-		{
-			"name": "dw.ocapi.shop.order.beforePOST",
-			"script": "./ocapi/shop/hooks/orderHooks.js"
-		}
-	]
-}
