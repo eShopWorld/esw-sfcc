@@ -3449,10 +3449,7 @@ const getEswHelper = {
             let errorMsg = 'Failed to get Admin OAuth Token';
             let details = '';
             if (ocapiAuthServiceRes) {
-                details = `Status: ${ocapiAuthServiceRes.getStatus()},
-                    Error: ${ocapiAuthServiceRes.getError()},
-                    Message: ${ocapiAuthServiceRes.getErrorMessage()
-                    }`;
+                details = `Status: ${ocapiAuthServiceRes.getStatus()}, Error: ${ocapiAuthServiceRes.getError()}, Message: ${ocapiAuthServiceRes.getErrorMessage()}`;
                 errorMsg += `. ${details}`;
             } else {
                 details = 'Service result is null or undefined.';
