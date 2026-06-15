@@ -7,10 +7,26 @@ const Transaction = require('dw/system/Transaction');
 const Status = require('dw/system/Status');
 const Order = require('dw/order/Order');
 
+/*
+ * DEPRECATION NOTICE:
+ *
+ * The order cancellation flow implemented in this script is deprecated and should
+ * no longer be used for new implementations. This flow relies on ESW's outdated
+ * order cancellation API from SFCC to ESW.
+ *
+ * **New Implementations**:
+ * Use the updated cancellation workflow/API, which supports ESW to SFCC integration
+ * instead of SFCC to ESW. Refer to the latest documentation for the recommended
+ * cancellation process.
+ *
+ * All functions below are affected by this deprecation.
+ */
+
 const ocUtils = {
     /**
      * Helper to prepare the order cancellation request object
      *
+     * @deprecated This order cancellation flow is deprecated. Use the updated cancellation workflow/API ESW to SFCC instead.
      * @param {dw.order.Order} order The order to transmit data for
      * @param {Object} args - job parameters
      * @returns {Object} The request object to send to Esw Package API
@@ -30,6 +46,8 @@ const ocUtils = {
     /**
      * Cancel Order in ESW CSP using ESW Order API
      *
+     * @deprecated This order cancellation flow is deprecated.
+     * Use the updated cancellation workflow/API ESW to SFCC instead.
      * @param {dw.order.Order} order The order to transmit data for
      * @param {Object} args - job parameters
      * @returns {Array<Object>} Results of each order cancellation in ESW CSP.
@@ -55,6 +73,7 @@ const ocUtils = {
                 return new Status(Status.ERROR);
             }
 
+            // @deprecated This order cancellation flow is deprecated. Use the updated cancellation workflow/API ESW to SFCC instead.
             let requestBody = this.prepareOrderCancellationRequest(order, args);
 
             let response = ocService.call({
@@ -74,11 +93,14 @@ const ocUtils = {
 /**
  * Script file to cancel order in ESW CSP
  * Cancel order in ESW CSP if ESW order cancelled in SFCC
+ * @deprecated This order cancellation flow is deprecated. 
+ * Use the updated cancellation workflow/API ESW to SFCC instead.
  * @param {Object} args - job parameters
  * @return {boolean} - returns execute result
  */
 function execute(args) {
     let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    Logger.warn('DEPRECATED: SFCC to ESW order cancellation processing is deprecated. Please use the ESW to SFCC API instead.');
     let orders = OrderMgr.searchOrders(
         'status = {0} AND (custom.eswShopperCurrencyCode != null) AND (custom.eswOrderCancellationReference = null) AND (custom.eswOrderCancellationRetryCount = null OR custom.eswOrderCancellationRetryCount < 3)',
         'creationDate desc',
@@ -89,9 +111,11 @@ function execute(args) {
             retryCount = 1;
         while (orders.hasNext()) {
             order = orders.next();
+            // @deprecated This order cancellation flow is deprecated. Use the updated cancellation workflow/API ESW to SFCC instead.
             let result = ocUtils.cancelESWOrder(order, args);
             if (result && result.status === 'OK') {
                 let responseObj = JSON.parse(result.object);
+                Logger.warn('DEPRECATED: SFCC to ESW order cancellation processing is deprecated. Please use the ESW to SFCC API instead.');
                 Transaction.wrap(function () { // eslint-disable-line no-loop-func
                     order.custom.eswOrderCancellationReference = responseObj.transactionReference;
                     order.custom.eswOrderCancellationTimestamp = new Date();
@@ -119,6 +143,7 @@ function execute(args) {
         }
         return new Status(Status.OK);
     } catch (e) {
+        Logger.warn('DEPRECATED: SFCC to ESW order cancellation processing is deprecated. Please use the ESW to SFCC API instead.');
         Logger.error('Order API service call failed: {0}: {1}', e.message, e.stack);
         eswHelper.eswInfoLogger('OrderStatus error', e, e.message, e.stack);
         return new Status(Status.ERROR);

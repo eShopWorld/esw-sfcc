@@ -283,7 +283,7 @@ server.post('IsInventoryAvailable', function (req, res, next) {
     let inventoryList = ProductInventoryMgr.getInventoryList();
     let inventoryRec = inventoryList ? inventoryList.getRecord(reqBodyJson.productItems[0].productId) : null;
     let result = {
-        success: inventoryUpdateResponse.success,
+        success: eswHelper.isEnabledMultiOrigin() ? inventoryUpdateResponse.success : true,
         message: inventoryUpdateResponse.success ? null : Resource.msgf(
                         'error.alert.selected.quantity.cannot.be.added.for',
                         'product',

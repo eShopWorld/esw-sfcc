@@ -41,8 +41,8 @@ const getEswHelper = {
     /*
      * This function is used to get selected country price cost for given base price
      */
-    getSelectedCountryProductPrice: function (price, currency) {
-        return eswHelper.getSelectedCountryProductPrice(price, currency);
+    getSelectedCountryProductPrice: function (price, currency, isPromotionActive) {
+        return eswHelper.getSelectedCountryProductPrice(price, currency, isPromotionActive);
     },
     /**
     * Function used to get request is ajax.

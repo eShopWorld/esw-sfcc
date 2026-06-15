@@ -74,6 +74,29 @@ server.prepend('Variation', function (req, res, next) {
 });
 
 /**
+ * Product-Variation : This endpoint is called when all the product variants are selected
+ * @name Base/Product-Variation
+ * @function
+ * @memberof Product
+ * @param {querystringparameter} - pid - Product ID
+ * @param {querystringparameter} - quantity - Quantity
+ * @param {querystringparameter} - dwvar_<pid>_color - Color Attribute ID
+ * @param {querystringparameter} - dwvar_<pid>_size - Size Attribute ID
+ * @param {category} - non-sensitive
+ * @param {returns} - json
+ * @param {serverfunction} - get
+ */
+server.append('Variation', function (req, res, next) {
+    try {
+        let viewData = res.getViewData();
+        eswHelper.updateProductPricesForAppliedPromotions(viewData.product);
+    } catch (error) {
+        eswHelper.eswInfoLogger('ESW Product-Variation Error', error, error.message, error.stack);
+    }
+    next();
+});
+
+/**
  * Product-ShowQuickView : This endpoint is called when a product quick view button is clicked
  * @name Base/Product-ShowQuickView
  * @function

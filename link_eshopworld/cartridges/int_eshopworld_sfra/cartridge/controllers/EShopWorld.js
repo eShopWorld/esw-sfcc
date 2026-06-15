@@ -414,10 +414,10 @@ server.get('GetSelectedCountryProductPrice', cache.applyCachedCountryVariations,
                     salesprice;
                 if (priceObject.list !== null && typeof priceObject.list === 'object') {
                     listPrice = priceObject.list;
-                    params.productStrikePrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(listPrice.value, listPrice.currency) : listPrice;
+                    params.productStrikePrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(listPrice.value, listPrice.currency, eswHelper.isPromotionActive()) : listPrice;
                 }
                 salesprice = priceObject.sales;
-                params.productPrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(salesprice.value, salesprice.currency) : salesprice;
+                params.productPrice = eswSFRAHelper.getEShopWorldModuleEnabled() ? eswSFRAHelper.getSelectedCountryProductPrice(salesprice.value, salesprice.currency, eswHelper.isPromotionActive()) : salesprice;
             }
             res.render('product/components/pricing/defaultESWSalesPrice', params);
         }

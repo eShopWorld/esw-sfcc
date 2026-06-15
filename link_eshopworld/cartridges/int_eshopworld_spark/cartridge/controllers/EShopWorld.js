@@ -54,9 +54,11 @@ server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
                 accessToken;
             let basketID = eswHelper.getRetailerCartId(obj.retailerCartId);
             accessToken = eswCoreApiHelper.getPWAHeadlessAccessToken(obj);
+            let isScapi = false;
             if (!empty(accessToken)) {
                 if (typeof accessToken === 'string') {
                     authKey = 'Bearer ' + accessToken;
+                    isScapi = true;
                 } else {
                     authKey = accessToken.authorization;
                 }
@@ -66,7 +68,7 @@ server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
                 let customerAuth = preorderServiceObj.call({ requestBody: { type: 'session' }, endpoint: customerEndpoint, dwsid: dwSid });
                 authKey = customerAuth.ok && !empty(customerAuth.object) ? customerAuth.object.getResponseHeader('authorization') : null;
             }
-            let ocapiBasketResponse = eswOcapiServiceHelper.ocapiBasketService().call({
+            let ocapiBasketResponse = eswOcapiServiceHelper.ocapiBasketService(isScapi).call({
                 basketId: basketID,
                 httpMethod: 'GET',
                 authToken: authKey,
@@ -103,7 +105,7 @@ server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
                 throw new Error('Basket data from OCAPI and ESW Checkout are not equal');
             }
             // Generate order from the basket
-            let ocapiOrderResponse = eswOcapiServiceHelper.ocapiOrderService().call({
+            let ocapiOrderResponse = eswOcapiServiceHelper.ocapiOrderService(isScapi).call({
                 httpMethod: 'POST',
                 authToken: authKey,
                 basketId: basketID,

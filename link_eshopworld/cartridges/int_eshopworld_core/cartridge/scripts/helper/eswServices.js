@@ -185,16 +185,11 @@ function logAllServicesUrls() {
  */
 function getLastExecutedServiceUrl(serviceName) {
     try {
-        let serviceCreds = LocalServiceRegistry.createService(serviceName, {
-            createRequest: function (service) {
-                service.URL = getEswServiceUrl(serviceName);
-            },
-            parseResponse: function (service) {
-                return service;
-            }
-        });
-        serviceCreds.call();
-        return serviceCreds.getURL();
+        let url = getEswServiceUrl(serviceName);
+        if (!empty(url)) {
+            return url;
+        }
+        return `No service ${serviceName} found in BM`;
     } catch (e) {
         return `No service ${serviceName} found in BM`;
     }
