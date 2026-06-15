@@ -113,6 +113,16 @@ export const eswAppInit = (locale) => {
     storeBmConfigs(locale)
 }
 
+export const applySparkClassToDom = (className) => {
+    try {
+        if (getEswConfigByKey('isEswEnabledSparkPricingConversion')) {
+            return className
+        }
+    } catch (error) {
+        // do nothing
+    }
+}
+
 /**
  * Call geo ip alert controller
  * @param {string} shopperCountry - shopper country

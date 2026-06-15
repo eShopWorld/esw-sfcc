@@ -70,14 +70,11 @@ const PwaCoreHelper = {
     },
     /**
      * Get PWA sites.js data
-     * @param {string} selectedCountryCode - Country code
      * @returns {Object} - Site.js complete object to export
      */
-    getPwaSitesData: function (selectedCountryCode) {
-        let allEswCountries;
-        let defaultCurrency;
-        allEswCountries = eswCoreHelper.getAllCountries();
-        defaultCurrency = eswCoreHelper.getBaseCurrencyPreference();
+    getPwaSitesData: function () {
+        let allEswCountries = eswCoreHelper.getAllCountries();
+        let defaultCurrency = eswCoreHelper.getBaseCurrencyPreference();
         let currentSite = Site.getCurrent();
         let currentSiteId = currentSite.getID();
         let allowedLocales = currentSite.getAllowedLocales();
@@ -88,33 +85,28 @@ const PwaCoreHelper = {
             let currentEswCountry = allEswCountries[i];
             if (allowedLocalesArr.indexOf(currentEswCountry.locale) !== -1) {
                 let preferedCurrency = currentEswCountry.isFixedPriceModel ? currentEswCountry.defaultCurrencyCode : eswCoreHelper.getBaseCurrencyPreference();
-                let siteConfigLocale = currentEswCountry.locale.replace('_', '-');
                 if (supportedCurrencies.indexOf(preferedCurrency) === -1) {
                     supportedCurrencies.push(preferedCurrency);
                 }
-                supportedLocals.push({
-                    id: siteConfigLocale,
-                    alias: currentEswCountry.value.toLowerCase(),
-                    preferredCurrency: preferedCurrency,
-                    supportedLocales: [siteConfigLocale],
-                    isFixedPriceModel: currentEswCountry.isFixedPriceModel,
-                    isSupportedByESW: currentEswCountry.isSupportedByESW,
-                    countryCode: currentEswCountry.value,
-                    actualCurrency: currentEswCountry.defaultCurrencyCode
-                });
+                var siteConfigLocales = currentEswCountry.locales
+                    .split(',')
+                    .map(locale => locale.trim().replace('_', '-'));
+                for (let index = 0; index < siteConfigLocales.length; index++) {
+                    let element = siteConfigLocales[index];
+                    supportedLocals.push({
+                        id: element,
+                        alias: element,
+                        preferredCurrency: preferedCurrency,
+                        supportedLocales: [element],
+                        isFixedPriceModel: currentEswCountry.isFixedPriceModel,
+                        isSupportedByESW: currentEswCountry.isSupportedByESW,
+                        countryCode: currentEswCountry.value,
+                        actualCurrency: currentEswCountry.defaultCurrencyCode
+                    });
+                }
             }
         }
         let defaultLocale = 'en-US';
-        if (!empty(selectedCountryCode)) {
-            let defaultSiteSetting = supportedLocals.filter(function (local) {
-                return local.countryCode === selectedCountryCode;
-            });
-            if (defaultSiteSetting.length > 0) {
-                defaultSiteSetting = defaultSiteSetting[0];
-                defaultCurrency = defaultSiteSetting.preferredCurrency;
-                defaultLocale = defaultSiteSetting.supportedLocales[0];
-            }
-        }
         return [{
             id: currentSiteId,
             l10n: {

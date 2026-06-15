@@ -51,9 +51,7 @@ exports.ESW_SERVICES_URLS = {
     EswPackageV4Service: 'https://package-api.{environment}.eshopworld.{domainSuffix}/api/{version}/Package',
     EswGetAsnPackage: 'https://logistics-package-api.{environment}.eshopworld.{domainSuffix}/api/{version}/Package/GetAsnPackage',
     EswPriceFeedService: 'https://pricing-advisor-api.{environment}.eshopworld.{domainSuffix}/api/{version}/StandardAdvice',
-    ESWOrderCreation: 'https://{bmHostname}/s/{siteId}/dw/shop/{ocapiVersion}/',
-    EswOcapiBasketService: 'https://{bmHostname}/s/{siteId}/dw/shop/{ocapiVersion}/baskets',
-    EswOcapiOrderService: 'https://{bmHostname}/s/{siteId}/dw/shop/{ocapiVersion}/orders',
+    EswOcapiService: 'https://{bmHostname}/s/{siteId}/dw/shop/{ocapiVersion}/',
     EswOAuthService: 'https://security-sts.{environment}.eshopworld.{domainSuffix}/connect/token',
     ESWCatalogService: 'https://logistics-customscatalog-api.{environment}.eshopworld.{domainSuffix}/api/{version}/RetailerCatalog',
     EswMoInventorySync: 'https://{bmHostname}/s/-/dw/data/{ocapiVersion}/inventory_lists/{inventory_ID}/product_inventory_records/{productID}'

@@ -11,26 +11,6 @@ const EswEmbeddedCheckout = () => {
 
     useEffect(() => {
         const scriptPath = getEswConfigByKey('eswEmbeddedCheckoutScriptPath')
-        const embeddedCheckoutCookieName = getEswConfigByKey('ecCookieName')
-
-        // Function to get the value of a cookie by name
-        const getCookieValue = (cookieName) => {
-            const cookies = document.cookie.split('; ')
-            const cookie = cookies.find((row) => row.startsWith(`${cookieName}=`))
-            return cookie ? cookie.split('=')[1] : null
-        }
-
-        // Function to validate if a string is a valid URL
-        const isValidUrl = (url) => {
-            try {
-                new URL(url)
-                return true
-            } catch (e) {
-                return false
-            }
-        }
-
-        const embeddedCheckoutCookieValue = getCookieValue(embeddedCheckoutCookieName)
 
         if (scriptPath) {
             const script = document.createElement('script')
@@ -41,25 +21,11 @@ const EswEmbeddedCheckout = () => {
             // MutationObserver to detect iframe insertion and set its height
             const container = document.querySelector('.esw-iframe-checkout')
             const observer = new MutationObserver(() => {
-                const urlParams = new URLSearchParams(window.location.search)
-                const eswCheckoutUrl = !isValidUrl(urlParams.get('eswiframeurl'))
-                    ? embeddedCheckoutCookieValue
-                    : urlParams.get('eswiframeurl')
                 const iframe = container?.querySelector('iframe')
                 if (iframe) {
                     iframe.style.height = '100vh'
                     observer.disconnect() // Stop observing after the iframe is found
                 }
-                // Set a timeout for 7 seconds
-                const iframeContent = iframe.contentDocument || iframe.contentWindow?.document
-                setTimeout(function () {
-                    if (!iframe || !iframeContent || iframeContent.body?.childElementCount === 0) {
-                        // Redirect to fallback URL if iframe is not loaded
-                        if (eswCheckoutUrl) {
-                            window.location.href = eswCheckoutUrl // Redirect to the eswCheckoutUrl
-                        }
-                    }
-                }, 7000)
             })
 
             if (container) {

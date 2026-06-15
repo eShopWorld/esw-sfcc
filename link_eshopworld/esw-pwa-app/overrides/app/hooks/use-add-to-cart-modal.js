@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import React, {useContext, useState, useEffect} from 'react'
+import React, {useContext, useState, useEffect, useLayoutEffect} from 'react'
 import {useLocation} from 'react-router-dom'
 import PropTypes from 'prop-types'
 import {useIntl, FormattedMessage} from 'react-intl'
@@ -37,6 +37,9 @@ import {
 } from '../utils/product-utils'
 import {EINSTEIN_RECOMMENDERS} from '@salesforce/retail-react-app/app/constants'
 import DisplayPrice from '@salesforce/retail-react-app/app/components/display-price'
+// ESW Custom Imports
+import {applySparkClassToDom} from '../esw/esw-helpers'
+// ESW Custom Imports
 
 // Esw Customization
 import {EswCheckoutBtn} from '../esw/components/checkout-btn'
@@ -72,6 +75,46 @@ export const AddToCartModal = () => {
     const {isOpen, onClose, data} = useAddToCartModalContext()
     const {product, itemsAdded = [], selectedQuantity} = data || {}
     const isProductABundle = product?.type.bundle
+    // ESW Native Shipping Imports
+    const [subtotalPriceClass, setSubtotalPriceClass] = useState('')
+    // ESW customization
+    const [itemViewClass, setItemViewClass] = useState('')
+    const [itemQtyClass, setitemQtyClass] = useState('')
+    const [itemEswClass, setitemPrice] = useState('')
+    // ESW customization
+    useEffect(() => {
+        if (!isOpen) return
+
+        const timeout = setTimeout(() => {
+            const elements = document.querySelectorAll('.esw-item-price')
+            const modelCart = document.querySelectorAll('.esw-modal-cart')
+
+            if (modelCart.length > 1) {
+                modelCart[modelCart.length - 1].remove()
+            }
+
+            elements.forEach((el) => {
+                const value = el.getAttribute('data-bp-lti')
+                if (!value) return
+
+                el.setAttribute('data-bp-lti', value)
+            })
+
+        }, 150) // small delay ensures modal DOM is painted
+
+        return () => clearTimeout(timeout)
+
+    }, [isOpen])
+    useEffect(() => {
+        // compute class once (or whenever dependencies change)
+        const cartSubtotalClass = applySparkClassToDom('esw-minicart-subtotal')
+        if (cartSubtotalClass) {
+            setSubtotalPriceClass(cartSubtotalClass)
+            setItemViewClass('esw-minicart-item')
+            setitemQtyClass('esw-minicart-item-quantity')
+            setitemPrice('esw-minicart-item-price')
+        }
+    }, []) // add dependencies if the helper depends on props/state
 
     const intl = useIntl()
     const {
@@ -125,6 +168,7 @@ export const AddToCartModal = () => {
     })?.images?.[0]
 
     return (
+        
         <Modal size={size} isOpen={isOpen} onClose={onClose} scrollBehavior="inside" isCentered>
             <ModalOverlay />
             <ModalContent
@@ -153,6 +197,35 @@ export const AddToCartModal = () => {
                         paddingBottom={{base: '0', lg: '8'}}
                         paddingX="4"
                     >
+                    {/* ESW Customization Start */}
+                    {/* Render hidden minicart items so LTI can calculate and update cart subtotal correctly */}
+                    <Box className="esw-modal-cart" style={{ display: 'none' }}>
+                        {basket?.productItems?.map((item) => (
+                            <Flex
+                            key={item.productId}
+                            className={itemViewClass}
+                            data-testid="product-added"
+                            >
+                            <span
+                                className={itemQtyClass}
+                                style={{ display: 'none' }}
+                            >
+                                {item.quantity}
+                            </span>
+                            <b
+                                className={itemEswClass}
+                                aria-label={`current price ${item.price}`}
+                                style={{ display: 'none' }}
+                            >
+                                {intl.formatNumber(item.price, {
+                                    style: 'currency',
+                                    currency
+                                })}
+                            </b>
+                            </Flex>
+                        ))}
+                    </Box>
+                    {/* ESW Customization End */}
                         <Box
                             flex="1"
                             paddingX={{lg: '4', xl: '8'}}
@@ -337,13 +410,15 @@ export const AddToCartModal = () => {
                                         {itemAccumulatedCount: totalItems}
                                     )}
                                 </Text>
-                                <Text alignSelf="flex-end" fontWeight="600">
+                                {/* Start ESW customization */}
+                                <Text alignSelf="flex-end" fontWeight="600" className={subtotalPriceClass}>
                                     {productSubTotal &&
                                         intl.formatNumber(productSubTotal, {
                                             style: 'currency',
                                             currency: currency
                                         })}
                                 </Text>
+                                {/* END ESW customization */}
                             </Flex>
                             <Stack spacing="4">
                                 <Button as={Link} to="/cart" width="100%" variant="solid">

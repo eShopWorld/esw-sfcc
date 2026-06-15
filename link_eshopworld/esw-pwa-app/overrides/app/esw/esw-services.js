@@ -108,7 +108,7 @@ const getTokenFromLocalStorage = (siteId) => {
 }
 
 const getScapiBaseUrl = (locale) => {
-    const proxyBase = '/mobify/proxy/api'
+    const proxyBase = app?.commerceAPI?.proxyPath
     const organizationId = app?.commerceAPI?.parameters?.organizationId || ''
     const siteId = app?.commerceAPI?.parameters?.siteId || ''
     const shopperLocale = typeof locale === 'string' && locale.length > 0 ? locale : ''
@@ -176,31 +176,6 @@ export const getAbandonmentCart = async (eswClientLastOrderId, locale, bearerTok
     }
     return fetch(url, {method: 'GET', headers})
 }
-
-/**
- * Get supported countries
- * @param {string} bearerToken - optional authentication token from PWA Kit auth helper
- * @returns {Promise} - fetch promise
- */
-
-export const getSupportedCountries = () => {
-    return fetch(
-        `${getAppOrigin()}${app.eswConfigs.ocapiProxyPath}${
-            app.eswConfigs.siteUri
-        }/EShopWorld-SupportedCountries`
-    )
-}
-// export const getSupportedCountries = async (bearerToken = null) => {
-//     let shopperTimezone = getCookie('esw.shopperTimezone')
-//     let scapiUrlComponents = getScapiBaseUrl('')
-//     const token = bearerToken || await getTokenFromStorage(scapiUrlComponents.siteId)
-//     const url = `${scapiUrlComponents.scapiBaseUrl}/getSupportedCountries?siteId=${scapiUrlComponents.siteId}&c_eswShopperTimezone=${shopperTimezone}`
-//     const headers = {
-//         'Content-Type': 'application/json',
-//         ...(token && {'Authorization': `Bearer ${token}`})
-//     }
-//     return fetch(url, {method: 'GET', headers})
-// }
 
 /**
  * Get order number from ESW

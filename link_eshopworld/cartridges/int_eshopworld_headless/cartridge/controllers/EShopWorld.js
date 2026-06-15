@@ -11,15 +11,6 @@ const Transaction = require('dw/system/Transaction');
 const eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
 const eswPwaHelper = require('*/cartridge/scripts/helper/eswPwaCoreHelper');
 
-server.get('SupportedCountries', function (req, res, next) {
-    let shopperTimezone = !empty(request.httpCookies) && !empty(request.httpCookies['esw.shopperTimezone']) ? request.httpCookies['esw.shopperTimezone'].value : null;
-    let tzCountry = eswPwaHelper.getCountryByTimeZone(shopperTimezone);
-    res.json({
-        allowedCountries: eswPwaHelper.getPwaSitesData(tzCountry)
-    });
-    next();
-});
-
 /**
  * Get AbandonmentCart, this controller also used to update cart and releted country on PWA
  * That is why require basketId in response everytime and should not be null

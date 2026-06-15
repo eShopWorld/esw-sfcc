@@ -9,7 +9,6 @@
  */
 
 import {getConfig} from '@salesforce/pwa-kit-runtime/utils/ssr-config'
-import {getSupportedCountries} from '../esw/esw-services'
 
 /**
  * This functions takes an url and returns a site object,
@@ -67,16 +66,7 @@ export const getDefaultSite = () => {
  * @return {array} sites - list of sites including their aliases
  */
 export const getSites = () => {
-    let sitesFromConfig = getConfig().app
-
-    /* ESW INIT */
-    // sites.js from the BM
-    getSupportedCountries()
-        .then((response) => response.json())
-        .then((data) => (sitesFromConfig.sites = data.allowedCountries))
-    /* End ESW INIT */
-
-    let {sites = [], siteAliases = {}} = sitesFromConfig || {}
+    const {sites = [], siteAliases = {}} = getConfig().app || {}
 
     if (!sites.length) {
         throw new Error("Can't find any sites from the config. Please check your configuration")

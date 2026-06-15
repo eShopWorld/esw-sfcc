@@ -10,10 +10,8 @@ const RESTResponseMgr = require('dw/system/RESTResponseMgr');
 exports.getSupportedCountries = function () {
     let responseJSON;
     try {
-    let shopperTimezone = !empty(request.httpParameters.get('c_eswShopperTimezone')) ? request.httpParameters.get('c_eswShopperTimezone')[0] : null;
-    let tzCountry = eswPwaHelper.getCountryByTimeZone(shopperTimezone);
     responseJSON = {
-        allowedCountries: eswPwaHelper.getPwaSitesData(tzCountry)
+        allowedCountries: eswPwaHelper.getPwaSitesData()
     };
     } catch (e) {
         logger.error('ESW supportedCountries Error: {0}', e.message);

@@ -284,7 +284,7 @@
             </attribute-definition>
             <attribute-definition attribute-id="eswOrderCancellationRetryCount">
                 <display-name xml:lang="x-default">ESW Order Cancellation Retry Count</display-name>
-                <description xml:lang="x-default">ESW Order Cancellation Retry Count In Case Of Failure</description>
+                <description xml:lang="x-default">This attribute is part of the job that synchronizes Order Status between SFCC and ESW. It is obsolete.Use the updated ESW to SFCC Order Cancellation job instead</description>
                 <type>int</type>
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>

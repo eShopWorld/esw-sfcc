@@ -106,7 +106,7 @@
             {
                 "@type-id": "custom.ESW_OrderStatus",
                 "timeout-in-seconds": "180000",
-                "description": "This job synch Order Status between SFCC & ESW.",
+                "description": "DEPRECATED: This job step synchronizes Order Status between SFCC and ESW. This workflow is obsolete. Use the updated ESW to SFCC Order Cancellation job instead.",
                 "module": "int_eshopworld_core/cartridge/scripts/jobs/OrderStatus.js",
                 "transactional": "false",
                 "function": "execute",

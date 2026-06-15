@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import React, {useState, useEffect} from 'react'
+import React, {useState, useEffect, useRef} from 'react'
 import PropTypes from 'prop-types'
 import {FormattedMessage, FormattedNumber} from 'react-intl'
 import {
@@ -38,7 +38,7 @@ import {useCurrency} from '@salesforce/retail-react-app/app/hooks'
 import useMultiSite from '@salesforce/retail-react-app/app/hooks/use-multi-site'
 // ESW Custom Imports
 import {getEswConfigByKey} from '../../esw/esw-helpers'
-import { getEswShopperCurrencyConfigByKey } from '../../esw/esw-helpers'
+import { getEswShopperCurrencyConfigByKey, applySparkClassToDom} from '../../esw/esw-helpers'
 // ESW Custom Imports
 
 const CartItems = ({basket}) => {
@@ -133,10 +133,28 @@ const OrderSummary = ({
     fontSize = 'md'
 }) => {
     // ESW Native Shipping Imports
+    const [subtotalPriceClass, setSubtotalPriceClass] = useState('')
+    const [surchargePriceClass, setsurchargePriceClass] = useState('')
+    const [shippingPriceClass, setShippingPriceClass] = useState('')
+    const [cartDiscountPriceClass, setCartDiscountPriceClass] = useState('')
+    const [totalCartPriceClass, setTotalCartPriceClass] = useState('')
     const [isNativeShippingEnabled, setIsNativeShippingEnabled] = useState(false)
     const [nativeShippingEnabledMessage, setNativeShippingEnabledMessage] = useState('')
     const {currency: activeCurrency, setCurrency} = useCurrency()
     const selectedCountrycCurrency = getEswShopperCurrencyConfigByKey('code')
+    const shippingRef = useRef(null);
+    // ESW customization
+    useEffect(() => {
+        // compute class once (or whenever dependencies change)
+        const cartSubtotalClass = applySparkClassToDom('esw-cart-subtotal')
+        if (cartSubtotalClass) {
+            setSubtotalPriceClass(cartSubtotalClass)
+            setsurchargePriceClass('esw-cart-surcharge esw-tax')
+            setTotalCartPriceClass('esw-order-total')
+            setShippingPriceClass('esw-cart-surcharge esw-shipping-cost')
+            setCartDiscountPriceClass('esw-cart-discount')
+        }
+    }, []) // add dependencies if the helper depends on props/state
     // ESW customization
     setCurrency(
         basket.currency && basket.currency === selectedCountrycCurrency
@@ -185,7 +203,16 @@ const OrderSummary = ({
         setSelectedShippingMethod(selectedMethod)
         setShippingTotal(selectedMethod.price)
     }
-
+    // Start ESW customization
+    useEffect(() => {
+        if (!shippingTotal) return
+        // Update data attribute safely
+        if (shippingRef.current) {
+        shippingRef.current.setAttribute("data-bp-lti", shippingTotal)
+        shippingRef.current.setAttribute("data-bp-lti-processed", shippingTotal)
+        }
+    }, [shippingTotal])
+    // End ESW customization
     const FinalorderTotal = isNativeShippingEnabled
         ? basket?.orderTotal
         : basket?.orderTotal + basket?.shippingTotal
@@ -216,13 +243,15 @@ const OrderSummary = ({
                                 id="order_summary.label.subtotal"
                             />
                         </Text>
-                        <Text fontWeight="bold" fontSize={fontSize}>
+                        {/* Start ESW customization */}
+                        <Text className={subtotalPriceClass} fontWeight="bold" fontSize={fontSize} as="span">
                             <FormattedNumber
                                 style="currency"
                                 currency={activeCurrency}
                                 value={basket?.productSubTotal}
                             />
                         </Text>
+                        {/* End ESW customization */}
                     </Flex>
 
                     {basket.orderPriceAdjustments?.map((adjustment) => (
@@ -233,13 +262,15 @@ const OrderSummary = ({
                             aria-atomic="true"
                         >
                             <Text fontSize={fontSize}>{adjustment.itemText}</Text>
-                            <Text color="green.600" fontSize={fontSize}>
+                            {/* Start ESW customization */}
+                            <Text color="green.600" className={cartDiscountPriceClass} fontSize={fontSize} >
                                 <FormattedNumber
                                     style="currency"
                                     currency={activeCurrency}
                                     value={adjustment.price}
                                 />
                             </Text>
+                            {/* End ESW customization */}
                         </Flex>
                     ))}
                     {!isNativeShippingEnabled && (
@@ -289,13 +320,15 @@ const OrderSummary = ({
                                     />
                                 </Text>
                             ) : (
-                                <Text fontSize={fontSize}>
+                                // Start ESW customization
+                                <Text ref={shippingRef} className={shippingPriceClass} fontSize={fontSize} as="span">
                                     <FormattedNumber
                                         value={basket.shippingTotal}
                                         style="currency"
                                         currency={activeCurrency}
                                     />
                                 </Text>
+                                // End ESW customization
                             )}
                         </Flex>
                     )}
@@ -305,13 +338,15 @@ const OrderSummary = ({
                             <FormattedMessage defaultMessage="Tax" id="order_summary.label.tax" />
                         </Text>
                         {basket.taxTotal != null ? (
-                            <Text fontSize={fontSize}>
+                            // Start ESW customization
+                            <Text className={surchargePriceClass} fontSize={fontSize} as="span">
                                 <FormattedNumber
                                     value={basket.taxTotal}
                                     style="currency"
                                     currency={activeCurrency}
                                 />
                             </Text>
+                            // End ESW customization
                         ) : (
                             <Text fontSize={fontSize} color="gray.700">
                                 TBD
@@ -372,13 +407,15 @@ const OrderSummary = ({
                                 />
                             </Text>
                         )}
-                        <Text fontWeight="bold" fontSize={fontSize}>
+                        {/* Start ESW customization */}
+                        <Text className={totalCartPriceClass} as="span" fontWeight="bold" fontSize={fontSize}>
                             <FormattedNumber
                                 style="currency"
                                 currency={activeCurrency}
                                 value={FinalorderTotal}
                             />
                         </Text>
+                        {/* End ESW customization */}
                     </Flex>
 
                     {basket.couponItems?.length > 0 && (

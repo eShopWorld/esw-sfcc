@@ -2618,6 +2618,6 @@ export const getCountry = () => {
         return null
     }
 
-    const tzCountry = timezones[timezone].c[0]
+    const tzCountry = timezones[timezone]?.c?.[0] || null
     return tzCountry
 }

@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import React from 'react'
+import React, {useState, useEffect} from 'react'
 import PropTypes from 'prop-types'
 import {FormattedMessage, useIntl} from 'react-intl'
 
@@ -24,7 +24,9 @@ import {HideOnDesktop, HideOnMobile} from '@salesforce/retail-react-app/app/comp
 import ItemVariantProvider from '@salesforce/retail-react-app/app/components/item-variant'
 import CartItemVariantImage from '@salesforce/retail-react-app/app/components/item-variant/item-image'
 import CartItemVariantName from '@salesforce/retail-react-app/app/components/item-variant/item-name'
-import CartItemVariantAttributes from '@salesforce/retail-react-app/app/components/item-variant/item-attributes'
+// ESW Custom Imports
+import CartItemVariantAttributes from '../../../app/components/item-variant/item-attributes'
+// ESW Custom Imports
 import CartItemVariantPrice from '@salesforce/retail-react-app/app/components/item-variant/item-price'
 import LoadingSpinner from '@salesforce/retail-react-app/app/components/loading-spinner'
 import QuantityPicker from '@salesforce/retail-react-app/app/components/quantity-picker'
@@ -34,7 +36,7 @@ import {noop} from '@salesforce/retail-react-app/app/utils/utils'
 
 // Hooks
 import {useCurrency, useDerivedProduct} from '@salesforce/retail-react-app/app/hooks'
-import { getEswShopperCurrencyConfigByKey } from '../../esw/esw-helpers'
+import { getEswShopperCurrencyConfigByKey, applySparkClassToDom } from '../../esw/esw-helpers'
 import { EswReturnProhibitMsg } from '../../../../../esw-pwa-app/overrides/app/esw/components/product-return-prohibit-msg'
 
 /**
@@ -53,6 +55,17 @@ const ProductItem = ({
     onItemQuantityChange = noop,
     showLoading = false
 }) => {
+    // ESW customization
+    const [itemViewClass, setItemViewClass] = useState('')
+    const [itemQtyClass, setitemQtyClass] = useState('')
+    useEffect(() => {
+        // compute class once (or whenever dependencies change)
+        const cartViewClass = applySparkClassToDom('esw-cart-item')
+        if (cartViewClass) {
+            setItemViewClass(cartViewClass)
+            setitemQtyClass('esw-item-quantity')
+        }
+    }, []) // add dependencies if the helper depends on props/state
     const {stepQuantity, showInventoryMessage, inventoryMessage, quantity, setQuantity} =
         useDerivedProduct(product)
     const {currency: activeCurrency, setCurrency} = useCurrency()
@@ -64,6 +77,9 @@ const ProductItem = ({
         <Box
             position="relative"
             data-testid={`sf-cart-item-${product.productId ? product.productId : product.id}`}
+            // ESW customization
+            className={itemViewClass}
+            // ESW customization
         >
             <ItemVariantProvider variant={product}>
                 {showLoading && <LoadingSpinner />}
@@ -106,6 +122,10 @@ const ProductItem = ({
                                             id="product_item.label.quantity"
                                         />
                                     </Text>
+                                    {/* ESW customization */}
+                                    {/* QuantityPicker does not support custom classes, so a wrapper is used to enable Spark functionality */}
+                                    <span className={itemQtyClass} style={{display: 'none'}}>{quantity}</span>
+                                    {/* ESW customization */}
                                     <QuantityPicker
                                         step={stepQuantity}
                                         value={quantity}

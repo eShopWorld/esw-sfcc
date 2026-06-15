@@ -36,7 +36,7 @@ exports.getBmConfigs = function () {
         let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
 
         filteredFields.defaultLoaderText = Resource.msg('message.default.esw.loading', 'esw', null);
-        if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+        if (eswHelper.isEswEnabledSparkPricingConversion()) {
             filteredFields.eswEmbeddedCheckoutScriptPath = eswHelper.getEswEmbCheckoutScriptPath();
         }
 
@@ -50,16 +50,21 @@ exports.getBmConfigs = function () {
         filteredFields.isAbTastyEnabled = eswHelper.isEswEnabledAbTasty();
         filteredFields.abTastyScriptPath = filteredFields.isAbTastyEnabled ? eswHelper.getEswAbTastyScriptPaths() : null;
 
-        filteredFields.isEswEnabledEmbeddedCheckout = eswHelper.isEswEnabledEmbeddedCheckout();
+        filteredFields.isEswEnabledEmbeddedCheckout = false;
+        if (eswHelper.isEswEnabledEmbeddedCheckout()) {
+            filteredFields.isEswEnabledEmbeddedCheckout = true;
+        }
         if (filteredFields.isEswEnabledEmbeddedCheckout === true) {
             try {
                 const embCheckoutHelper = require('*/cartridge/scripts/helper/eckoutHelper').eswEmbCheckoutHelper;
                 filteredFields.ecCookieName = embCheckoutHelper.getEswIframeCookieName();
+                filteredFields.eswEmbeddedCheckoutScriptPath = eswHelper.getEswEmbCheckoutScriptPath();
             } catch (e) {
                 filteredFields.ecCookieName = null;
             }
         }
         filteredFields.isEnabledMultiOrigin = eswHelper.isEnabledMultiOrigin();
+        filteredFields.isEswEnabledSparkPricingConversion = eswHelper.isEswEnabledSparkPricingConversion();
         eswHelper.setLocation(selectedCountryDetail.countryCode);
         eswHelper.createCookie('esw.location', selectedCountryDetail.countryCode, '/');
         eswHelper.createCookie('esw.currency', selectedCountryDetail.defaultCurrencyCode, '/');

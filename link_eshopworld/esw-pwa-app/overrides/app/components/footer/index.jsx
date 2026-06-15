@@ -37,6 +37,7 @@ const [StylesProvider, useStyles] = createStylesContext('Footer')
 
 // ESW Custom Imports
 import {EswInit} from '../../esw/components/esw-init'
+import {UseSparkEffects} from '../../esw/useSparkEffects'
 // End ESW Custom Imports
 
 const Footer = ({...otherProps}) => {
@@ -199,6 +200,7 @@ const Footer = ({...otherProps}) => {
             </Box>
             {/* ESW INIT */}
             <EswInit locale={locale} site={site} />
+            <UseSparkEffects />
             {/* End ESW INIT */}
         </Box>
     )

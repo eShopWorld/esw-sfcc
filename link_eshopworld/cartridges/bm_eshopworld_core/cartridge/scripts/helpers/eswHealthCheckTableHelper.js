@@ -208,16 +208,10 @@ function getServicesMock(fakeBearerToken) {
             payload: azInsightPayload,
             type: 'service'
         },
-        EswOcapiBasketService: {
+        EswOcapiService: {
             payload: {
-                bearerToken: fakeBearerToken,
-                requestBody: []
-            },
-            type: 'service'
-        },
-        EswOcapiOrderService: {
-            payload: {
-                bearerToken: fakeBearerToken,
+                endpoint: '/orders',
+                Authorization: fakeBearerToken,
                 requestBody: []
             },
             type: 'service'
@@ -228,73 +222,6 @@ function getServicesMock(fakeBearerToken) {
                 scope: 'data_api',
                 client_id: eswHelper.getClientID(),
                 client_secret: eswHelper.getClientSecret()
-            },
-            type: 'service'
-        },
-        ESWOrderCreation: {
-            payload: {
-                endpoint: '/orders',
-                Authorization: 'Bearer your-valid-access-token',
-                requestBody: {
-                    order_no: '00012345',
-                    customer_info: {
-                        customer_id: 'test-customer-001',
-                        email: 'testuser@example.com'
-                    },
-                    product_items: [
-                        {
-                            product_id: 'sku12345',
-                            quantity: 2,
-                            price: {
-                                currency: 'USD',
-                                amount: 59.99
-                            }
-                        },
-                        {
-                            product_id: 'sku67890',
-                            quantity: 1,
-                            price: {
-                                currency: 'USD',
-                                amount: 39.99
-                            }
-                        }
-                    ],
-                    shipping_address: {
-                        first_name: 'John',
-                        last_name: 'Doe',
-                        address1: '123 Main St',
-                        city: 'San Francisco',
-                        postal_code: '94105',
-                        country_code: 'US'
-                    },
-                    billing_address: {
-                        first_name: 'John',
-                        last_name: 'Doe',
-                        address1: '123 Main St',
-                        city: 'San Francisco',
-                        postal_code: '94105',
-                        country_code: 'US'
-                    },
-                    payment_instruments: [
-                        {
-                            payment_method_id: 'CREDIT_CARD',
-                            payment_card: {
-                                card_type: 'Visa',
-                                card_number: '4111111111111111',
-                                expiration_month: 12,
-                                expiration_year: 2028
-                            },
-                            amount: {
-                                currency: 'USD',
-                                value: 159.97
-                            }
-                        }
-                    ],
-                    shipment_method: 'ground',
-                    custom_attributes: {
-                        eswOrderRef: 'ESW-TEST-001'
-                    }
-                }
             },
             type: 'service'
         },

@@ -35,7 +35,7 @@ const OCAPIHelper = {
     eswPdpPriceConversions: function (scriptProduct, doc) {
         let localeCountryCode = eswHelper.getHeadlessLocale(request);
         let selectedCountryDetail = eswHelper.getSelectedCountryDetail(localeCountryCode);
-        if (localeCountryCode && !empty(doc.price)) {
+        if (localeCountryCode && !empty(doc.price) && !eswHelper.isEswEnabledSparkPricingConversion()) {
             let shopperCurrency = pricingHelper.getShopperCurrency(localeCountryCode);
             if (!empty(shopperCurrency)) {
                 let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
@@ -83,7 +83,7 @@ const OCAPIHelper = {
         try {
             let localeCountryCode = eswHelper.getHeadlessLocale(request);
             let selectedCountryDetail = eswHelper.getSelectedCountryDetail(localeCountryCode);
-            if (localeCountryCode && doc.count > 0) {
+            if (localeCountryCode && doc.count > 0  && !eswHelper.isEswEnabledSparkPricingConversion()) {
                 let shopperCurrency = pricingHelper.getShopperCurrency(localeCountryCode);
                 if (!empty(shopperCurrency)) {
                     let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
@@ -164,6 +164,35 @@ const OCAPIHelper = {
         }
     },
     /**
+     * This function covers the logic of converting
+     * the pricing related attributes to eSW Prices
+     * for Search Suggestions (search_suggestion end-point)
+     * @param {Object} doc - Response document
+     */
+    eswSearchSuggestionPriceConversions: function (doc) {
+        try {
+            let localeCountryCode = eswHelper.getHeadlessLocale(request);
+            let selectedCountryDetail = eswHelper.getSelectedCountryDetail(localeCountryCode);
+            if (localeCountryCode && doc.productSuggestions && doc.productSuggestions.products && doc.productSuggestions.products.length > 0 && !eswHelper.isEswEnabledSparkPricingConversion()) {
+                let shopperCurrency = pricingHelper.getShopperCurrency(localeCountryCode);
+                if (!empty(shopperCurrency)) {
+                    let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
+                    for (let i = 0; i < doc.productSuggestions.products.length; i++) {
+                        let product = doc.productSuggestions.products[i];
+                        if (!selectedCountryDetail.isFixedPriceModel) {
+                            if ('price' in product && !empty(product.price)) {
+                                product[coreApiHelper.getEswAttributeMapping('price')] = eswHelper.getMoneyObject(product.price.toString(), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+                            }
+                        }
+                        product.currency = shopperCurrency;
+                    }
+                }
+            }
+        } catch (error) {
+            Logger.error('ESW Search Suggestion Error: {0} {1}', error.message, error.stack);
+        }
+    },
+    /**
      * This function sets the override pricebook
      * configured in custom site preference.
      * @param {Object} basket - Basket API object (Optional)
@@ -217,10 +246,15 @@ const OCAPIHelper = {
                     var result = checkoutHelper.callEswCheckoutAPI(order, localeCountryCode, shopperCurrency, shopperLocale);
                     if (!empty(result)) {
                         if (request.isSCAPI()) {
+                            let lang = request.locale &&
+                                typeof request.locale === 'string' &&
+                                request.locale.trim()
+                                ? request.locale.split('_')[0]
+                                    : '';
                             orderResponse.c_eswPreOrderResponseStatus = result.status;
                             let resultObjectJson = !empty(result.object) ? JSON.parse(result.object) : JSON.parse(result.errorMessage);
                             if (resultObjectJson.redirectUrl && !empty(resultObjectJson.redirectUrl)) {
-                                let eswEmbeddedCheckoutUrl = (eswHelper.getPwaShopperUrl(localeCountryCode) + '/esw-checkout');
+                                let eswEmbeddedCheckoutUrl = (eswHelper.getPwaShopperUrl((!empty(lang) ? lang + '-' : '') + localeCountryCode, lang) + '/esw-checkout');
                                 // Replace double slashes with a single slash
                                 eswEmbeddedCheckoutUrl = eswEmbeddedCheckoutUrl.replace(/\/\//g, '/');
                                 // Ensure the protocol part is not affected

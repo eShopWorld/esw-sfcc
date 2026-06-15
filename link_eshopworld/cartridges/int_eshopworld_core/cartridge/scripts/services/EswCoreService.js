@@ -403,9 +403,9 @@ const eShopWorldServices = {
      */
     getSFCCOcapi: function () {
         let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-        let orderCreationService = LocalServiceRegistry.createService('ESWOrderCreation', {
+        let orderCreationService = LocalServiceRegistry.createService('EswOcapiService', {
             createRequest: function (service, params) {
-                service.URL = eswServices.getEswServiceUrl('ESWOrderCreation');
+                service.URL = eswServices.getEswServiceUrl('EswOcapiService');
                 if (!empty(service.URL) && service.URL.toLowerCase().indexOf('{siteid}') !== -1) {
                     let Site = require('dw/system/Site').getCurrent();
                     let siteId = Site.getID();

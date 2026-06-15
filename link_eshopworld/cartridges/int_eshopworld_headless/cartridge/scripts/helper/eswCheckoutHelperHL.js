@@ -37,6 +37,8 @@ const CheckoutRequestBuilder = {
      * @returns {Object} - the metadataItems Array
      */
     getRetailerCheckoutMetadataItems: function (shopperLocale) {
+        let headersMap = request.getHttpHeaders();
+        let serverName = headersMap.get('x-is-server_name');
         let URLUtils = require('dw/web/URLUtils');
         let metadataItems = eswHelper.getMetadataItems(),
             currentInstance = eswHelper.getSelectedInstance(),
@@ -57,9 +59,15 @@ const CheckoutRequestBuilder = {
                 if (metadataItem.indexOf('OrderConfirmationBase64EncodedAuth') !== -1 && eswHelper.getBasicAuthEnabled() && !empty(eswHelper.getBasicAuthPassword())) {
                     obj.Value = eswHelper.encodeBasicAuth();
                 } else if (metadataItem.indexOf('OrderConfirmationUri') !== -1) {
-                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale)).toString();
+                    let httpsUrl = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale));
+                    obj.Value = request.isSCAPI() && !empty(serverName)
+                        ? httpsUrl.host(serverName).toString()
+                        : httpsUrl.toString();
                 } else if (metadataItem.indexOf('InventoryCheckUri') !== -1) {
-                    obj.Value = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale)).toString();
+                    let httpsUrl = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale));
+                    obj.Value = request.isSCAPI() && !empty(serverName)
+                        ? httpsUrl.host(serverName).toString()
+                        : httpsUrl.toString();
                 } else {
                     obj.Value = metadataItem.substring(i + 1);
                 }
@@ -316,7 +324,7 @@ function setEswOrderAttributes(order, localizeObj, conversionPrefs) {
         }
     }
     let orderDiscount = eswHelper.getOrderDiscountHL(order, localizeObj, conversionPrefs);
-    if (!empty(orderDiscount) && typeof orderDiscount === 'object') {
+    if (order instanceof dw.order.Order && !empty(orderDiscount) && typeof orderDiscount === 'object' && !empty(orderDiscount.value) && orderDiscount.value > 0) {
         order.custom.eswShopperCurrencyTotalOrderDiscount = orderDiscount.value;
     }
 }

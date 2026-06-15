@@ -71,8 +71,8 @@ const getEswHelper = {
             let selectedCountryDetail = this.getSelectedCountryDetail(countryCode);
             let isFixedPriceCountry = selectedCountryDetail ? selectedCountryDetail.isFixedPriceModel : false;
             return !empty(embCheckoutHelper.getEswEmbCheckoutScriptPath())
-                    && this.getEShopWorldModuleEnabled() 
-                    && Site.getCustomPreferenceValue('eswIsSparkDynamicPricingEnabled') 
+                    && this.getEShopWorldModuleEnabled()
+                    && Site.getCustomPreferenceValue('eswIsSparkDynamicPricingEnabled')
                     && !isFixedPriceCountry;
         }catch(e){
             return false;
@@ -184,11 +184,23 @@ const getEswHelper = {
     getAllCountries: function () {
         let allCountriesCO = this.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
             countriesArr = [];
+        let defaultLocale = Site.getDefaultLocale();
+        let match = defaultLocale.match(/^([a-zA-Z]+)_/);
+        let lang = match ? match[1] : 'en';
         if (allCountriesCO.count > 0) {
             while (allCountriesCO.hasNext()) {
                 let countryDetail = allCountriesCO.next();
                 let countryCode = countryDetail.getCustom().countryCode;
                 let lcoale = countryDetail.getCustom().eswCountrylocale;
+                let locales = !empty(lcoale)
+                    ? lcoale.split(',').map(function (loc) {
+                        return loc.trim();
+                    })
+                    : [];
+
+                locales.push(lang + '_' + countryDetail.getCustom().countryCode);
+
+                locales = locales.join(',');
                 if (!empty(countryCode)) {
                     countriesArr.push({
                         value: countryCode,
@@ -196,7 +208,8 @@ const getEswHelper = {
                         defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
                         isSupportedByESW: countryDetail.getCustom().isSupportedByESW || false,
                         isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
-                        locale: !empty(lcoale) ? lcoale : 'en_' + countryDetail.getCustom().countryCode
+                        locale: lang + '_' + countryDetail.getCustom().countryCode,
+                        locales: locales
                     });
                 }
             }
@@ -622,18 +635,19 @@ const getEswHelper = {
         };
     },
     getPwaUrl: function () {
-        return Site.getCustomPreferenceValue('eswPwaUrl');
+        return Site.getCustomPreferenceValue('eswHeadlessSiteUrl');
     },
     /**
      * Get PWA shopper url
      * @param {string} countryCode - country code
+     * @param {string} isMultiLocaleEnabled - bool
      * @returns {string} - PWA shopper url
      */
-    getPwaShopperUrl: function (countryCode) {
+    getPwaShopperUrl: function (countryCode, isMultiLocaleEnabled) {
         let baseUrl = this.getPwaUrl();
         if (!empty(countryCode)) {
             // eslint-disable-next-line no-param-reassign
-            countryCode = countryCode.toLowerCase();
+            countryCode = !empty(isMultiLocaleEnabled) ? countryCode : countryCode.toLowerCase();
             baseUrl += '/' + countryCode;
         }
         return baseUrl;
@@ -707,7 +721,7 @@ const getEswHelper = {
             // eslint-disable-next-line no-param-reassign
             promotionPriceObj = false;
         }
-        return eswCalculationHelper.getMoneyObject(price, noAdjustment, formatted, promotionPriceObj === false ? noRounding : true, selectedCountryInfoObjParam, promotionPriceObj);
+        return eswCalculationHelper.getMoneyObject(price, noAdjustment, formatted, (promotionPriceObj === false || empty(promotionPriceObj)) ? noRounding : true, selectedCountryInfoObjParam, promotionPriceObj);
     },
     /**
      * Get PWA shopper url
@@ -1076,13 +1090,24 @@ const getEswHelper = {
         }
     },
     /*
+     * Function to remove a leading dot from the cookie domain as per updated Salesforce policy
+     * @param {string} str - Domain string to normalize
+     * @returns {string} Normalized domain string without a leading dot
+     */
+    refactorDomainString: function (str) {
+        if (typeof str !== 'string' || !str) {
+            return str;
+        }
+        return str.replace(/^\./, "");
+    },
+    /*
      * Function that can be used to create cookies
      */
     createCookie: function (name, value, path, maxAge, domain) {
         let newCookie = new Cookie(name, value);
         newCookie.setPath(path);
         if (domain) {
-            newCookie.setDomain(domain);
+            newCookie.setDomain(this.refactorDomainString(domain));
         }
         if (maxAge) {
             let maxAgeSeconds = (maxAge === 'expired') ? 0 : maxAge;
@@ -1097,8 +1122,8 @@ const getEswHelper = {
     },
     /**
      * Function to update cookie value
-     * @param {*} changeCookie 
-     * @param {*} value 
+     * @param {*} changeCookie
+     * @param {*} value
      */
     updateCookieValue: function (changeCookie, value) {
         changeCookie.setValue(value);
@@ -1698,6 +1723,8 @@ const getEswHelper = {
                         orderPriceAdjustment.custom.thresholdDiscountType = 'order';
                     }
                 } else if (priceAdjustment.promotion && priceAdjustment.promotion.promotionClass === dw.campaign.Promotion.PROMOTION_CLASS_SHIPPING) {
+                    // skip FXrates for threshold shipping level discounts only
+                    fxRate = 1;
                     if (this.isThresholdEnabled(priceAdjustment.promotion)) {
                         discountType = this.getDiscountType(priceAdjustment.promotion);
                         Discount = this.getPromoThresholdAmount(cartTotals.value, priceAdjustment.promotion);
@@ -1773,12 +1800,12 @@ const getEswHelper = {
      * @param {string} currency - country code
      * @return {Object} - price object
      */
-    getSelectedCountryProductPrice: function (price, currency) {
+    getSelectedCountryProductPrice: function (price, currency, isPromotionActive) {
         if (price) {
             return {
                 value: price,
                 currency: currency,
-                decimalPrice: getEswHelper.getMoneyObject(price, false)
+                decimalPrice: getEswHelper.getMoneyObject(price, false, null, isPromotionActive)
             };
         }
         return null;
@@ -1794,6 +1821,11 @@ const getEswHelper = {
         let OrderMgr = require('dw/order/OrderMgr');
         let order = OrderMgr.getOrder(orderID);
         return !empty(order) && (order.status.value === 3 || order.status.value === 4);
+    },
+    isPromotionActive: function(){
+        let PromotionMgr = require('dw/campaign/PromotionMgr');
+        let isPromotionActive = PromotionMgr.getActiveCustomerPromotions().getPromotions().length > 0 ? true : false;
+        return isPromotionActive;
     },
     /**
      * Function to rebuild basket from back to ESW checkout
@@ -2786,7 +2818,7 @@ const getEswHelper = {
         let isPWA = this.isEswPwa(request.httpParameters);
 
         if (!localizeObj && !conversionPrefs) {
-            return this.getMoneyObject(cart.defaultShipment.shippingTotalPrice.value, true, false, true).value;
+            return this.getMoneyObject(cart.defaultShipment.shippingTotalPrice.value, true, false, true, null, true).value;
         }
         if (isPWA) {
             let selectedCountryDetail = this.getCountryDetailByParam(localizeObj.localizeCountryObj.countryCode);
@@ -3449,10 +3481,7 @@ const getEswHelper = {
             let errorMsg = 'Failed to get Admin OAuth Token';
             let details = '';
             if (ocapiAuthServiceRes) {
-                details = `Status: ${ocapiAuthServiceRes.getStatus()},
-                    Error: ${ocapiAuthServiceRes.getError()},
-                    Message: ${ocapiAuthServiceRes.getErrorMessage()
-                    }`;
+                details = `Status: ${ocapiAuthServiceRes.getStatus()}, Error: ${ocapiAuthServiceRes.getError()}, Message: ${ocapiAuthServiceRes.getErrorMessage()}`;
                 errorMsg += `. ${details}`;
             } else {
                 details = 'Service result is null or undefined.';
@@ -3862,9 +3891,7 @@ const getEswHelper = {
      */
     isMockServiceCallled: function (serviceName) {
         let jobServices = [
-            'ESWOrderCreation',
-            'EswOcapiBasketService',
-            'EswOcapiOrderService'
+            'EswOcapiService'
         ];
         return jobServices.indexOf(serviceName) !== -1;
     },
@@ -3880,9 +3907,7 @@ const getEswHelper = {
                 return this.getCheckoutServiceName() === serviceName;
             case 'EswOAuthService':
                 return this.getClientID() && this.getClientSecret();
-            case 'EswOcapiBasketService':
-            case 'EswOcapiOrderService':
-            case 'ESWOrderCreation':
+           case 'EswOcapiService':
                 return this.isEswEnabledEmbeddedCheckout();
             default:
                 return false;

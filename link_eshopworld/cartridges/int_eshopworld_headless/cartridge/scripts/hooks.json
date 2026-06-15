@@ -21,6 +21,14 @@
 			"script": "./ocapi/shop/hooks/plpPriceHook.js"
 		},
 		{
+			"name": "dw.ocapi.shop.search_suggestion.beforeGET",
+			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
+		},
+		{
+			"name": "dw.ocapi.shop.search_suggestion.modifyGETResponse",
+			"script": "./ocapi/shop/hooks/searchSuggestionPriceHook.js"
+		},
+		{
 			"name": "dw.ocapi.shop.basket.beforePOST_v2",
 			"script": "./ocapi/shop/hooks/setOverridePriceBook.js"
 		},

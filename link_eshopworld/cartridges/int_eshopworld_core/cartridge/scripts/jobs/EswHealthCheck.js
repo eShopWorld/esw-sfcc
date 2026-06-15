@@ -199,12 +199,6 @@ function getServicesMock() {
             payload: 'fake_bearer_token',
             type: 'service'
         },
-        CancelOrder: {
-            payload: {},
-            url: 'EShopWorld-CancelOrder',
-            type: 'webhook',
-            httpMethod: 'POST'
-        },
         ReturnOrder: {
             payload: {},
             url: 'EShopWorld-ProcessWebHooks',
@@ -218,21 +212,15 @@ function getServicesMock() {
             },
             type: 'service'
         },
-        EswOcapiBasketService: {
+        EswOcapiService: {
             payload: {
-                bearerToken: 'fake_bearer_token',
+                endpoint: 'orders',
+                Authorization: 'Bearer fake_bearer_token',
                 requestBody: []
             },
             type: 'service'
         },
         EswOcapiAuthService: {
-            payload: {
-                bearerToken: 'fake_bearer_token',
-                requestBody: []
-            },
-            type: 'service'
-        },
-        EswOcapiOrderService: {
             payload: {
                 bearerToken: 'fake_bearer_token',
                 requestBody: []

@@ -18,8 +18,11 @@ import {useToast} from '@salesforce/retail-react-app/app/hooks/use-toast'
 import {useIntl} from 'react-intl'
 import {useCustomerId, useCustomerBaskets} from '@salesforce/commerce-sdk-react'
 import {isServer} from '@salesforce/retail-react-app/app/utils/utils'
+import {useLocation} from 'react-router-dom'
+
 
 export const EswInit = (props) => {
+    const location = useLocation()
     const customerId = useCustomerId()
     const {data: basketsData} = useCustomerBaskets(
         {parameters: {customerId}},
@@ -141,6 +144,35 @@ export const EswInit = (props) => {
         }
     }, [basketsData])
     useEffect(() => {
+        const removeParams = (url) => {
+            const u = new URL(url, window.location.origin)
+            u.searchParams.delete('ltiCountry')
+            u.searchParams.delete('ltiCurrency')
+            return u.toString()
+        }
+        const patchHistoryMethod = (method) => {
+            const original = history[method]
+            history[method] = function (...args) {
+                // args[0] is url
+                if (typeof args[0] === 'string') {
+                    args[0] = removeParams(args[0])
+                }
+                return original.apply(this, args)
+            }
+        }
+        patchHistoryMethod('pushState')
+        patchHistoryMethod('replaceState')
+        window.addEventListener('popstate', () => {
+            const cleanUrl = removeParams(window.location.href)
+            window.history.replaceState({}, '', cleanUrl)
+        })
+        const cleanUrl = removeParams(window.location.href)
+        window.history.replaceState({}, '', cleanUrl)
+        return () => {
+            window.removeEventListener('popstate', () => {})
+        }
+    }, [])
+    useEffect(() => {
         const eswFirstVisit = isFirstVisit()
         const eswShopperCountry = getShopperCountry()
         const eswShopperLocale = getLocaleByCountry(eswShopperCountry, site)
@@ -173,6 +205,31 @@ export const EswInit = (props) => {
                 }
             })
     }, [bearerToken])
+
+    useEffect(() => {
+        let intervalId
+        const tryLoadEswScript = () => {
+            try {
+                const scriptPath = getEswConfigByKey('eswEmbeddedCheckoutScriptPath')
+                const isEnabled = getEswConfigByKey('isEswEnabledSparkPricingConversion')
+                if (!scriptPath || !isEnabled) return
+                // prevent double injection
+                if (document.querySelector(`script[src="${scriptPath}"]`)) {
+                    clearInterval(intervalId)
+                    return
+                }
+                const script = document.createElement('script')
+                script.src = scriptPath
+                script.defer = true
+                document.body.appendChild(script)
+                clearInterval(intervalId)
+            } catch (e) {
+                // config not ready yet → try again
+            }
+        }
+        intervalId = setInterval(tryLoadEswScript, 100)
+        return () => clearInterval(intervalId)
+    }, [location.pathname])
 
     return (
         <>
