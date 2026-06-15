@@ -166,7 +166,7 @@
     </job>
 
     <job job-id="eswRetailerOrderStatus" priority="0">
-        <description>This job synch Order Status between SFCC &amp; ESW</description>
+        <description>DEPRECATED: This job synchronizes Order Status between SFCC and ESW. SFCC to ESW Obsolete – use the updated ESW to SFCC Order Cancellation job instead.</description>
         <parameters/>
         <flow>
             <context site-id="RefArch"/>

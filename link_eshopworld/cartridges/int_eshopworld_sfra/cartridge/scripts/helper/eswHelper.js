@@ -105,6 +105,29 @@ eswHelper.getMatchingLineItem = function (lineItem) {
 };
 
 /*
+ * Function is used to return matching line item from current basket
+ */
+eswHelper.updateProductPricesForAppliedPromotions = function (product) {
+    try {
+        let currentBasket = dw.order.BasketMgr.getCurrentBasket();
+        let matchingLineItem;
+        if (currentBasket != null && eswHelper.isPromotionActive()) {
+            matchingLineItem = collections.find(currentBasket.productLineItems, function (item) {
+                return item.productID === product.id;
+            });
+        }
+        if (matchingLineItem) {
+            let symbol = product.price.sales.formatted.replace(/[\d.,\s]/g, '');
+            let result = eswHelper.getUnitPriceCost(matchingLineItem, false);
+            product.price.sales.formatted = symbol + result.value;
+            product.price.sales.decimalPrice = symbol + result.value;
+        }
+    } catch (e) {
+        eswHelper.eswInfoLogger('Error while calculating product promotional price', e.message + ' ' + e.stack);
+    }
+};
+
+/*
  * Function is used to return sale price for ajax calls as per template implementation
  */
 eswHelper.getItemUpdatedSalePrice = function (items) {
@@ -178,6 +201,7 @@ eswHelper.rebuildCart = function (orderId) {
  */
 eswHelper.setEnableMultipleFxRatesCurrency = function (req) {
     let country = eswHelper.getAvailableCountry();
+    eswHelper.rebuildCart();
     if (eswHelper.checkIsEswAllowedCountry(country)) {
         if (!eswHelper.overridePrice(req, country)) {
             eswHelper.setBaseCurrencyPriceBook(req, eswHelper.getBaseCurrencyPreference());

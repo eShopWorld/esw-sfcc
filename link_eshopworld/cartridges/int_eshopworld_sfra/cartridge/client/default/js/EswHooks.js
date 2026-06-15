@@ -261,6 +261,10 @@ function updateCountryList() {
             $('.modal.show').find('.price').removeClass('d-none');
             $('.modal.show').find('.product-not-available-msg').addClass('d-none');
         }
+        if (response.data.product && response.data.product.price && response.data.product.price.sales && 
+            response.data.product.price.sales.formatted && $('.sales .value').length > 0) {
+                $('.sales .value').text(response.data.product.price.sales.formatted);
+        }
     });
 }
 
@@ -558,7 +562,7 @@ function handleCartOrPromotionUpdate(event, data) {
         $('.line-item-price-' + itemUUID + ' .unit-price').empty().append(item.renderedPrice);
         let $unitPrice = $('.line-item-price-' + itemUUID + ' .unit-price');
 
-        if ($unitPrice.find('.sales').length && item.price && item.price.sales && item.price.sales.formatted) {
+        if ($unitPrice.find('.sales').length && item.price && item.price.sales && item.price.sales.formatted && Object.keys(item.price.sales.formatted).length > 0) {
             $unitPrice.find('.sales .value')
                 .empty()
                 .text(item.price.sales.formatted);

@@ -26,8 +26,8 @@ function toPriceModel(price) {
     return {
         value: value,
         currency: currency,
-        formatted: (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) ? eswHelper.getMoneyObject(price, false) : formattedPrice,
-        decimalPrice: (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) ? eswHelper.getMoneyObject(decimalPrice, false) : decimalPrice
+        formatted: (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) ? eswHelper.getMoneyObject(price, false, null, eswHelper.isPromotionActive()) : formattedPrice,
+        decimalPrice: (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) ? eswHelper.getMoneyObject(decimalPrice, false, null, eswHelper.isPromotionActive()) : decimalPrice
     };
 }
 
