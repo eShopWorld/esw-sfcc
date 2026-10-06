@@ -15,19 +15,25 @@ const Constants = require('*/cartridge/scripts/util/Constants');
 // Private Methods
 const CheckoutRequestBuilder = {
     getPwaUrl: function () {
-        return Site.getCustomPreferenceValue('eswPwaUrl');
+        return Site.getCustomPreferenceValue('eswHeadlessSiteUrl');
     },
     /**
      * Get PWA shopper url
-     * @param {string} countryCode - country code
+     * @param {string} countryCode - country code or full locale (eg. en-IE or en_IE)
      * @returns {string} - PWA shopper url
      */
     getPwaShopperUrl: function (countryCode) {
         let baseUrl = this.getPwaUrl();
         if (!empty(countryCode)) {
-            // eslint-disable-next-line no-param-reassign
-            countryCode = countryCode.toLowerCase();
-            baseUrl += '/' + countryCode;
+            // If a full locale is provided (contains '-' or '_'), convert to dash format
+            // Otherwise treat as a plain country code and lowercase it
+            if (countryCode.indexOf('-') !== -1 || countryCode.indexOf('_') !== -1) {
+                countryCode = countryCode.replace('_', '-');
+            } else {
+                countryCode = countryCode.toLowerCase();
+            }
+                // Normalize slashes between baseUrl and countryCode without altering the protocol (e.g. https://)
+                baseUrl = baseUrl.replace(/\/+$/, '') + '/' + countryCode.replace(/^\/+/, '');
         }
         return baseUrl;
     },
@@ -37,8 +43,6 @@ const CheckoutRequestBuilder = {
      * @returns {Object} - the metadataItems Array
      */
     getRetailerCheckoutMetadataItems: function (shopperLocale) {
-        let headersMap = request.getHttpHeaders();
-        let serverName = headersMap.get('x-is-server_name');
         let URLUtils = require('dw/web/URLUtils');
         let metadataItems = eswHelper.getMetadataItems(),
             currentInstance = eswHelper.getSelectedInstance(),
@@ -60,14 +64,14 @@ const CheckoutRequestBuilder = {
                     obj.Value = eswHelper.encodeBasicAuth();
                 } else if (metadataItem.indexOf('OrderConfirmationUri') !== -1) {
                     let httpsUrl = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale));
-                    obj.Value = request.isSCAPI() && !empty(serverName)
-                        ? httpsUrl.host(serverName).toString()
-                        : httpsUrl.toString();
+                    let orderConfirmationUri = httpsUrl.toString();
+                    Logger.info('Order Confirmation URL: {0}', orderConfirmationUri);
+                    obj.Value = orderConfirmationUri;
                 } else if (metadataItem.indexOf('InventoryCheckUri') !== -1) {
                     let httpsUrl = URLUtils.https(new dw.web.URLAction(metadataItem.substring(i + 1), Site.ID, shopperLocale));
-                    obj.Value = request.isSCAPI() && !empty(serverName)
-                        ? httpsUrl.host(serverName).toString()
-                        : httpsUrl.toString();
+                    let inventoryCheckUri = httpsUrl.toString();
+                    Logger.info('Inventory URL: {0}', inventoryCheckUri);
+                    obj.Value = inventoryCheckUri;
                 } else {
                     obj.Value = metadataItem.substring(i + 1);
                 }
@@ -85,7 +89,7 @@ const CheckoutRequestBuilder = {
      */
     getPWAExpansionPairs: function (shopperLocale, shopperCountry) {
         let urlExpansionPairs = eswHelper.getPwaUrlExpansionPairs(),
-            pwaSiteMainUrl = this.getPwaShopperUrl(shopperCountry),
+            pwaSiteMainUrl = this.getPwaShopperUrl(shopperLocale),
             i = 0,
             obj = {};
         if (empty(urlExpansionPairs) || !urlExpansionPairs.length) {
@@ -114,6 +118,10 @@ const CheckoutRequestBuilder = {
      */
     composeRequestBody: function (order, shopperCountry, shopperCurrency, shopperLocale) {
         let bodyJSON = eswServiceHelper.preparePreOrder(order, shopperCountry, shopperCurrency, shopperLocale);
+        // Initialize retailerCheckoutExperience metadataItems array before pushing auth token parts
+        if (!('metadataItems' in bodyJSON.retailerCheckoutExperience) || empty(bodyJSON.retailerCheckoutExperience.metadataItems)) {
+            bodyJSON.retailerCheckoutExperience.metadataItems = [];
+        }
         if (request.isSCAPI()) {
             bodyJSON.retailerCheckoutExperience = this.getPWAExpansionPairs(shopperLocale, shopperCountry);
         }
@@ -126,7 +134,7 @@ const CheckoutRequestBuilder = {
             if (request.isSCAPI()) {
                 let splittedAccessToken = eswHelper.splitAccessToken(order.custom.eswPreOrderRequest, 1000);
                 splittedAccessToken.forEach((part, index) => {
-                    bodyJSON.shopperCheckoutExperience.metadataItems.push({
+                    bodyJSON.retailerCheckoutExperience.metadataItems.push({
                         name: `accessTokenParted${index + 1}`,
                         value: part
                     });
@@ -135,7 +143,7 @@ const CheckoutRequestBuilder = {
                 let splittedAccessToken = eswHelper.splitAccessToken(request.httpHeaders.authorization, 1000);
 
                 splittedAccessToken.forEach((part, index) => {
-                    bodyJSON.shopperCheckoutExperience.metadataItems.push({
+                    bodyJSON.retailerCheckoutExperience.metadataItems.push({
                         name: `authorizationParted${index + 1}`,
                         value: part
                     });
@@ -239,7 +247,8 @@ function callEswCheckoutAPI(order, shopperCountry, shopperCurrency, shopperLocal
         let requestBody = CheckoutRequestBuilder.composeRequestBody(order, shopperCountry, shopperCurrency, shopperLocale);
         if (eswHelper.isEswSelfHostedOcEnabled()) {
             const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
-            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestBody.retailerCartId, request.isSCAPI() ? shopperCountry: null);
+            // For PWA/SCAPI we must pass the full shopper locale (e.g. en-IE) so PWA URLs are built correctly.
+            let selfHostedOcMetadata = selfHostedOcHelper.getEswSelfhostedPreOrderMetadata(requestBody.retailerCartId, request.isSCAPI() ? shopperLocale : null);
             if (!empty(selfHostedOcMetadata)) {
                 requestBody.retailerCheckoutExperience.metadataItems.push({
                     Name: selfHostedOcMetadata.metadataName,

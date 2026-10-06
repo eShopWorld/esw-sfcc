@@ -180,7 +180,11 @@ server.get('OrderConfirm', csrfProtection.generateToken, function (req, res, nex
         res.json(responseJSON);
         return next();
     }
-    session.privacy.confirmedOrderID = order.currentOrderNo;
+    if (eswHelper.isCheckoutRegisterationEnabled()) {
+        session.privacy.confirmedOrderID = order.currentOrderNo;
+    } else {
+        delete session.privacy.confirmedOrderID;
+    }
     let eswSelfHostedOcPageUrl = eswHelper.getEswHeadlessSiteUrl() + eswHelper.getEswSelfhostedOcPageUrlPref() + '?orderId=' + order.currentOrderNo;
     res.redirect(eswSelfHostedOcPageUrl);
 

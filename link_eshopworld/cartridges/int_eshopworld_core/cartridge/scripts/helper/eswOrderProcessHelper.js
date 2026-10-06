@@ -208,14 +208,13 @@ const eswOrderProcessHelper = {
 
             Transaction.wrap(function () {
                 // Update payment status
-                if (isPreAuthorized && isSettled) {
-                    paymentStatus = Constants.TXT_PAYMENT_SETTLED;
-                    order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
-                } else if (isPreAuthorized && !isSettled) {
-                    paymentStatus = Constants.TXT_PAYMENT_AUTHORIZED;
-                    order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
-                } else if (!isPreAuthorized && !isSettled) {
-                    paymentStatus = Constants.TXT_PAYMENT_NOT_AUTHORIZED;
+                if (isSettled) {
+                    if (isPreAuthorized) {
+                        paymentStatus = Constants.TXT_PAYMENT_SETTLED;
+                        order.setPaymentStatus(Order.PAYMENT_STATUS_PAID);
+                    }
+                } else {
+                    paymentStatus = isPreAuthorized ? Constants.TXT_PAYMENT_AUTHORIZED : Constants.TXT_PAYMENT_NOT_AUTHORIZED;
                     order.setPaymentStatus(Order.PAYMENT_STATUS_NOTPAID);
                 }
 

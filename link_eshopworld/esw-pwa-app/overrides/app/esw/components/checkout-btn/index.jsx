@@ -32,7 +32,7 @@ export const EswCheckoutBtn = (props) => {
     const {formatMessage} = useIntl()
 
     const handleEswCheckout = async () => {
-        if (!locale.isSupportedByESW || !getEswConfigByKey('eswEshopworldModuleEnabled')) {
+        if (!locale.isSupportedByESW || !getEswConfigByKey('eswModuleEnabled')) {
             navigate('/checkout')
             return
         }

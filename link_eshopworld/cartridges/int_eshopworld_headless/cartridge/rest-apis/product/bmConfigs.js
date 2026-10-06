@@ -24,7 +24,7 @@ exports.getBmConfigs = function () {
         ).attributes;
         let filteredFields = {};
         // Add allowed fields in this array
-        let allwedResponseFields = ['eswEshopworldModuleEnabled', 'eswEnableTaxInformation'];
+        let allwedResponseFields = ['eswModuleEnabled', 'eswEnableTaxInformation'];
         for (let i = 0; i < configFields.length; i++) {
             let configFieldId = configFields[i].id;
             if (allwedResponseFields.indexOf(configFieldId) !== -1) {

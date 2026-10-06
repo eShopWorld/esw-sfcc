@@ -90,9 +90,6 @@ const eswHealthCheckHelper = {
                 case 'ESWCatalogService':
                     serviceResponse = eswCoreService.getCatalogService().call(serviceTestJson.payload);
                     break;
-                case 'EswAzureInsightService':
-                    serviceResponse = eswCoreService.getEswAzureInsightService().call(serviceTestJson.payload);
-                    break;
                 case 'EswOcapiDataAuthService':
                     serviceResponse = eswCoreService.getDataOcapiAuthToken().call(serviceTestJson.payload);
                     break;

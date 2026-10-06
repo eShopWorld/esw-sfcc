@@ -35,7 +35,8 @@ const OCAPIHelper = {
     eswPdpPriceConversions: function (scriptProduct, doc) {
         let localeCountryCode = eswHelper.getHeadlessLocale(request);
         let selectedCountryDetail = eswHelper.getSelectedCountryDetail(localeCountryCode);
-        if (localeCountryCode && !empty(doc.price) && !eswHelper.isEswEnabledSparkPricingConversion()) {
+        // Root cause: master doc.price is empty until a variant is selected, skipping conversion; Fix: also convert priceRanges/variants and don't gate on doc.price
+        if (localeCountryCode && !eswHelper.isEswEnabledSparkPricingConversion()) {
             let shopperCurrency = pricingHelper.getShopperCurrency(localeCountryCode);
             if (!empty(shopperCurrency)) {
                 let selectedCountryLocalizeObj = eswHelper.getCountryLocalizeObj(selectedCountryDetail);
@@ -61,6 +62,32 @@ const OCAPIHelper = {
                     doc.prices.keySet().toArray().forEach(function (priceBookId) {
                         doc.c_eswPrices['eswPriceOf-' + priceBookId.replace(retailerCurrencies, 'base')] = eswHelper.getMoneyObject(doc.prices[priceBookId].toString(), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
                     });
+                }
+
+                if ('priceRanges' in doc && !empty(doc.priceRanges)) {
+                    for (let priceRangesIndex = 0; priceRangesIndex < doc.priceRanges.length; priceRangesIndex++) {
+                        let currentPriceRange = doc.priceRanges[priceRangesIndex];
+                        if (!empty(currentPriceRange.maxPrice)) {
+                            doc.priceRanges[priceRangesIndex].maxPrice = eswHelper.getMoneyObject(currentPriceRange.maxPrice.toString(), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+                        }
+                        if (!empty(currentPriceRange.minPrice)) {
+                            doc.priceRanges[priceRangesIndex].minPrice = eswHelper.getMoneyObject(currentPriceRange.minPrice.toString(), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+                        }
+                    }
+                }
+
+                if (doc.variants && doc.variants.length > 0) {
+                    for (let variantsIndex = 0; variantsIndex < doc.variants.length; variantsIndex++) {
+                        let currentVariant = doc.variants[variantsIndex];
+                        if (!empty(currentVariant.price)) {
+                            doc.variants[variantsIndex].price = eswHelper.getMoneyObject(currentVariant.price.toString(), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+                        }
+                        if (currentVariant.variantPrices && !empty(currentVariant.variantPrices)) {
+                            for (let variantPricesIndex = 0; variantPricesIndex < currentVariant.variantPrices.length; variantPricesIndex++) {
+                                doc.variants[variantsIndex].variantPrices[variantPricesIndex].price = eswHelper.getMoneyObject(currentVariant.variantPrices[variantPricesIndex].price.toString(), false, false, !selectedCountryLocalizeObj.applyRoundingModel, selectedCountryLocalizeObj).value;
+                            }
+                        }
+                    }
                 }
                 doc.c_shopperCurrency = shopperCurrency;
                 doc.currency = shopperCurrency;

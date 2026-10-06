@@ -87,6 +87,8 @@ server.post('Notify', function (req, res, next) {
                 }
                 // If order already confirmed & processed
                 if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
+                    response.setStatus(409);
+                    responseJSON.ResponseCode = '409';
                     responseJSON.ResponseText = 'Order already exists';
                     res.json(responseJSON);
                     return;
@@ -148,19 +150,13 @@ server.post('Notify', function (req, res, next) {
                 }
             });
         } catch (e) {
-            eswHelper.eswInfoLogger('ESW Service Error', JSON.stringify(obj), e.message, e.stack);
             logger.error('ESW Service Error: {0}', e.message);
-            // In SFCC, SystemError suggest exceptions initiated by system like optimistic lock exception etc.
-            if (e.name === 'SystemError') {
-                response.setStatus(429);
-                responseJSON.ResponseCode = '429';
-                responseJSON.ResponseText = 'Transient Error: Too many requests';
-            } else { // For other errors like ReferenceError etc.
-                response.setStatus(400);
-                responseJSON.ResponseCode = '400';
-                responseJSON.ResponseText = 'Error: Internal error';
-            }
+            let errorStatus = e.status || e.statusCode || 500;
+            response.setStatus(errorStatus);
+            responseJSON.ResponseCode = errorStatus.toString();
+            responseJSON.ResponseText = e.message;
         }
+
         eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
     }
     res.json(responseJSON);

@@ -188,9 +188,15 @@ const PwaCoreHelper = {
     getPwaShopperUrl: function (countryCode) {
         let baseUrl = this.getPwaUrl();
         if (!empty(countryCode)) {
-            // eslint-disable-next-line no-param-reassign
-            countryCode = countryCode.toLowerCase();
-            baseUrl += '/' + countryCode;
+             // If a full locale is provided (contains '-' or '_'), preserve formatting
+            // Otherwise treat as a country code and lowercase it
+            let code = countryCode;
+            if (code.indexOf('-') !== -1 || code.indexOf('_') !== -1) {
+                code = code.replace('_', '-');
+            } else {
+                code = code.toLowerCase();
+            }
+            baseUrl += '/' + code;
         }
         return baseUrl;
     },

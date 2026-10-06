@@ -367,22 +367,6 @@ const eShopWorldServices = {
             }
         });
     },
-    getEswAzureInsightService: function () {
-        let eswHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
-        return LocalServiceRegistry.createService('EswAzureInsightService', {
-            createRequest: function (service, params) {
-                service.addHeader('Content-Type', 'application/json');
-                service.setRequestMethod('POST');
-                // Use params.requestBody if it exists, otherwise use params directly
-                let requestBody = params.requestBody || params;
-                return JSON.stringify(requestBody);
-            },
-            parseResponse: function (service, svcResponse) {
-                eswHelper.eswInfoLogger('parseResponse - EswAzureInsightService : ', svcResponse.text);
-                return JSON.parse(svcResponse.text);
-            }
-        });
-    },
     dispatchJobViaOcapi: function () {
         return LocalServiceRegistry.createService('EswDispatchOcapiJobService', {
             createRequest: function (service, params) {

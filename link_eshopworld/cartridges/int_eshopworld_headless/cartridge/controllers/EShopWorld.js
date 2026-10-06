@@ -99,7 +99,9 @@ server.get('RegisterCustomer', function (req, res, next) {
         let order = OrderMgr.getOrder(orderNumber);
         let countryCode = null;
         try {
-            countryCode = order.getDefaultShipment().getShippingAddress().getCountryCode().getValue();
+            countryCode = !empty(order.getCustomerLocaleID()) ? 
+                order.getCustomerLocaleID().replace('_', '-') :  
+                order.getDefaultShipment().getShippingAddress().getCountryCode().getValue();
         } catch (e) {
             logger.error('ESW Checkout Registration error: {0}', e.message);
         }
