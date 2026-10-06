@@ -578,7 +578,11 @@ server.get('OrderConfirm', csrfProtection.generateToken, function (req, res, nex
         return next();
     }
 
-    session.privacy.confirmedOrderID = order.currentOrderNo;
+    if (eswHelper.isCheckoutRegisterationEnabled()) {
+        session.privacy.confirmedOrderID = order.currentOrderNo;
+    } else {
+        delete session.privacy.confirmedOrderID;
+    }
 
     let orderModel = new OrderModel(order, { containerView: 'order' });
     let reportingURLs = reportingUrlsHelper.getOrderReportingURLs(order);

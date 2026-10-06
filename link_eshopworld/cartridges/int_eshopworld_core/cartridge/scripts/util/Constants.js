@@ -45,8 +45,8 @@ exports.REGISTERATION_URL_VALUE_SG = 'EShopWorldSG-RegisterCustomer';
 exports.SITE_GENESIS_SITE_ID = 'SiteGenesis';
 exports.ESW_SERVICES_URLS = {
     ESWSFTP: 'sftp2.eshopworld.com',
-    'EswCheckoutV3Service.SFRA': 'https://checkout-api-{tenant}.{environment}.eshopworld.{domainSuffix}/api/{version}/PreOrder',
-    'EswCheckoutV2Service.SFRA': 'https://checkout-api-{tenant}.{environment}.eshopworld.{domainSuffix}/api/{version}/PreOrder',
+    'EswCheckoutV3Service.SFRA': 'https://{checkoutHost}/checkout/api/v3/{tenant}/PreOrder',
+    'EswCheckoutV2Service.SFRA': 'https://{checkoutHost}/checkout/api/v2/{tenant}/PreOrder',
     EswGetJwksService: 'https://security-sts.{environment}.eshopworld.{domainSuffix}/.well-known/openid-configuration/jwks',
     EswPackageV4Service: 'https://package-api.{environment}.eshopworld.{domainSuffix}/api/{version}/Package',
     EswGetAsnPackage: 'https://logistics-package-api.{environment}.eshopworld.{domainSuffix}/api/{version}/Package/GetAsnPackage',
@@ -70,6 +70,13 @@ exports.TXT_PAYMENT_NOT_AUTHORIZED = 'Not Authorized';
 exports.TXT_PAYMENT_AUTHORIZED = 'Authorized';
 exports.TXT_PAYMENT_SETTLED = 'Settled';
 exports.ESW_ORDER_PAYMENT_STATUS_EVENT_NAME = 'Test-fromVirtualEvent-order-order';
+exports.ESW_LINE_ITEM_APPEASEMENT_SUCCEEDED_EVENT = 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent';
+exports.ESW_ORDER_APPEASEMENT_SUCCEEDED_EVENT = 'eshopworld.platform.events.oms.orderappeasementsucceededevent';
+exports.ESW_RETURN_ORDER_EVENT = 'eshopworld.platform.events.logistics.returnorderevent';
+exports.ESW_RETURN_ORDER_RETAILER_EVENT = 'logistics-return-order-retailer';
+exports.ESW_LINE_ITEM_CANCEL_SUCCEEDED_EVENT = 'eshopworld.platform.events.oms.lineitemcancelsucceededevent';
+exports.ESW_ORDER_CANCEL_SUCCEEDED_EVENT = 'eshopworld.platform.events.oms.ordercancelsucceededevent';
+exports.ESW_ORDER_HOLD_STATUS_UPDATED_EVENT = 'eshopworld.platform.events.oms.orderholdstatusupdatedevent';
 exports.LOCALE_QUERY_PARAM = 'locale';
 exports.ESW_NO_OPERATION_STATUS = '204';
 exports.NO_APPEASEMRNT_PERFORMED_MSG = 'No appeasement performed';

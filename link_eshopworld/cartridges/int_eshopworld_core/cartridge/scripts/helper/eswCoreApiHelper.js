@@ -334,8 +334,8 @@ function getPWAHeadlessAccessToken(reqObj) {
         let regexPeaToken = /^accessTokenParted(\d+)$/;
         let headlessToken = false;
         let accessTokenParts = [];
-        if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
-            let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
+        if (!empty(reqObj.retailerCheckoutExperience) && !empty(reqObj.retailerCheckoutExperience.metadataItems)) {
+            let metadataItems = reqObj.retailerCheckoutExperience.metadataItems;
             // eslint-disable-next-line no-restricted-syntax
             for (let metaObj in metadataItems) {
                 if ((metadataItems[metaObj] && metadataItems[metaObj].name.match(regexPeaToken)) || (metadataItems[metaObj] && metadataItems[metaObj].name.match(regex))) {

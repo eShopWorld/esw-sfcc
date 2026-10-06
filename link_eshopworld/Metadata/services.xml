@@ -54,12 +54,6 @@
         <password encrypted="true" encryption-type="common.export"></password>
     </service-credential>
 
-     <service-credential service-credential-id="EswAzureInsightServiceCredentials">
-        <url>https://westeurope-5.in.applicationinsights.azure.com/v2/track</url>
-        <user-id/>
-        <password encrypted="true" encryption-type="common.export"></password>
-    </service-credential>
-
     <service-credential service-credential-id="EswOcapiDataAuthServiceCredentials">
         <url>https://account.demandware.com/dw/oauth2/access_token</url>
         <user-id/>
@@ -91,7 +85,7 @@
     </service-credential>
 
     <service-profile service-profile-id="ESWSFTPProfile">
-        <timeout-millis>110000</timeout-millis>
+        <timeout-millis>120000</timeout-millis>
         <rate-limit-enabled>false</rate-limit-enabled>
         <rate-limit-calls>0</rate-limit-calls>
         <rate-limit-millis>0</rate-limit-millis>
@@ -101,13 +95,83 @@
     </service-profile>
 
     <service-profile service-profile-id="EswServiceProfile">
-        <timeout-millis>30000</timeout-millis>
+        <timeout-millis>15000</timeout-millis>
         <rate-limit-enabled>false</rate-limit-enabled>
         <rate-limit-calls>0</rate-limit-calls>
         <rate-limit-millis>0</rate-limit-millis>
         <cb-enabled>true</cb-enabled>
-        <cb-calls>20</cb-calls>
-        <cb-millis>50000</cb-millis>
+        <cb-calls>10</cb-calls>
+        <cb-millis>60000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswOAuthServiceProfile">
+        <timeout-millis>10000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>20</rate-limit-calls>
+        <rate-limit-millis>60000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>5</cb-calls>
+        <cb-millis>60000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswPriceFeedServiceProfile">
+        <timeout-millis>20000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>30</rate-limit-calls>
+        <rate-limit-millis>1000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>10</cb-calls>
+        <cb-millis>60000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswOcapiBasketServiceProfile">
+        <timeout-millis>15000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>100</rate-limit-calls>
+        <rate-limit-millis>1000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>5</cb-calls>
+        <cb-millis>60000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswOcapiOrderServiceProfile">
+        <timeout-millis>15000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>30</rate-limit-calls>
+        <rate-limit-millis>1000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>10</cb-calls>
+        <cb-millis>60000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswCheckoutV3ServiceProfile.SFRA">
+        <timeout-millis>15000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>100</rate-limit-calls>
+        <rate-limit-millis>1000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>10</cb-calls>
+        <cb-millis>60000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswGetJwksServiceProfile">
+        <timeout-millis>10000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>10</rate-limit-calls>
+        <rate-limit-millis>60000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>5</cb-calls>
+        <cb-millis>300000</cb-millis>
+    </service-profile>
+
+    <service-profile service-profile-id="EswOcapiDataAuthServiceProfile">
+        <timeout-millis>10000</timeout-millis>
+        <rate-limit-enabled>true</rate-limit-enabled>
+        <rate-limit-calls>20</rate-limit-calls>
+        <rate-limit-millis>60000</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>5</cb-calls>
+        <cb-millis>60000</cb-millis>
     </service-profile>
 
     <service service-id="EswOAuthService">
@@ -117,7 +181,7 @@
         <comm-log-enabled>false</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswOAuthServiceProfile</profile-id>
         <credential-id>EswOAuthCredentials</credential-id>
     </service>
 
@@ -128,7 +192,7 @@
         <comm-log-enabled>false</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswPriceFeedServiceProfile</profile-id>
         <credential-id>EswPriceFeedCredentials</credential-id>
     </service>
 	
@@ -139,7 +203,7 @@
         <comm-log-enabled>true</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswOcapiBasketServiceProfile</profile-id>
         <credential-id>EswOcapiBasketServiceCredentials</credential-id>
     </service>
 	
@@ -150,7 +214,7 @@
         <comm-log-enabled>true</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswOcapiOrderServiceProfile</profile-id>
         <credential-id>EswOcapiOrderServiceCredentials</credential-id>
     </service>
 
@@ -183,7 +247,7 @@
         <comm-log-enabled>false</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswCheckoutV3ServiceProfile.SFRA</profile-id>
         <credential-id>EswCheckoutV3Credentials.SFRA</credential-id>
     </service>
 
@@ -207,14 +271,6 @@
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>EswServiceProfile</profile-id>
         <credential-id>EswGetAsnPackageCredentials</credential-id>
-    </service>
-
-    <service service-id="EswAzureInsightService">
-        <service-type>HTTP</service-type>
-        <enabled>true</enabled>
-        <log-prefix>EswAzureInsightService</log-prefix>
-        <profile-id>EswServiceProfile</profile-id>
-        <credential-id>EswAzureInsightServiceCredentials</credential-id>
     </service>
 
     <service service-id="EswDispatchOcapiJobService">
@@ -246,7 +302,7 @@
         <comm-log-enabled>true</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswGetJwksServiceProfile</profile-id>
         <credential-id>EswGetJwksServiceCredentials</credential-id>
     </service>
 
@@ -257,7 +313,7 @@
         <comm-log-enabled>false</comm-log-enabled>
         <force-prd-enabled>true</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
-        <profile-id>EswServiceProfile</profile-id>
+        <profile-id>EswOcapiDataAuthServiceProfile</profile-id>
         <credential-id>EswOcapiDataAuthServiceCredentials</credential-id>
     </service>
 

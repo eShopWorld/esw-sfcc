@@ -36,7 +36,7 @@
     <link rel="stylesheet" href="${style.src}" <isif condition="${style.integrity != null}">integrity="${style.integrity}" crossorigin="anonymous"</isif> />
 </isloop>
 
-<isif condition="${'eswEshopworldModuleEnabled' in dw.system.Site.current.preferences.custom && dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled}">
+<isif condition="${'eswModuleEnabled' in dw.system.Site.current.preferences.custom && dw.system.Site.current.preferences.custom.eswModuleEnabled}">
     <isif condition="${eswHelper.isEswEnabledAbTasty()}">
         <isinclude url="${URLUtils.url('EShopWorld-GetEswAbTastyScriptPath')}"/>
         <link rel="stylesheet" href="${URLUtils.staticURL('/css/ABTasty.css')}" />

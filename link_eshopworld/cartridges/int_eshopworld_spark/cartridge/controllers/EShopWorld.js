@@ -129,16 +129,10 @@ server.post('EswEmbeddedCheckoutNotify', function (req, res, next) {
             };
         } catch (e) {
             logger.error('ESW Service Error: {0}', e.message);
-            // In SFCC, SystemError suggest exceptions initiated by system like optimistic lock exception etc.
-            if (e.name === 'SystemError') {
-                response.setStatus(429);
-                responseJSON.ResponseCode = '429';
-                responseJSON.ResponseText = 'Transient Error: Too many requests';
-            } else { // For other errors like ReferenceError etc.
-                response.setStatus(400);
-                responseJSON.ResponseCode = '400';
-                responseJSON.ResponseText = 'Error: Internal error';
-            }
+            let errorStatus = e.status || e.statusCode || 500;
+            response.setStatus(errorStatus);
+            responseJSON.ResponseCode = errorStatus.toString();
+            responseJSON.ResponseText = e.message;
         }
         eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
     }
@@ -171,7 +165,8 @@ server.post('EswEmbeddedCheckoutPreOrderRequest', function (req, res, next) {
         ocapiBasketResponse = eswOcapiServiceHelper.ocapiBasketService().call({
             basketId: postedData.basket_id,
             httpMethod: 'PATCH',
-            countryCode: param['country-code'][0]
+            countryCode: param['country-code'][0],
+            payload: {},
         });
         if (ocapiBasketResponse.isOk() && !empty(ocapiBasketResponse.getObject())) {
             let response = JSON.parse(ocapiBasketResponse.object.text);

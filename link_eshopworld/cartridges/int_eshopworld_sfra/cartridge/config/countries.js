@@ -26,7 +26,7 @@ function getAlternateCurrency(selectedCountry) {
  * @returns {Object} countries - updated countries
  */
 function getUpdatedCountries() {
-    if (!Site.current.preferences.custom.eswEshopworldModuleEnabled || empty(baseCountries)) return baseCountries;
+    if (!Site.current.preferences.custom.eswModuleEnabled || empty(baseCountries)) return baseCountries;
 
     let Locale = require('dw/util/Locale');
     let currentLocale = Locale.getLocale(request.locale);

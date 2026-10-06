@@ -98,6 +98,11 @@ eswHelper.rebuildCartUponBackFromESW = function () {
         let currentBasket = BasketMgr.getCurrentBasket();
         if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
             if (orderID && eswHelper.isOrderPlaced(orderID)) {
+                if (!empty(session.privacy.keepOrderIDForRegistration)) {
+                    // Self-hosted OC with registration enabled: order is already confirmed,
+                    // do not clear newly added basket items
+                    return true;
+                }
                 if (!empty(currentBasket)) {
                     Transaction.wrap(function () {
                         let coupons = currentBasket.getCouponLineItems();
@@ -118,9 +123,7 @@ eswHelper.rebuildCartUponBackFromESW = function () {
                         }
                     });
                 }
-                if (empty(session.privacy.keepOrderIDForRegistration)) {
-                    delete session.privacy.confirmedOrderID;
-                }
+                delete session.privacy.confirmedOrderID;
                 return true;
             }
             if (!currentBasket) {
