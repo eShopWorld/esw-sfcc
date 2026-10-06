@@ -1531,8 +1531,8 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>true</default-value>
             </attribute-definition>
-            <attribute-definition attribute-id="eswEshopworldModuleEnabled">
-                <display-name xml:lang="x-default">ESW eShopWorld Module Enabled</display-name>
+            <attribute-definition attribute-id="eswModuleEnabled">
+                <display-name xml:lang="x-default">ESW Module Enabled</display-name>
                 <description xml:lang="x-default">To configure if ESW module is enabled or not</description>
                 <type>boolean</type>
                 <mandatory-flag>false</mandatory-flag>
@@ -1881,20 +1881,6 @@ Example: &#13;
                 <externally-managed-flag>false</externally-managed-flag>
                 <default-value>false</default-value>
             </attribute-definition>
-            <attribute-definition attribute-id="eswEnableAzureInsightLogs">
-                <display-name xml:lang="x-default">Esw Enable Azure Insight Logs</display-name>
-                <type>boolean</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <default-value>false</default-value>
-            </attribute-definition>
-            <attribute-definition attribute-id="eswAzureInsightiKey">
-                <display-name xml:lang="x-default">Esw Azure Insight iKey</display-name>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <default-value></default-value>
-            </attribute-definition>
             <attribute-definition attribute-id="eswOcapiClientId">
                 <display-name xml:lang="x-default">ESW SFCC OCAPI Client ID</display-name>
                 <description xml:lang="x-default">SFCC OCAPI client ID to be use for basket and order related operations in case of embedded checkout</description>
@@ -1998,7 +1984,7 @@ Example: &#13;
             </attribute-group>
             <attribute-group group-id="ESW General Configuration">
                 <display-name xml:lang="x-default">ESW General Configuration</display-name>
-                <attribute attribute-id="eswEshopworldModuleEnabled"/>
+                <attribute attribute-id="eswModuleEnabled"/>
                 <attribute attribute-id="eswReturnOrderType"/>
                 <attribute attribute-id="eswAllowedLanguages"/>
                 <attribute attribute-id="eswBaseCurrency"/>
@@ -2091,11 +2077,6 @@ Example: &#13;
                 <display-name xml:lang="x-default">ESW Returns Configuration</display-name>
                 <attribute attribute-id="eswCheckoutOnlyPackagesExport"/>
                 <attribute attribute-id="eswReturnOrderStatus"/>
-            </attribute-group>
-            <attribute-group group-id="ESW Azure Insights Configuration">
-                <display-name xml:lang="x-default">ESW Azure Insights Configuration</display-name>
-                <attribute attribute-id="eswEnableAzureInsightLogs"/>
-                <attribute attribute-id="eswAzureInsightiKey"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

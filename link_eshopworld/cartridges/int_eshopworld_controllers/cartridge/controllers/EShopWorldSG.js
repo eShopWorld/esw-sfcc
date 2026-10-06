@@ -531,7 +531,6 @@ function notify() {
                     response.setStatus(400);
                     responseJSON.ResponseCode = '400';
                     responseJSON.ResponseText = (empty(order)) ? 'Order not found' : 'Order Failed';
-                    Response.renderJSON(responseJSON);
                     return;
                 } else if (order.status.value === Order.ORDER_STATUS_FAILED) {
                     let result = OrderMgr.undoFailOrder(order);
@@ -539,14 +538,14 @@ function notify() {
                         response.setStatus(409);
                         responseJSON.ResponseCode = '409';
                         responseJSON.ResponseText = 'Error: Inventory Reservation Failed';
-                        Response.renderJSON(responseJSON);
                         return;
                     }
                 }
                 // If order already confirmed & processed
                 if (order.confirmationStatus.value === Order.CONFIRMATION_STATUS_CONFIRMED) {
+                    response.setStatus(409);
+                    responseJSON.ResponseCode = '409';
                     responseJSON.ResponseText = 'Order already exists';
-                    Response.renderJSON(responseJSON);
                     return;
                 }
                 // If order exist with created status in SFCC then perform order confirmation
@@ -605,17 +604,11 @@ function notify() {
                 }
             });
         } catch (e) {
-            logger.error('ESW Service Error: {0} {1}', e.message, e.stack);
-            // In SFCC, SystemError suggest exceptions initiated by system like optimistic lock exception etc.
-            if (e.name === 'SystemError') {
-                response.setStatus(429);
-                responseJSON.ResponseCode = '429';
-                responseJSON.ResponseText = 'Transient Error: Too many requests';
-            } else { // For other errors like ReferenceError etc.
-                response.setStatus(400);
-                responseJSON.ResponseCode = '400';
-                responseJSON.ResponseText = 'Error: Internal error';
-            }
+            logger.error('ESW Service Error: {0}', e.message);
+            let errorStatus = e.status || e.statusCode || 500;
+            response.setStatus(errorStatus);
+            responseJSON.ResponseCode = errorStatus.toString();
+            responseJSON.ResponseText = e.message;
         }
         eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
     }
@@ -719,15 +712,10 @@ function eswEmbeddedCheckoutNotify() {
             }
         } catch (e) {
             logger.error('ESW Service Error: {0}', e.message);
-            if (e.name === 'SystemError') {
-                response.setStatus(429);
-                responseJSON.ResponseCode = '429';
-                responseJSON.ResponseText = 'Transient Error: Too many requests';
-            } else {
-                response.setStatus(400);
-                responseJSON.ResponseCode = '400';
-                responseJSON.ResponseText = 'Error: Internal error';
-            }
+            let errorStatus = e.status || e.statusCode || 500;
+            response.setStatus(errorStatus);
+            responseJSON.ResponseCode = errorStatus.toString();
+            responseJSON.ResponseText = e.message;
         }
 
         eswHelper.eswInfoLogger('Esw Order Confirmation Response', JSON.stringify(responseJSON));
@@ -876,7 +864,7 @@ exports.GetCart = guard.ensure(['get'], eswBackToCart);
 exports.RegisterCustomer = guard.ensure(['get'], registerCustomer);
 
 /** Handles the order inventory check before order confirmation.
- * @see {@link module:controllers/EShopWorld~ValidateInventory} */
+ * @see {@link module:controllers/EShopWorldSG~ValidateInventory} */
 exports.ValidateInventory = guard.ensure(['post', 'https'], validateInventory);
 
 /** Handles the order confirmation request

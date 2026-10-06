@@ -17,6 +17,16 @@ const eswPricingHelper = require('*/cartridge/scripts/helper/eswPricingHelper').
 const eswCoreService = require('*/cartridge/scripts/services/EswCoreService').getEswServices();
 const Constants = require('*/cartridge/scripts/util/Constants');
 
+/**
+ * Returns a random integer from 0 (inclusive) to max (exclusive)
+ * @param {number} max - upper bound
+ * @returns {number} - random index
+ */
+function randomIndex(max) {
+    const SecureRandom = require('dw/crypto/SecureRandom');
+    return new SecureRandom().nextInt(max);
+}
+
 const getEswHelper = {
     isEnableLandingPageRedirect: function () {
         return Site.getCustomPreferenceValue('eswEnableLandingPageRedirect');
@@ -176,40 +186,44 @@ const getEswHelper = {
         return uploadMethod;
     },
     getEShopWorldModuleEnabled: function () {
-        return Site.getCustomPreferenceValue('eswEshopworldModuleEnabled');
+        return Site.getCustomPreferenceValue('eswModuleEnabled');
     },
     getEswCatalogFeedProductCustomAttrFieldMapping: function () {
         return Site.getCustomPreferenceValue('eswCatalogFeedProductCustomAttrFieldMapping');
     },
+    /**
+     * Returns allowed SFCC locales that match the given country code,
+     * derived from Site.getAllowedLocales() and dw.util.Locale.
+     * Replaces the previous eswCountrylocale custom object lookup.
+     * @param {string} countryCode - ISO country code (e.g. 'IE', 'US')
+     * @returns {Array} - array of matching locale strings (e.g. ['en_IE', 'fr_IE'])
+     */
+    getCountryLocalesFromSite: function (countryCode) {
+        let Locale = require('dw/util/Locale');
+        let allowedLocales = Site.getCurrent().getAllowedLocales();
+        let allowedLocalesArr = !empty(allowedLocales) ? allowedLocales.toArray() : [];
+        return allowedLocalesArr.filter(function (localeId) {
+            let localeObj = Locale.getLocale(localeId);
+            return localeObj && localeObj.country === countryCode;
+        });
+    },
     getAllCountries: function () {
         let allCountriesCO = this.queryAllCustomObjects('ESW_COUNTRIES', '', 'custom.name asc'),
             countriesArr = [];
-        let defaultLocale = Site.getDefaultLocale();
-        let match = defaultLocale.match(/^([a-zA-Z]+)_/);
-        let lang = match ? match[1] : 'en';
         if (allCountriesCO.count > 0) {
             while (allCountriesCO.hasNext()) {
                 let countryDetail = allCountriesCO.next();
                 let countryCode = countryDetail.getCustom().countryCode;
-                let lcoale = countryDetail.getCustom().eswCountrylocale;
-                let locales = !empty(lcoale)
-                    ? lcoale.split(',').map(function (loc) {
-                        return loc.trim();
-                    })
-                    : [];
-
-                locales.push(lang + '_' + countryDetail.getCustom().countryCode);
-
-                locales = locales.join(',');
                 if (!empty(countryCode)) {
+                    let countryLocales = this.getCountryLocalesFromSite(countryCode);
                     countriesArr.push({
                         value: countryCode,
                         displayValue: countryDetail.getCustom().name,
                         defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
                         isSupportedByESW: countryDetail.getCustom().isSupportedByESW || false,
                         isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
-                        locale: lang + '_' + countryDetail.getCustom().countryCode,
-                        locales: locales
+                        locale: countryLocales.length > 0 ? countryLocales[0] : null,
+                        locales: countryLocales.join(',')
                     });
                 }
             }
@@ -378,6 +392,18 @@ const getEswHelper = {
     },
     getCheckoutServiceName: function () {
         return Site.getCustomPreferenceValue('eswCheckoutServiceName');
+    },
+    /**
+     * Check whether the configured checkout service is V3
+     * @param {string} checkoutServiceName - optional override value
+     * @returns {boolean} - true when EswCheckoutV3Service is configured
+     */
+    isCheckoutServiceV3: function (checkoutServiceName) {
+        let name = checkoutServiceName || this.getCheckoutServiceName();
+        if (empty(name)) {
+            return false;
+        }
+        return name.indexOf('EswCheckoutV3Service') !== -1;
     },
     isUpdateOrderPaymentStatusToPaidAllowed: function () {
         return Site.getCustomPreferenceValue('eswUpdateOrderPaymentStatusToPaid');
@@ -1844,6 +1870,11 @@ const getEswHelper = {
             let eswHelper = this;
             if (eswHelper.getEShopWorldModuleEnabled() && eswHelper.isESWSupportedCountry()) {
                 if (this.isOrderPlaced(orderID)) {
+                    if (!empty(session.privacy.keepOrderIDForRegistration)) {
+                        // Self-hosted OC with registration enabled: order is already confirmed,
+                        // do not clear newly added basket items
+                        return true;
+                    }
                     if (!empty(currentBasket)) {
                         Transaction.wrap(function () {
                             let coupons = currentBasket.getCouponLineItems();
@@ -1864,9 +1895,7 @@ const getEswHelper = {
                             }
                         });
                     }
-                    if (empty(session.privacy.keepOrderIDForRegistration)) {
-                        delete session.privacy.confirmedOrderID;
-                    }
+                    delete session.privacy.confirmedOrderID;
                     return true;
                 }
                 if (!currentBasket) {
@@ -1991,11 +2020,17 @@ const getEswHelper = {
      * @return {string} - password
      */
     generateRandomPassword: function () {
+        // BM password policy needs at least one of each of these
+        const requiredCharSets = ['abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '0123456789', '!@#$%^&*()'];
+
         let password = '';
-        for (let i = 0; i <= Constants.RANDOM_LENGTH; i++) {
-            let randomNumber = Math.floor(Math.random() * Constants.RANDOM_CHARS.length);
-            password += Constants.RANDOM_CHARS.substring(randomNumber, randomNumber + 1);
+        while (password.length <= Constants.RANDOM_LENGTH - requiredCharSets.length) {
+            password += Constants.RANDOM_CHARS.charAt(randomIndex(Constants.RANDOM_CHARS.length));
         }
+        requiredCharSets.forEach(function (charSet) {
+            let position = randomIndex(password.length + 1);
+            password = password.slice(0, position) + charSet.charAt(randomIndex(charSet.length)) + password.slice(position);
+        });
         return password;
     },
     // eslint-disable-next-line valid-jsdoc
@@ -2143,13 +2178,13 @@ const getEswHelper = {
         } else {
             this.eswInfoLogger('ProcessWebhook Log [' + requestType + ']', JSON.stringify(reqBody));
             try {
-                if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemappeasementsucceededevent' || requestType === 'eshopworld.platform.events.oms.orderappeasementsucceededevent')) {
+                if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === Constants.ESW_LINE_ITEM_APPEASEMENT_SUCCEEDED_EVENT || requestType === Constants.ESW_ORDER_APPEASEMENT_SUCCEEDED_EVENT)) {
                     responseJSON = eswOrderProcessHelper.markOrderAppeasement(obj);
-                } else if (obj && !empty(obj) && (requestType === 'eshopworld.platform.events.logistics.returnorderevent' || requestType === 'logistics-return-order-retailer')) {
+                } else if (obj && !empty(obj) && (requestType === Constants.ESW_RETURN_ORDER_EVENT || requestType === Constants.ESW_RETURN_ORDER_RETAILER_EVENT)) {
                     responseJSON = eswOrderProcessHelper.markOrderAsReturn(obj, requestType);
-                } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === 'eshopworld.platform.events.oms.lineitemcancelsucceededevent' || requestType === 'eshopworld.platform.events.oms.ordercancelsucceededevent')) {
+                } else if (obj && 'Request' in obj && !empty(obj.Request) && (requestType === Constants.ESW_LINE_ITEM_CANCEL_SUCCEEDED_EVENT || requestType === Constants.ESW_ORDER_CANCEL_SUCCEEDED_EVENT)) {
                     responseJSON = eswOrderProcessHelper.cancelAnOrder(obj);
-                } else if (obj && !empty(obj) && requestType === 'eshopworld.platform.events.oms.orderholdstatusupdatedevent') {
+                } else if (obj && !empty(obj) && requestType === Constants.ESW_ORDER_HOLD_STATUS_UPDATED_EVENT) {
                     responseJSON = eswOrderProcessHelper.processKonbiniPayment(obj);
                 } else if (obj && !empty(obj) && requestType === Constants.ESW_ORDER_PAYMENT_STATUS_EVENT_NAME) {
                     responseJSON = eswOrderProcessHelper.handlePostOrderOrderHook(obj);
@@ -2992,22 +3027,6 @@ const getEswHelper = {
         return [(address.address1 || ''), (address.city || ''), (address.postalCode || '')].join(' - ');
     },
     /**
-     * function to return if Azure Insight logging is enabled
-     * @returns {bool} TRUE if Azure Insight logging is enabled, FALSE otherwise
-     */
-    isEswAzureInsightLogsEnabled: function () {
-        return Site.getCustomPreferenceValue('eswEnableAzureInsightLogs');
-    },
-    /**
-     * function to return the Azure Instrumentation Key (iKey)
-     * @returns {string|null} The iKey as a string if configured, null otherwise
-     */
-    getEswAzureInsightiKey: function () {
-        return this.isEswAzureInsightLogsEnabled()
-            ? Site.getCustomPreferenceValue('eswAzureInsightiKey')
-            : null;
-    },
-    /**
  * Return the countries configs
  * @returns {Array} - array of countries
  */
@@ -3020,14 +3039,16 @@ const getEswHelper = {
                     let countryDetail = allCountriesCO.next();
                     let countryCode = countryDetail.getCustom().countryCode;
                     if (!empty(countryCode)) {
+                        let countryLocales = this.getCountryLocalesFromSite(countryCode);
                         countriesArr.push({
                             countryCode: countryCode,
                             isFixedPriceModel: countryDetail.getCustom().isFixedPriceModel || false,
                             name: countryDetail.getCustom().name,
                             defaultCurrencyCode: countryDetail.getCustom().defaultCurrencyCode,
-                            eswCountrylocale: countryDetail.getCustom().eswCountrylocale,
                             baseCurrencyCode: countryDetail.getCustom().baseCurrencyCode,
                             isSupportedByESW: countryDetail.getCustom().isSupportedByESW,
+                            locale: countryLocales.length > 0 ? countryLocales[0] : null,
+                            locales: countryLocales.join(','),
                             isLocalizedShoppingFeedSupported: countryDetail.getCustom().isLocalizedShoppingFeedSupported,
                             ESW_HUB_Address: {
                                 hubAddress: countryDetail.getCustom().hubAddress,
@@ -3092,7 +3113,6 @@ const getEswHelper = {
         if (!('metadataItems' in requestObj.shopperCheckoutExperience) || empty(requestObj.shopperCheckoutExperience.metadataItems)) {
             requestObj.shopperCheckoutExperience.metadataItems = [];
         }
-        requestObj.shopperCheckoutExperience.metadataItems.push({ name: 'dwsid', value: request.httpCookies.dwsid.value });
         // Add metadata items for self-hosted OC if enabled
         if (this.isEswSelfHostedOcEnabled()) {
             const selfHostedOcHelper = require('*/cartridge/scripts/helper/eswSelfHostedOcHelper');
@@ -3118,8 +3138,8 @@ const getEswHelper = {
     },
     getDwsid: function (reqObj) {
         let dwsid = '';
-        if (!empty(reqObj.shopperCheckoutExperience) && !empty(reqObj.shopperCheckoutExperience.metadataItems)) {
-            let metadataItems = reqObj.shopperCheckoutExperience.metadataItems;
+        if (!empty(reqObj.retailerCheckoutExperience) && !empty(reqObj.retailerCheckoutExperience.metadataItems)) {
+            let metadataItems = reqObj.retailerCheckoutExperience.metadataItems;
             // eslint-disable-next-line no-restricted-syntax
             for (let metaObj in metadataItems) {
                 if (metadataItems[metaObj] && metadataItems[metaObj].name === 'dwsid') {
@@ -3774,53 +3794,6 @@ const getEswHelper = {
             palletId: 'ABC123456',
             metadata: {}
         };
-    },
-    /**
-     *
-     * @param {string} type - Type of info; ESW Service info
-     * @param {string} errorMessage - error Message
-     * @param {string} stackTrace - Stack Trace of error
-     * @returns {Object} - request payload
-     */
-    getAZInsightRequestPayload: function (type, errorMessage, stackTrace) {
-        let requestPayload = null;
-        let key = this.getEswAzureInsightiKey();
-        try {
-            // Validate input parameters
-            if (!type || !key) {
-                throw new Error('Invalid input parameters: type and key are required.');
-            }
-
-            let Resource = require('dw/web/Resource');
-            let currentDate = new Date();
-            let isoString = currentDate.toISOString();
-
-            requestPayload = {
-                name: 'Microsoft.ApplicationInsights.Event',
-                time: isoString,
-                iKey: key,
-                tags: {},
-                data: {
-                    baseType: 'EventData',
-                    baseData: {
-                        ver: Resource.msg('esw.cartridges.version.number', 'esw', null),
-                        eswCartridgeVersion: Resource.msg('global.version.number', 'version', null),
-                        name: type,
-                        properties: {
-                            retailer: Site.getCustomPreferenceValue('eswRetailerBrandCode'),
-                            errorMessage: errorMessage,
-                            stack: stackTrace,
-                            errorCode: '',
-                            errorStatusCode: ''
-                        }
-                    }
-                }
-            };
-        } catch (error) {
-            logger.error('Error while setting up AZ insight {0} {1}', error.message, error.stack);
-            return null;
-        }
-        return requestPayload;
     },
     /**
      * Checks the basket for restricted products and sets session/error message if found.

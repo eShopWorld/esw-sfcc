@@ -1,4 +1,0 @@
-<isdecorate template="application/ESWMenuFrame">
-    <isinclude template="util/modules" />
-    <isinclude template="/common/esw-site-pref-form" />
-</isdecorate>

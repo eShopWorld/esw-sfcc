@@ -48,7 +48,7 @@
 
 <!--- Sales Tax --->
 <iscomment>CUSTOM START: ESW integration </iscomment>
-<isif condition="${pdict.order.isEswOrder && !eswHelper.getEShopWorldTaxInformationEnabled()}">
+<isif condition="${pdict.order.isEswOrder && eswHelper.getEShopWorldTaxInformationEnabled()}">
     <div class="row leading-lines sales-tax-item">
         <div class="col-6 start-lines">
             <p class="order-receipt-label"><span>${Resource.msg('label.order.sales.tax','confirmation', null)}</span></p>

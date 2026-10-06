@@ -101,10 +101,10 @@ server.prepend(
  */
 server.append('Show', function (req, res, next) {
     let viewData = res.getViewData();
-    let CartModel = require('*/cartridge/models/cart');
+    var CartModel = require('*/cartridge/models/cart');
     let BasketMgr = require('dw/order/BasketMgr');
     let Transaction = require('dw/system/Transaction');
-    let currentBasket = BasketMgr.getCurrentBasket();
+    var currentBasket = BasketMgr.getCurrentBasket();
     // Check if cart contains only digital products
     viewData.isOnlyDigitalProductsInCart = eswHelper.isOnlyDigitalProductsInCart(currentBasket);
     // Group product for multi origin

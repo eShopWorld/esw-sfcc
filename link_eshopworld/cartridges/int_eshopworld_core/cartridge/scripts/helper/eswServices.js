@@ -42,6 +42,16 @@ function getDomainSuffix() {
     return domainSuffix;
 }
 /**
+ * Retrieves the Checkout API host based on the current environment (eswInstance preference).
+ * Production uses api.esw.com, non-production uses api.sandbox.esw.com.
+ * @returns {string} the Checkout API host name.
+ */
+function getCheckoutHost() {
+    let eswCoreHelper = require('*/cartridge/scripts/helper/eswCoreHelper').getEswHelper;
+    let environment = eswCoreHelper.getSelectedInstance();
+    return environment === 'production' ? 'api.esw.com' : 'api.sandbox.esw.com';
+}
+/**
  * Retrieves the API version for the given service name.
  * @param {string} serviceName - The name of the ESW service.
  * @returns {string} The API version for the ESW service.
@@ -143,7 +153,8 @@ function getEswServiceUrl(serviceName) {
     let bmHostname = getInstanceHostname();
     let ocapiVersion = getOcapiVersion();
     let siteId = Site.getID();
-    if (empty(bmServiceUrl)) {
+    let checkoutHost = getCheckoutHost();
+if (empty(bmServiceUrl) || bmServiceUrl.indexOf('No service ') === 0) {
         serviceUrl = unmappedServiceUrl
                 .replace('{tenant}', tenant)
                 .replace('{environment}', eswCoreHelper.getSelectedInstance())
@@ -152,6 +163,7 @@ function getEswServiceUrl(serviceName) {
                 .replace('{bmHostname}', bmHostname)
                 .replace('{siteId}', siteId)
                 .replace('{ocapiVersion}', ocapiVersion)
+                .replace('{checkoutHost}', checkoutHost)
                 .replace(Constants.ESW_V4_PRICING_ADVISOR_SERVICE, !empty(serviceVersionAdvisor) ? serviceVersionAdvisor : Constants.ESW_V4_PRICING_ADVISOR_SERVICE);
     } else {
         serviceUrl = bmServiceUrl;

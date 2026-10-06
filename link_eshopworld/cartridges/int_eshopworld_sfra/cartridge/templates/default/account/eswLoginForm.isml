@@ -5,7 +5,7 @@
         assets.addJs('/js/login.js');
     </isscript>
 
-    <isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled) ? dw.system.Site.current.preferences.custom.eswEshopworldModuleEnabled : false}" scope="page" />
+    <isset name="isEswEnabled" value="${!empty(dw.system.Site.current.preferences.custom.eswModuleEnabled) ? dw.system.Site.current.preferences.custom.eswModuleEnabled : false}" scope="page" />
 
     <isif condition="${isEswEnabled}">
         <div class="card col-md-6 col-sm-8 container my-5">
